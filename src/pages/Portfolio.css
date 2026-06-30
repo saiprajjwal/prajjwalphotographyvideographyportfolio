@@ -84,19 +84,6 @@
   padding: 2rem 0;
 }
 
-@supports (column-count: 3) {
-  .masonry-grid {
-    display: block;
-    column-count: 3;
-    column-gap: 2rem;
-  }
-  
-  .masonry-item {
-    break-inside: avoid;
-    margin-bottom: 2rem;
-  }
-}
-
 .masonry-item {
   position: relative;
   cursor: pointer;
@@ -108,6 +95,7 @@
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
   transform: translateY(0);
   transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  aspect-ratio: 3 / 4; /* Uniform size for all containers */
 }
 
 .masonry-item::before {
@@ -123,7 +111,8 @@
 
 .portfolio-image {
   width: 100%;
-  height: auto;
+  height: 100%;
+  object-fit: cover; /* Ensure image fills the fixed aspect ratio */
   display: block;
   transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1), filter 0.5s ease;
   filter: brightness(0.9);
@@ -171,24 +160,11 @@
   transform: translateY(0);
 }
 
-@media (max-width: 1024px) {
-  @supports (column-count: 2) {
-    .masonry-grid {
-      column-count: 2;
-    }
-  }
-}
-
 @media (max-width: 600px) {
   .page-header {
     margin-top: 4rem;
   }
   .page-header h1 {
     font-size: 2.5rem;
-  }
-  @supports (column-count: 1) {
-    .masonry-grid {
-      column-count: 1;
-    }
   }
 }
