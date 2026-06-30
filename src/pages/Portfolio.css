@@ -1,4 +1,5 @@
 .page-header {
+  margin-top: 6rem;
   margin-bottom: 4rem;
   text-align: center;
   position: relative;
@@ -6,49 +7,52 @@
 }
 
 .page-header h1 {
+  font-family: var(--font-display);
+  font-size: 3.5rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
   margin-bottom: 2rem;
-  background: linear-gradient(135deg, #fff 0%, #aaa 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  color: #ffffff;
+  text-shadow: 0 4px 30px rgba(255, 255, 255, 0.2);
 }
 
 .filter-nav {
   display: inline-flex;
   justify-content: center;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  background: var(--glass-bg);
-  padding: 0.5rem;
+  gap: 0.8rem;
+  background: rgba(10, 10, 10, 0.4);
+  padding: 0.8rem;
   border-radius: 100px;
-  border: 1px solid var(--glass-border);
-  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
 }
 
 .filter-btn {
   background: transparent;
   border: none;
-  color: var(--text-secondary);
-  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.9rem;
   font-family: var(--font-sans);
   font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.05em;
   cursor: pointer;
-  padding: 0.6rem 1.2rem;
+  padding: 0.6rem 1.4rem;
   border-radius: 100px;
   transition: all var(--transition-speed) ease;
 }
 
 .filter-btn:hover {
-  color: var(--text-primary);
-  background: rgba(255,255,255,0.05);
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .filter-btn.active {
-  color: var(--bg-color);
-  background: var(--text-primary);
-  box-shadow: 0 4px 15px rgba(255,255,255,0.2);
+  color: #000000;
+  background: #ffffff;
+  box-shadow: 0 4px 20px rgba(255, 255, 255, 0.3);
 }
 
 .masonry-grid {
@@ -76,10 +80,10 @@
   cursor: pointer;
   border-radius: 16px;
   overflow: hidden;
-  background-color: var(--accent-color);
-  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  background-color: transparent;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
   transform: translateY(0);
-  transition: all var(--transition-speed) var(--transition-bounce);
+  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .masonry-item::before {
@@ -87,7 +91,7 @@
   position: absolute;
   top: 0; left: 0; right: 0; bottom: 0;
   border-radius: 16px;
-  border: 1px solid rgba(255,255,255,0.1);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   pointer-events: none;
   z-index: 2;
   transition: border-color var(--transition-speed);
@@ -97,7 +101,8 @@
   width: 100%;
   height: auto;
   display: block;
-  transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+  transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1), filter 0.5s ease;
+  filter: brightness(0.9);
 }
 
 .image-overlay {
@@ -105,34 +110,36 @@
   bottom: 0;
   left: 0;
   width: 100%;
-  padding: 3rem 1.5rem 1.5rem;
-  background: linear-gradient(to top, rgba(5,5,7,0.9) 0%, rgba(5,5,7,0) 100%);
+  padding: 2rem 1.5rem 1.5rem;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0) 100%);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
   opacity: 0;
-  transform: translateY(20px);
-  transition: all var(--transition-speed) ease;
+  transform: translateY(10px);
+  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
   z-index: 1;
 }
 
 .image-category {
-  color: var(--text-primary);
-  font-family: var(--font-display);
+  color: #ffffff;
+  font-family: var(--font-sans);
   font-size: 0.9rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
+  font-weight: 500;
+  letter-spacing: 0.05em;
 }
 
 .masonry-item:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 20px 40px rgba(0,0,0,0.6), 0 0 20px rgba(255,255,255,0.05);
+  transform: translateY(-10px);
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.8), 0 0 40px rgba(255, 255, 255, 0.05);
 }
 
 .masonry-item:hover::before {
-  border-color: rgba(255,255,255,0.3);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .masonry-item:hover .portfolio-image {
-  transform: scale(1.05);
+  transform: scale(1.03);
+  filter: brightness(1.1);
 }
 
 .masonry-item:hover .image-overlay {
@@ -149,6 +156,12 @@
 }
 
 @media (max-width: 600px) {
+  .page-header {
+    margin-top: 4rem;
+  }
+  .page-header h1 {
+    font-size: 2.5rem;
+  }
   @supports (column-count: 1) {
     .masonry-grid {
       column-count: 1;
