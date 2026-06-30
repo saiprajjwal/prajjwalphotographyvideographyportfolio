@@ -1,4 +1,4 @@
-import { useRef, Suspense } from 'react';
+import { useRef, Suspense, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { Canvas, useFrame } from '@react-three/fiber';
@@ -102,6 +102,8 @@ function BackgroundGallery({ scrollYProgress }) {
 }
 
 export default function Home() {
+  const [canvasReady, setCanvasReady] = useState(false);
+
   // Native window scroll tracker
   const { scrollYProgress } = useScroll();
 
@@ -119,9 +121,20 @@ export default function Home() {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0, transition: { duration: 0.5 } }}
     >
-      {/* 3D Background */}
-      <div className="monolith-canvas-fixed">
-        <Canvas camera={{ position: [0, 0, 10], fov: 45 }}>
+      {/* 3D canvas — fades in once GPU shader compiles */}
+      <div 
+        className="monolith-canvas-fixed"
+        style={{
+          opacity: canvasReady ? 1 : 0,
+          transition: 'opacity 1s ease-out',
+        }}
+      >
+        <Canvas
+          camera={{ position: [0, 0, 10], fov: 45 }}
+          onCreated={() => {
+            requestAnimationFrame(() => requestAnimationFrame(() => setCanvasReady(true)));
+          }}
+        >
           <Suspense fallback={null}>
             <ambientLight intensity={0.2} />
             <spotLight position={[10, 10, 10]} intensity={4} color="#ffffff" penumbra={1} angle={0.5} />
