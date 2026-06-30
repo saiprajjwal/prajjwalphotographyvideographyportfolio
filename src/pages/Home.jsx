@@ -87,7 +87,8 @@ function BackgroundGallery({ scrollYProgress }) {
         transparent 
         scale={[40, 50]} 
         position={[0, 0, -5]} 
-        opacity={0.3} 
+        opacity={0.3}
+        toneMapped={false}
       />
       
       {/* Single Center Hero Image properly scaled to its portrait aspect ratio */}
@@ -96,6 +97,7 @@ function BackgroundGallery({ scrollYProgress }) {
         transparent 
         scale={[10.6, 13.25]} 
         position={[0, 0, 0]} 
+        toneMapped={false}
       />
     </group>
   );
