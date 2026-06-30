@@ -1,7 +1,7 @@
 import { useRef, Suspense, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, useScroll, useTransform } from 'framer-motion';
-import { Canvas, useFrame } from '@react-three/fiber';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Environment, MeshTransmissionMaterial, Sparkles, Image, Float } from '@react-three/drei';
 import * as THREE from 'three';
 import './Home.css';
@@ -9,6 +9,13 @@ import './Home.css';
 // The Massive Glass Monolith (Reacts to scroll as a single majestic piece)
 function GlassMonolith({ scrollYProgress }) {
   const meshRef = useRef();
+  const { viewport } = useThree();
+  
+  // If the viewport is narrow (mobile phone), scale the glass down
+  const isMobile = viewport.width < 6;
+  const glassWidth = isMobile ? 2.8 : 4.5;
+  const glassHeight = isMobile ? 4.5 : 6.5;
+  const glassDepth = isMobile ? 0.5 : 0.8;
   
   useFrame((state) => {
     const t = state.clock.elapsedTime;
@@ -36,7 +43,7 @@ function GlassMonolith({ scrollYProgress }) {
   return (
     <Float speed={1.5} rotationIntensity={0} floatIntensity={0.5}>
       <mesh ref={meshRef} position={[0, 0, 2]}>
-        <boxGeometry args={[4.5, 6.5, 0.8]} />
+        <boxGeometry args={[glassWidth, glassHeight, glassDepth]} />
         <MeshTransmissionMaterial 
           backside={true}
           samples={16}
