@@ -1,5 +1,4 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X } from 'lucide-react';
 import { useState } from 'react';
 import './Navigation.css';
 
@@ -22,13 +21,15 @@ export default function Navigation() {
           Prajjwal Pandey
         </Link>
 
-        {/* Mobile toggle */}
+        {/* Custom Animated Hamburger */}
         <button 
-          className="nav-toggle" 
+          className={`nav-toggle ${isOpen ? 'open' : ''}`} 
           onClick={() => setIsOpen(!isOpen)}
           aria-label="Toggle menu"
         >
-          {isOpen ? <X size={24} /> : <Menu size={24} />}
+          <span className="hamburger-line top"></span>
+          <span className="hamburger-line middle"></span>
+          <span className="hamburger-line bottom"></span>
         </button>
 
         {/* Desktop & Mobile Links */}
