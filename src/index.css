@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&family=Great+Vibes&display=swap');
 
 :root {
   --bg-color: #050507;
@@ -13,6 +13,7 @@
   --font-sans: 'Inter', sans-serif;
   --font-display: 'Outfit', sans-serif;
   --font-serif: 'Playfair Display', serif;
+  --font-signature: 'Great Vibes', cursive;
   --transition-speed: 0.4s;
   --transition-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
 }

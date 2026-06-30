@@ -1,10 +1,9 @@
 import { useRef, Suspense } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, useScroll, useTransform } from 'framer-motion';
-import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { Canvas, useFrame } from '@react-three/fiber';
 import { Environment, MeshTransmissionMaterial, Sparkles, Image, Float } from '@react-three/drei';
 import * as THREE from 'three';
-import portfolioData from '../data/portfolio.json';
 import './Home.css';
 
 // The Massive Glass Monolith (Reacts to scroll as a single majestic piece)
@@ -61,15 +60,23 @@ function GlassMonolith({ scrollYProgress }) {
 }
 
 // Background Gallery that gets refracted by the glass
-function BackgroundGallery() {
+function BackgroundGallery({ scrollYProgress }) {
   const groupRef = useRef();
 
   useFrame((state) => {
+    // Parallax effect on mouse move
     const targetX = -(state.mouse.x * 2);
     const targetY = -(state.mouse.y * 2);
     
     groupRef.current.position.x = THREE.MathUtils.lerp(groupRef.current.position.x, targetX, 0.05);
     groupRef.current.position.y = THREE.MathUtils.lerp(groupRef.current.position.y, targetY, 0.05);
+
+    // Animate scale to zoom in as the glass lifts away
+    if (scrollYProgress) {
+      const scrollVal = scrollYProgress.get();
+      const targetScale = 1 + (scrollVal * 0.15);
+      groupRef.current.scale.set(targetScale, targetScale, targetScale);
+    }
   });
 
   return (
@@ -112,7 +119,7 @@ export default function Home() {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0, transition: { duration: 0.5 } }}
     >
-      {/* 3D Background - Always visible, controlled by scroll */}
+      {/* 3D Background */}
       <div className="monolith-canvas-fixed">
         <Canvas camera={{ position: [0, 0, 10], fov: 45 }}>
           <Suspense fallback={null}>
@@ -121,7 +128,7 @@ export default function Home() {
             <spotLight position={[-10, -10, -10]} intensity={2} color="#3b82f6" penumbra={1} angle={0.5} />
             <Environment preset="studio" />
             <Sparkles count={800} scale={20} size={1.5} speed={0.4} opacity={0.3} color="#ffffff" />
-            <BackgroundGallery />
+            <BackgroundGallery scrollYProgress={scrollYProgress} />
             <GlassMonolith scrollYProgress={scrollYProgress} />
           </Suspense>
         </Canvas>
@@ -135,6 +142,11 @@ export default function Home() {
           <div className="monolith-text-container">
             <h1 className="hero-title">Prajjwal Pandey</h1>
             <p className="hero-subtitle">Photographer | Storyteller</p>
+            <div style={{ marginTop: '2.5rem' }}>
+              <Link to="/portfolio" className="btn-glass">
+                My Work
+              </Link>
+            </div>
           </div>
         </motion.div>
 
