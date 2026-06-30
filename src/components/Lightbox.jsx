@@ -4,6 +4,8 @@ import './Lightbox.css';
 
 export default function Lightbox({ photos, currentIndex, onClose, onNext, onPrev }) {
   useEffect(() => {
+    if (currentIndex === null) return;
+
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') onClose();
       if (e.key === 'ArrowRight') onNext();
@@ -16,9 +18,9 @@ export default function Lightbox({ photos, currentIndex, onClose, onNext, onPrev
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = 'auto';
+      document.body.style.overflow = '';
     };
-  }, [onClose, onNext, onPrev]);
+  }, [currentIndex, onClose, onNext, onPrev]);
 
   if (currentIndex === null || !photos[currentIndex]) return null;
 

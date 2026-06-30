@@ -74,7 +74,12 @@ export default function Portfolio() {
   const prevPhoto = () => setLightboxIndex((prev) => (prev - 1 + filteredPhotos.length) % filteredPhotos.length);
 
   return (
-    <div className="portfolio-wrapper-full">
+    <motion.div 
+      className="portfolio-wrapper-full"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0, transition: { duration: 0.5 } }}
+    >
       {/* 3D Background Canvas */}
       <div 
         className="portfolio-canvas-fixed"
@@ -85,6 +90,7 @@ export default function Portfolio() {
       >
         <Canvas
           camera={{ position: [0, 0, 10], fov: 45 }}
+          style={{ pointerEvents: 'none' }}
           onCreated={() => {
             requestAnimationFrame(() => requestAnimationFrame(() => setCanvasReady(true)));
           }}
@@ -101,18 +107,12 @@ export default function Portfolio() {
       </div>
 
       {/* Main Content Overlay */}
-      <motion.main 
-        className="page-wrapper section-padding portfolio-content-overlay"
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, transition: { duration: 0.5 } }}
-        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-      >
+      <main className="page-wrapper section-padding portfolio-content-overlay">
         <div className="container">
           <header className="page-header">
             <motion.h1 
-              initial={{ opacity: 0, scale: 0.95 }} 
-              animate={{ opacity: 1, scale: 1 }} 
+              initial={{ opacity: 0, y: 20 }} 
+              animate={{ opacity: 1, y: 0 }} 
               transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
             >
               Portfolio
@@ -171,7 +171,7 @@ export default function Portfolio() {
           onNext={nextPhoto}
           onPrev={prevPhoto}
         />
-      </motion.main>
-    </div>
+      </main>
+    </motion.div>
   );
 }
