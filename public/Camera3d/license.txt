@@ -1,0 +1,11 @@
+Model Information:
+* title:	SONY A7M4 with GM1635 f2.8
+* source:	https://sketchfab.com/3d-models/sony-a7m4-with-gm1635-f28-93fb2cac30e741f580faf022795f7d50
+* author:	Metazeon (https://sketchfab.com/Metazeon)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "SONY A7M4 with GM1635 f2.8" (https://sketchfab.com/3d-models/sony-a7m4-with-gm1635-f28-93fb2cac30e741f580faf022795f7d50) by Metazeon (https://sketchfab.com/Metazeon) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

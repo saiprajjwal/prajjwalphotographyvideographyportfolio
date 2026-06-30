@@ -1,0 +1,56 @@
+{
+  "categories": ["All", "Portraits", "Editorial", "Behind the Scenes"],
+  "photos": [
+    {
+      "id": "1",
+      "src": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=1000",
+      "alt": "Portrait photo 1",
+      "category": "Portraits"
+    },
+    {
+      "id": "2",
+      "src": "https://images.unsplash.com/photo-1492633423870-43d1cd2775eb?auto=format&fit=crop&q=80&w=1000",
+      "alt": "Editorial shoot",
+      "category": "Editorial"
+    },
+    {
+      "id": "3",
+      "src": "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&q=80&w=1000",
+      "alt": "Behind the scenes camera setup",
+      "category": "Behind the Scenes"
+    },
+    {
+      "id": "4",
+      "src": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&q=80&w=1000",
+      "alt": "Portrait photo 2",
+      "category": "Portraits"
+    },
+    {
+      "id": "5",
+      "src": "https://images.unsplash.com/photo-1605369572399-05d8d64a0f6e?auto=format&fit=crop&q=80&w=1000",
+      "alt": "Editorial fashion",
+      "category": "Editorial"
+    }
+  ],
+  "videos": [
+    {
+      "id": "dQw4w9WgXcQ",
+      "title": "Cinematic B-Roll Reel"
+    },
+    {
+      "id": "jNQXAC9IVRw",
+      "title": "Me at the zoo - Short Film"
+    }
+  ],
+  "about": {
+    "name": "Prajjwal Pandey",
+    "tagline": "Capturing moments, telling stories.",
+    "bio": "I'm a photographer and filmmaker specializing in cinematic storytelling. With a keen eye for detail and a passion for visual arts, I bring ideas to life through the lens.",
+    "gear": ["Sony A7S III", "Canon C70", "Sigma Art 24-70mm", "DJI Ronin S2", "Aputure Lighting"],
+    "email": "hello@example.com",
+    "social": {
+      "instagram": "https://instagram.com/",
+      "youtube": "https://youtube.com/"
+    }
+  }
+}

@@ -1,0 +1,329 @@
+/* Base Architecture */
+.home-wrapper-full {
+  position: relative;
+  width: 100vw;
+  background-color: #030303;
+  color: #ffffff;
+}
+
+/* 3D Canvas is fixed behind everything */
+.monolith-canvas-fixed {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 1;
+  pointer-events: auto; /* Allow mouse interaction for 3D parallax */
+}
+
+/* The scrollable content layer */
+.home-scroll-content {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+}
+
+.monolith-content-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.monolith-text-container {
+  text-align: center;
+  pointer-events: auto;
+}
+
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 5vw;
+}
+
+/* --- Hero Section (100vh) --- */
+.section-hero {
+  position: relative;
+  height: 100vh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none; /* Let mouse hit 3D canvas */
+}
+
+.hero-text-container {
+  text-align: center;
+  pointer-events: auto;
+}
+
+.hero-title {
+  color: #ffffff;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif;
+  font-size: clamp(4rem, 12vw, 9rem);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  margin: 0;
+  text-shadow: 0 10px 50px rgba(0,0,0,0.9);
+  background: linear-gradient(180deg, #ffffff 0%, #dddddd 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.hero-subtitle {
+  color: #e0e0e0;
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  font-weight: 300;
+  letter-spacing: 0.5em;
+  text-transform: uppercase;
+  margin-top: 1rem;
+  text-shadow: 0 4px 10px rgba(0,0,0,0.8);
+}
+
+.scroll-indicator {
+  position: absolute;
+  bottom: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+  pointer-events: auto;
+}
+
+.scroll-indicator span {
+  font-family: var(--font-sans);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: #888888;
+}
+
+.scroll-line {
+  width: 1px;
+  height: 50px;
+  background: linear-gradient(to bottom, #ffffff, transparent);
+  animation: scrollPulse 2s infinite;
+}
+
+@keyframes scrollPulse {
+  0% { transform: scaleY(0); transform-origin: top; }
+  50% { transform: scaleY(1); transform-origin: top; }
+  50.1% { transform: scaleY(1); transform-origin: bottom; }
+  100% { transform: scaleY(0); transform-origin: bottom; }
+}
+
+/* --- Content Sections Typography --- */
+.section-heading {
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 5vw, 4rem);
+  font-weight: 300;
+  letter-spacing: -0.02em;
+  margin-bottom: 2rem;
+  color: #ffffff;
+}
+
+.link-arrow {
+  display: inline-flex;
+  align-items: center;
+  color: #ffffff;
+  text-decoration: none;
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-top: 2rem;
+  transition: opacity 0.3s ease;
+}
+
+.link-arrow:hover {
+  opacity: 0.7;
+}
+
+.link-arrow .arrow {
+  margin-left: 10px;
+  transition: transform 0.3s ease;
+}
+
+.link-arrow:hover .arrow {
+  transform: translateX(5px);
+}
+
+/* --- Philosophy Section --- */
+.section-philosophy {
+  padding: 150px 0;
+  background-color: #030303;
+}
+
+.philosophy-text {
+  font-family: var(--font-sans);
+  font-size: clamp(1.2rem, 3vw, 2.5rem);
+  line-height: 1.5;
+  color: #a0a0a0;
+  max-width: 1000px;
+}
+
+/* --- Works Section --- */
+.section-works {
+  padding: 100px 0 150px 0;
+  background-color: #030303;
+}
+
+.works-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 60px;
+}
+
+.works-header .link-arrow {
+  margin-top: 0;
+  margin-bottom: 10px;
+}
+
+.works-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4vw;
+}
+
+.work-item {
+  position: relative;
+  cursor: pointer;
+}
+
+.work-item:nth-child(even) {
+  margin-top: 10vw; /* Staggered grid look */
+}
+
+.work-image-wrapper {
+  overflow: hidden;
+  aspect-ratio: 4/5;
+  background: #111111;
+}
+
+.work-image-wrapper img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.work-item:hover .work-image-wrapper img {
+  transform: scale(1.05);
+}
+
+.work-info {
+  margin-top: 1.5rem;
+}
+
+.work-info h3 {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 400;
+  margin: 0 0 0.5rem 0;
+}
+
+.work-info p {
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  color: #888888;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin: 0;
+}
+
+/* --- Footer --- */
+.home-footer {
+  background-color: #000000;
+  padding: 100px 0 40px 0;
+  border-top: 1px solid rgba(255,255,255,0.05);
+}
+
+.footer-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 100px;
+}
+
+.footer-left h2 {
+  font-family: var(--font-display);
+  font-size: 3rem;
+  font-weight: 300;
+  margin: 0 0 1rem 0;
+}
+
+.footer-left p {
+  font-family: var(--font-sans);
+  color: #888888;
+  font-size: 1rem;
+}
+
+.btn-solid {
+  background: #ffffff;
+  color: #000000;
+  padding: 1rem 3rem;
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  text-decoration: none;
+  transition: transform 0.3s ease;
+  display: inline-block;
+}
+
+.btn-solid:hover {
+  transform: translateY(-2px);
+}
+
+.footer-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 5vw;
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  color: #666666;
+}
+
+.social-links {
+  display: flex;
+  gap: 2rem;
+}
+
+.social-links a {
+  color: #888888;
+  text-decoration: none;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  transition: color 0.3s ease;
+}
+
+.social-links a:hover {
+  color: #ffffff;
+}
+
+@media (max-width: 768px) {
+  .works-grid {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+  .work-item:nth-child(even) {
+    margin-top: 0;
+  }
+  .footer-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 40px;
+  }
+}
