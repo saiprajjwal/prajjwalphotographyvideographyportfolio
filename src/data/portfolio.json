@@ -34,12 +34,20 @@
   ],
   "videos": [
     {
-      "id": "dQw4w9WgXcQ",
-      "title": "Cinematic B-Roll Reel"
+      "id": "pRxSNAsuj9U",
+      "title": "Snow Day – Slow Motion Cinematic Film (Sony a7S III)"
     },
     {
-      "id": "jNQXAC9IVRw",
-      "title": "Me at the zoo - Short Film"
+      "id": "0W2VgHTp69E",
+      "title": "The One Who Stays || Short Film (2026)"
+    },
+    {
+      "id": "za7qrQm9NmA",
+      "title": "Unwanted | Psychological Horror Short Film"
+    },
+    {
+      "id": "Ola41HJmdJA",
+      "title": "Uninvited Remains | Psychological | Part 2 | Horror Short Film (2026)"
     }
   ],
   "about": {
@@ -47,10 +55,12 @@
     "tagline": "Capturing moments, telling stories.",
     "bio": "I'm a photographer and filmmaker specializing in cinematic storytelling. With a keen eye for detail and a passion for visual arts, I bring ideas to life through the lens.",
     "gear": ["Sony A7S III", "Canon C70", "Sigma Art 24-70mm", "DJI Ronin S2", "Aputure Lighting"],
-    "email": "hello@example.com",
+    "email": "designer.prajjwal@gmail.com",
     "social": {
-      "instagram": "https://instagram.com/",
-      "youtube": "https://youtube.com/"
+      "instagram": "https://www.instagram.com/saiprajjwal",
+      "youtube": "https://www.youtube.com/@Prajjwalpandey9",
+      "tiktok": "https://www.tiktok.com/@prajjwalp",
+      "pinterest": "https://au.pinterest.com/saiprajjwal/?invite_code=af7db456a81d4cf89c2e563fd6486c43&sender=334111003514027156"
     }
   }
 }

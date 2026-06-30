@@ -1,19 +1,61 @@
+.about-wrapper-full {
+  position: relative;
+  min-height: 100vh;
+  width: 100%;
+}
+
+.about-content-overlay {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+}
+
+.glass-canvas-fixed {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 1;
+  pointer-events: none;
+}
+
 .about-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 4rem;
-  align-items: center;
+  align-items: start;
 }
 
 .about-image-container {
+  position: sticky;
+  top: 100px;
   width: 100%;
+  border-radius: 16px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+  padding: 0.8rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .about-image {
   width: 100%;
-  aspect-ratio: 4/5;
-  object-fit: cover;
-  border-radius: 4px;
+  height: auto;
+  display: block;
+  border-radius: 10px;
+}
+
+.glass-panel-padded {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
 }
 
 .about-content h1 {

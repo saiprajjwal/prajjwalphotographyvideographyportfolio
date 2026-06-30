@@ -6,6 +6,7 @@ import Portfolio from './pages/Portfolio';
 import Films from './pages/Films';
 import About from './pages/About';
 import Contact from './pages/Contact';
+import Footer from './components/Footer';
 import './App.css';
 
 function App() {
@@ -23,6 +24,7 @@ function App() {
           <Route path="/contact" element={<Contact />} />
         </Routes>
       </AnimatePresence>
+      <Footer />
     </>
   );
 }

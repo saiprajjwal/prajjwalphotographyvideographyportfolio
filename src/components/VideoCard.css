@@ -1,34 +1,44 @@
 .video-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 1.2rem;
-  transition: transform var(--transition-speed) var(--transition-bounce);
+  padding: 0.8rem;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.03); /* Frosted Glass */
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.video-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  pointer-events: none;
+  z-index: 2;
+  transition: border-color var(--transition-speed);
 }
 
 .video-card:hover {
-  transform: translateY(-5px);
+  transform: translateY(-10px);
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.8), 0 0 40px rgba(255, 255, 255, 0.05);
+}
+
+.video-card:hover::before {
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .video-thumbnail-container {
   position: relative;
   width: 100%;
   aspect-ratio: 16 / 9;
-  border-radius: 16px;
+  border-radius: 10px;
   overflow: hidden;
   cursor: pointer;
-  background-color: var(--accent-color);
-  box-shadow: 0 10px 30px rgba(0,0,0,0.4);
-}
-
-.video-thumbnail-container::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 16px;
-  pointer-events: none;
-  z-index: 2;
-  transition: border-color var(--transition-speed);
 }
 
 .video-thumbnail {
