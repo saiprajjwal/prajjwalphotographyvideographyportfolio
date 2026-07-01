@@ -177,32 +177,33 @@
 /* Floating category pill badge */
 .card-badge {
   position: absolute;
-  bottom: 1.2rem;
-  left: 50%;
-  transform: translateX(-50%) translateY(15px);
-  background: rgba(10, 10, 10, 0.75); /* Dark frosted glass */
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  bottom: 0.8rem; /* Align inside card padding */
+  left: 0.8rem;
+  width: calc(100% - 1.6rem); /* Full inner width */
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.75) 0%, rgba(0, 0, 0, 0.3) 100%);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom-left-radius: 10px; /* Curve matching image corners */
+  border-bottom-right-radius: 10px;
   color: rgba(255, 255, 255, 0.95);
   font-family: var(--font-sans);
-  font-size: 0.72rem;
+  font-size: 0.78rem;
   font-weight: 500;
-  letter-spacing: 0.08em;
-  padding: 0.35rem 0.85rem;
-  border-radius: 100px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-align: center;
+  padding: 1.2rem 0;
   z-index: 4;
   pointer-events: none;
   opacity: 0;
+  transform: translateY(15px);
   transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .masonry-item:hover .card-badge {
   opacity: 1;
-  transform: translateX(-50%) translateY(0);
-  background: rgba(10, 10, 10, 0.9); /* Remains dark glass on hover for readability */
-  border-color: rgba(255, 255, 255, 0.25);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+  transform: translateY(0);
 }
 
 .masonry-item:hover {
@@ -242,10 +243,11 @@
   }
 
   .card-badge {
-    bottom: 0.6rem;
-    left: 50%;
-    transform: translateX(-50%) translateY(10px);
-    font-size: 0.6rem;
-    padding: 0.25rem 0.65rem;
+    bottom: 0.4rem;
+    left: 0.4rem;
+    width: calc(100% - 0.8rem);
+    font-size: 0.65rem;
+    padding: 0.8rem 0;
+    transform: translateY(10px);
   }
 }
