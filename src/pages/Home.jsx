@@ -37,7 +37,20 @@ function GlassMonolith({ scrollYProgress }) {
     meshRef.current.rotation.x = THREE.MathUtils.lerp(meshRef.current.rotation.x, baseRotX - mouseY + scrollTiltX, 0.1);
 
     // Push the monolith closer to the camera on scroll until it engulfs the view
-    meshRef.current.position.z = THREE.MathUtils.lerp(meshRef.current.position.z, 2 + (offset * 6), 0.1);
+    // Camera is at Z=10, push it up to Z=12
+    const targetZ = 2 + (offset * 10);
+    meshRef.current.position.z = THREE.MathUtils.lerp(meshRef.current.position.z, targetZ, 0.1);
+
+    // Smoothly fade out the monolith as it approaches the camera lens (Z=7.5 to Z=9.8)
+    if (meshRef.current.material) {
+      const currentZ = meshRef.current.position.z;
+      let opacity = 1;
+      if (currentZ > 7.5) {
+        opacity = Math.max(0, 1 - (currentZ - 7.5) / 2.3);
+      }
+      meshRef.current.material.transparent = true;
+      meshRef.current.material.opacity = opacity;
+    }
   });
 
   return (
@@ -45,6 +58,7 @@ function GlassMonolith({ scrollYProgress }) {
       <mesh ref={meshRef} position={[0, 0, 2]}>
         <boxGeometry args={[glassWidth, glassHeight, glassDepth]} />
         <MeshTransmissionMaterial 
+          transparent={true}
           backside={true}
           samples={16}
           resolution={1024}
