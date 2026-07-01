@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { v2 as cloudinary } from 'cloudinary';
 import fs from 'fs';
 import path from 'path';
+import portfolioData from './src/data/portfolio.json' with { type: 'json' };
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -10,18 +11,14 @@ cloudinary.config({
 });
 
 const SOURCE_DIR = path.resolve('photos-to-upload');
-const DATA_PATH = path.resolve('src/data/portfolio.json');
 const VALID_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp']);
 
 // A folder inside photos-to-upload/ is treated as a category if its name
-// matches one of the categories already defined in portfolio.json (case-insensitive).
+// matches one of the categories defined in portfolio.json. Each upload is
+// tagged with its category in Cloudinary — the site reads that tag live via
+// /api/photos, so nothing needs to be written back to portfolio.json.
 async function run() {
-  const data = JSON.parse(fs.readFileSync(DATA_PATH, 'utf8'));
-  const categories = data.categories.filter((c) => c !== 'All');
-
-  const nextId = () =>
-    String(1 + data.photos.reduce((max, p) => Math.max(max, Number(p.id) || 0), 0));
-
+  const categories = portfolioData.categories.filter((c) => c !== 'All');
   let totalUploaded = 0;
 
   for (const category of categories) {
@@ -42,20 +39,13 @@ async function run() {
     const uploadedDir = path.join(categoryDir, 'uploaded');
     fs.mkdirSync(uploadedDir, { recursive: true });
 
-    let countInCategory = data.photos.filter((p) => p.category === category).length;
-
     for (const file of files) {
       const filePath = path.join(categoryDir, file);
       try {
-        const result = await cloudinary.uploader.upload(filePath, { folder: 'portfolio' });
-        const optimizedUrl = result.secure_url.replace('/upload/', '/upload/f_auto,q_auto,w_1200,c_limit,dpr_auto/');
-
-        countInCategory += 1;
-        data.photos.push({
-          id: nextId(),
-          src: optimizedUrl,
-          alt: `${category} photography by Prajjwal Pandey ${countInCategory}`,
-          category,
+        await cloudinary.uploader.upload(filePath, {
+          folder: 'portfolio',
+          tags: category,
+          context: `alt=${category} photo by Prajjwal Pandey`,
         });
 
         fs.renameSync(filePath, path.join(uploadedDir, file));
@@ -73,9 +63,8 @@ async function run() {
     return;
   }
 
-  fs.writeFileSync(DATA_PATH, JSON.stringify(data, null, 2) + '\n');
-  console.log(`\nUploaded ${totalUploaded} photo(s) and updated src/data/portfolio.json.`);
-  console.log('Uploaded source files were moved into each category\'s "uploaded" subfolder.');
+  console.log(`\nUploaded ${totalUploaded} photo(s). They'll appear on the site within a few minutes`);
+  console.log('(the /api/photos endpoint caches Cloudinary results for 5 minutes).');
 }
 
 run();

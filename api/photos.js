@@ -31,9 +31,9 @@ export default async function handler(req, res) {
       };
     });
 
-    // Cache at Vercel's edge for 5 minutes so every page load doesn't hit
-    // Cloudinary's Search API (which has a daily quota on the free tier).
-    res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=600');
+    // Short edge cache only — long enough to absorb bursts of page loads,
+    // short enough that a fresh upload shows up on the site almost immediately.
+    res.setHeader('Cache-Control', 's-maxage=10, stale-while-revalidate=30');
     res.status(200).json({ photos });
   } catch (error) {
     res.status(500).json({ error: error.message });
