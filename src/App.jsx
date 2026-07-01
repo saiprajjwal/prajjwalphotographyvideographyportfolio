@@ -27,6 +27,18 @@ function App() {
     window.scrollTo(0, 0);
   }, [location.pathname]);
 
+  // Block right-click ("Save image as", "Open image in new tab", "Copy image")
+  // on photos/videos specifically, without disabling right-click elsewhere on the site
+  useEffect(() => {
+    const handleContextMenu = (e) => {
+      if (e.target.tagName === 'IMG' || e.target.tagName === 'VIDEO') {
+        e.preventDefault();
+      }
+    };
+    document.addEventListener('contextmenu', handleContextMenu);
+    return () => document.removeEventListener('contextmenu', handleContextMenu);
+  }, []);
+
   const handleGlobalClick = (e) => {
     const newRipple = {
       id: Date.now() + Math.random(),

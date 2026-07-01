@@ -1,35 +1,65 @@
 {
-  "categories": ["All", "Portraits", "Editorial", "Behind the Scenes"],
+  "categories": ["All", "Portraits", "Pets", "Travel", "Products", "Behind The Scene"],
   "photos": [
     {
-      "id": "1",
-      "src": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=1000",
-      "alt": "Portrait photo 1",
+      "id": "6",
+      "src": "https://res.cloudinary.com/xetzasmy/image/upload/f_auto,q_auto,w_1200,c_limit,dpr_auto/v1782917762/portfolio/w48w8gzll9azctfnykn6.jpg",
+      "alt": "Portrait photography by Prajjwal Pandey 1",
       "category": "Portraits"
     },
     {
-      "id": "2",
-      "src": "https://images.unsplash.com/photo-1492633423870-43d1cd2775eb?auto=format&fit=crop&q=80&w=1000",
-      "alt": "Editorial shoot",
-      "category": "Editorial"
-    },
-    {
-      "id": "3",
-      "src": "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&q=80&w=1000",
-      "alt": "Behind the scenes camera setup",
-      "category": "Behind the Scenes"
-    },
-    {
-      "id": "4",
-      "src": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&q=80&w=1000",
-      "alt": "Portrait photo 2",
+      "id": "7",
+      "src": "https://res.cloudinary.com/xetzasmy/image/upload/f_auto,q_auto,w_1200,c_limit,dpr_auto/v1782917763/portfolio/irsylfy1w3thgsj3yatd.jpg",
+      "alt": "Portrait photography by Prajjwal Pandey 2",
       "category": "Portraits"
     },
     {
-      "id": "5",
-      "src": "https://images.unsplash.com/photo-1605369572399-05d8d64a0f6e?auto=format&fit=crop&q=80&w=1000",
-      "alt": "Editorial fashion",
-      "category": "Editorial"
+      "id": "8",
+      "src": "https://res.cloudinary.com/xetzasmy/image/upload/f_auto,q_auto,w_1200,c_limit,dpr_auto/v1782917764/portfolio/m8fk1xlatojacsvjn7vc.jpg",
+      "alt": "Portrait photography by Prajjwal Pandey 3",
+      "category": "Portraits"
+    },
+    {
+      "id": "9",
+      "src": "https://res.cloudinary.com/xetzasmy/image/upload/f_auto,q_auto,w_1200,c_limit,dpr_auto/v1782917765/portfolio/aiikwadrzh3kzvtk3pkm.jpg",
+      "alt": "Portrait photography by Prajjwal Pandey 4",
+      "category": "Portraits"
+    },
+    {
+      "id": "10",
+      "src": "https://res.cloudinary.com/xetzasmy/image/upload/f_auto,q_auto,w_1200,c_limit,dpr_auto/v1782917766/portfolio/hiqfzrni0guejnd8zfqk.jpg",
+      "alt": "Portrait photography by Prajjwal Pandey 5",
+      "category": "Portraits"
+    },
+    {
+      "id": "11",
+      "src": "https://res.cloudinary.com/xetzasmy/image/upload/f_auto,q_auto,w_1200,c_limit,dpr_auto/v1782917767/portfolio/bb7nhn6vvenc2r668uxc.jpg",
+      "alt": "Portrait photography by Prajjwal Pandey 6",
+      "category": "Portraits"
+    },
+    {
+      "id": "12",
+      "src": "https://res.cloudinary.com/xetzasmy/image/upload/f_auto,q_auto,w_1200,c_limit,dpr_auto/v1782917768/portfolio/srgumfzrbsdejewhqpeo.jpg",
+      "alt": "Portrait photography by Prajjwal Pandey 7",
+      "category": "Portraits"
+    },
+    {
+      "id": "13",
+      "src": "https://res.cloudinary.com/xetzasmy/image/upload/f_auto,q_auto,w_1200,c_limit,dpr_auto/v1782917769/portfolio/dqek0amvmjki9kobnlv1.jpg",
+      "alt": "Portrait photography by Prajjwal Pandey 8",
+      "category": "Portraits"
+    },
+    {
+      "id": "14",
+      "src": "https://res.cloudinary.com/xetzasmy/image/upload/f_auto,q_auto,w_1200,c_limit,dpr_auto/v1782917770/portfolio/cpgsuxroqj1wfzbzghix.jpg",
+      "alt": "Portrait photography by Prajjwal Pandey 9",
+      "category": "Portraits"
+    },
+    {
+      "id": "15",
+      "src": "https://res.cloudinary.com/xetzasmy/image/upload/f_auto,q_auto,w_1200,c_limit,dpr_auto/v1782917771/portfolio/ow2xuolz5ohqxlk6phdx.jpg",
+      "alt": "Portrait photography by Prajjwal Pandey 10",
+      "category": "Portraits"
     }
   ],
   "videos": [

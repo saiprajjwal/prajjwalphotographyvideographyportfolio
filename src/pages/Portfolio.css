@@ -84,9 +84,17 @@
   padding: 2rem 0;
 }
 
+/* Tablet / narrow-desktop range: minmax(300px,1fr) can't quite fit 2 columns
+   here, collapsing to 1. Force 2 so no viewport width ever shows a single column. */
+@media (min-width: 601px) and (max-width: 899px) {
+  .masonry-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 .masonry-item {
   position: relative;
-  cursor: pointer;
+  cursor: default;
   border-radius: 16px;
   overflow: hidden;
   background: rgba(255, 255, 255, 0.03); /* Frosted Glass Look */
@@ -116,8 +124,7 @@
   object-fit: cover; /* Ensure image fills the fixed aspect ratio */
   display: block;
   border-radius: 10px; /* Inner curve to match the glass frame */
-  transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1), filter 0.5s ease;
-  filter: brightness(0.9);
+  transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .image-overlay {
@@ -156,7 +163,6 @@
 
 .masonry-item:hover .portfolio-image {
   transform: scale(1.03);
-  filter: brightness(1.1);
 }
 
 .masonry-item:hover .image-overlay {
@@ -170,5 +176,25 @@
   }
   .page-header h1 {
     font-size: 2.5rem;
+  }
+
+  .masonry-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.8rem;
+  }
+
+  .masonry-item {
+    padding: 0.4rem;
+  }
+
+  .image-overlay {
+    bottom: 0.4rem;
+    left: 0.4rem;
+    width: calc(100% - 0.8rem);
+    padding: 1.2rem 0.8rem 0.8rem;
+  }
+
+  .image-category {
+    font-size: 0.7rem;
   }
 }

@@ -44,6 +44,9 @@ a {
 img, video {
   max-width: 100%;
   display: block;
+  -webkit-user-drag: none;
+  user-select: none;
+  -webkit-touch-callout: none; /* blocks the iOS long-press save/copy menu */
 }
 
 /* Typography */

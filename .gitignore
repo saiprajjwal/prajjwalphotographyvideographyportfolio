@@ -28,3 +28,11 @@ dist-ssr
 .env.local
 .env.*.local
 
+# Raw source photos staged for Cloudinary upload — keep the category folder
+# structure (and its .gitkeep placeholders), not the actual photo files
+photos-to-upload/*
+!photos-to-upload/.gitkeep
+!photos-to-upload/*/
+photos-to-upload/*/*
+!photos-to-upload/*/.gitkeep
+

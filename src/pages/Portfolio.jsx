@@ -1,6 +1,5 @@
 import { lazy, Suspense, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import Lightbox from '../components/Lightbox';
 import portfolioData from '../data/portfolio.json';
 import './Portfolio.css';
 
@@ -9,7 +8,6 @@ const PortfolioScene = lazy(() => import('./PortfolioScene'));
 
 export default function Portfolio() {
   const [filter, setFilter] = useState('All');
-  const [lightboxIndex, setLightboxIndex] = useState(null);
   const [canvasReady, setCanvasReady] = useState(false);
 
   const categories = portfolioData.categories;
@@ -17,11 +15,6 @@ export default function Portfolio() {
   const filteredPhotos = filter === 'All'
     ? portfolioData.photos
     : portfolioData.photos.filter(photo => photo.category === filter);
-
-  const openLightbox = (index) => setLightboxIndex(index);
-  const closeLightbox = () => setLightboxIndex(null);
-  const nextPhoto = () => setLightboxIndex((prev) => (prev + 1) % filteredPhotos.length);
-  const prevPhoto = () => setLightboxIndex((prev) => (prev - 1 + filteredPhotos.length) % filteredPhotos.length);
 
   const handleMouseMove = (e) => {
     const card = e.currentTarget;
@@ -101,7 +94,7 @@ export default function Portfolio() {
 
           <motion.div layout className="masonry-grid">
             <AnimatePresence mode="popLayout">
-              {filteredPhotos.map((photo, index) => (
+              {filteredPhotos.map((photo) => (
                 <motion.div
                   layout
                   initial={{ opacity: 0, y: 20 }}
@@ -114,12 +107,8 @@ export default function Portfolio() {
                   }}
                   key={photo.id}
                   className="masonry-item"
-                  onClick={() => openLightbox(index)}
                   onMouseMove={handleMouseMove}
                   onMouseLeave={handleMouseLeave}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openLightbox(index); } }}
                 >
                   <img
                     src={photo.src}
@@ -135,14 +124,6 @@ export default function Portfolio() {
             </AnimatePresence>
           </motion.div>
         </div>
-
-        <Lightbox
-          photos={filteredPhotos}
-          currentIndex={lightboxIndex}
-          onClose={closeLightbox}
-          onNext={nextPhoto}
-          onPrev={prevPhoto}
-        />
       </main>
     </motion.div>
   );
