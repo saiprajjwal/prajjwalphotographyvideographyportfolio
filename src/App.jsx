@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import Navigation from './components/Navigation';
@@ -11,9 +12,25 @@ import './App.css';
 
 function App() {
   const location = useLocation();
+  const [ripples, setRipples] = useState([]);
+
+  const handleGlobalClick = (e) => {
+    const newRipple = {
+      id: Date.now() + Math.random(),
+      x: e.clientX,
+      y: e.clientY
+    };
+    
+    setRipples((prev) => [...prev, newRipple]);
+
+    // Clean up once the 0.65s animation completes
+    setTimeout(() => {
+      setRipples((prev) => prev.filter((r) => r.id !== newRipple.id));
+    }, 650);
+  };
 
   return (
-    <>
+    <div onClick={handleGlobalClick} style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <Navigation />
       <AnimatePresence mode="wait">
         <Routes location={location} key={location.pathname}>
@@ -25,7 +42,16 @@ function App() {
         </Routes>
       </AnimatePresence>
       <Footer />
-    </>
+
+      {/* Dynamic expanding glass ripples */}
+      {ripples.map((ripple) => (
+        <span 
+          key={ripple.id}
+          className="click-ripple"
+          style={{ left: ripple.x, top: ripple.y }}
+        />
+      ))}
+    </div>
   );
 }
 

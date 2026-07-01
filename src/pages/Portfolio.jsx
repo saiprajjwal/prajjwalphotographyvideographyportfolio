@@ -73,6 +73,32 @@ export default function Portfolio() {
   const nextPhoto = () => setLightboxIndex((prev) => (prev + 1) % filteredPhotos.length);
   const prevPhoto = () => setLightboxIndex((prev) => (prev - 1 + filteredPhotos.length) % filteredPhotos.length);
 
+  const handleMouseMove = (e) => {
+    const card = e.currentTarget;
+    const rect = card.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    const pctX = (x / rect.width) - 0.5;
+    const pctY = (y / rect.height) - 0.5;
+
+    // Pan the image inside its crop window to follow mouse movement
+    const moveX = pctX * 16; // up to 8px horizontal translation
+    const moveY = pctY * 16; // up to 8px vertical translation
+
+    const img = card.querySelector('.portfolio-image');
+    if (img) {
+      img.style.transform = `scale(1.08) translate(${moveX}px, ${moveY}px)`;
+    }
+  };
+
+  const handleMouseLeave = (e) => {
+    const img = e.currentTarget.querySelector('.portfolio-image');
+    if (img) {
+      img.style.transform = ''; // Return smoothly via CSS transition
+    }
+  };
+
   return (
     <motion.div 
       className="portfolio-wrapper-full"
@@ -153,6 +179,8 @@ export default function Portfolio() {
                   key={photo.id} 
                   className="masonry-item"
                   onClick={() => openLightbox(index)}
+                  onMouseMove={handleMouseMove}
+                  onMouseLeave={handleMouseLeave}
                 >
                   <img 
                     src={photo.src} 

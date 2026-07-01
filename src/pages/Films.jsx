@@ -4,6 +4,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Environment, MeshTransmissionMaterial, Sparkles, Float } from '@react-three/drei';
 import * as THREE from 'three';
 import VideoCard from '../components/VideoCard';
+import VideoLightbox from '../components/VideoLightbox';
 import portfolioData from '../data/portfolio.json';
 import './Films.css';
 
@@ -45,6 +46,7 @@ function AmbientGlass() {
 
 export default function Films() {
   const [canvasReady, setCanvasReady] = useState(false);
+  const [activeVideo, setActiveVideo] = useState(null);
   const videos = portfolioData.videos;
 
   return (
@@ -96,12 +98,20 @@ export default function Films() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 + (index * 0.1), duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
               >
-                <VideoCard video={video} />
+                <VideoCard video={video} onPlay={() => setActiveVideo(video)} />
               </motion.div>
             ))}
           </div>
         </div>
       </main>
+
+      {/* Cinematic Fullscreen Lightbox Modal */}
+      {activeVideo && (
+        <VideoLightbox 
+          video={activeVideo} 
+          onClose={() => setActiveVideo(null)} 
+        />
+      )}
     </motion.div>
   );
 }
