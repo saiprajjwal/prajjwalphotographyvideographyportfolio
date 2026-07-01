@@ -31,9 +31,10 @@ export default async function handler(req, res) {
       };
     });
 
-    // Short edge cache only — long enough to absorb bursts of page loads,
-    // short enough that a fresh upload shows up on the site almost immediately.
-    res.setHeader('Cache-Control', 's-maxage=10, stale-while-revalidate=30');
+    // No caching: for a personal portfolio's traffic level, Cloudinary's
+    // Search API quota isn't a real concern, but a stale photo list after
+    // uploading directly undermines the point of a live admin panel.
+    res.setHeader('Cache-Control', 'no-store');
     res.status(200).json({ photos });
   } catch (error) {
     res.status(500).json({ error: error.message });
