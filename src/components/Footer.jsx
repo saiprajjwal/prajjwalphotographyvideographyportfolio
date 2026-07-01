@@ -1,5 +1,6 @@
 import React from 'react';
 import { InstagramIcon, YoutubeIcon, TiktokIcon, PinterestIcon } from './Icons';
+import Magnetic from './Magnetic';
 import './Footer.css';
 
 export default function Footer() {
@@ -35,16 +36,17 @@ export default function Footer() {
           </p>
           <div className="social-icons-glass">
             {socialLinks.map((link) => (
-              <a 
-                key={link.name} 
-                href={link.url} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="social-glass-btn"
-                aria-label={link.name}
-              >
-                {link.icon}
-              </a>
+              <Magnetic key={link.name} tolerance={30}>
+                <a 
+                  href={link.url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="social-glass-btn"
+                  aria-label={link.name}
+                >
+                  {link.icon}
+                </a>
+              </Magnetic>
             ))}
           </div>
         </div>
