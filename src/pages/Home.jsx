@@ -71,8 +71,8 @@ function GlassMonolith({ scrollYProgress }) {
         <MeshTransmissionMaterial
           transparent={true}
           backside={true}
-          samples={isMobile ? 4 : 16}
-          resolution={isMobile ? 256 : 1024}
+          samples={isMobile ? 4 : 8}
+          resolution={isMobile ? 256 : 512}
           transmission={1}
           roughness={0.0}
           thickness={1.5}
