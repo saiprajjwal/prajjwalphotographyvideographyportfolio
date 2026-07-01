@@ -1,67 +1,5 @@
 {
   "categories": ["All", "Portraits", "Pets", "Travel", "Products", "Behind The Scene"],
-  "photos": [
-    {
-      "id": "6",
-      "src": "https://res.cloudinary.com/xetzasmy/image/upload/f_auto,q_auto,w_1200,c_limit,dpr_auto/v1782917762/portfolio/w48w8gzll9azctfnykn6.jpg",
-      "alt": "Portrait photography by Prajjwal Pandey 1",
-      "category": "Portraits"
-    },
-    {
-      "id": "7",
-      "src": "https://res.cloudinary.com/xetzasmy/image/upload/f_auto,q_auto,w_1200,c_limit,dpr_auto/v1782917763/portfolio/irsylfy1w3thgsj3yatd.jpg",
-      "alt": "Portrait photography by Prajjwal Pandey 2",
-      "category": "Portraits"
-    },
-    {
-      "id": "8",
-      "src": "https://res.cloudinary.com/xetzasmy/image/upload/f_auto,q_auto,w_1200,c_limit,dpr_auto/v1782917764/portfolio/m8fk1xlatojacsvjn7vc.jpg",
-      "alt": "Portrait photography by Prajjwal Pandey 3",
-      "category": "Portraits"
-    },
-    {
-      "id": "9",
-      "src": "https://res.cloudinary.com/xetzasmy/image/upload/f_auto,q_auto,w_1200,c_limit,dpr_auto/v1782917765/portfolio/aiikwadrzh3kzvtk3pkm.jpg",
-      "alt": "Portrait photography by Prajjwal Pandey 4",
-      "category": "Portraits"
-    },
-    {
-      "id": "10",
-      "src": "https://res.cloudinary.com/xetzasmy/image/upload/f_auto,q_auto,w_1200,c_limit,dpr_auto/v1782917766/portfolio/hiqfzrni0guejnd8zfqk.jpg",
-      "alt": "Portrait photography by Prajjwal Pandey 5",
-      "category": "Portraits"
-    },
-    {
-      "id": "11",
-      "src": "https://res.cloudinary.com/xetzasmy/image/upload/f_auto,q_auto,w_1200,c_limit,dpr_auto/v1782917767/portfolio/bb7nhn6vvenc2r668uxc.jpg",
-      "alt": "Portrait photography by Prajjwal Pandey 6",
-      "category": "Portraits"
-    },
-    {
-      "id": "12",
-      "src": "https://res.cloudinary.com/xetzasmy/image/upload/f_auto,q_auto,w_1200,c_limit,dpr_auto/v1782917768/portfolio/srgumfzrbsdejewhqpeo.jpg",
-      "alt": "Portrait photography by Prajjwal Pandey 7",
-      "category": "Portraits"
-    },
-    {
-      "id": "13",
-      "src": "https://res.cloudinary.com/xetzasmy/image/upload/f_auto,q_auto,w_1200,c_limit,dpr_auto/v1782917769/portfolio/dqek0amvmjki9kobnlv1.jpg",
-      "alt": "Portrait photography by Prajjwal Pandey 8",
-      "category": "Portraits"
-    },
-    {
-      "id": "14",
-      "src": "https://res.cloudinary.com/xetzasmy/image/upload/f_auto,q_auto,w_1200,c_limit,dpr_auto/v1782917770/portfolio/cpgsuxroqj1wfzbzghix.jpg",
-      "alt": "Portrait photography by Prajjwal Pandey 9",
-      "category": "Portraits"
-    },
-    {
-      "id": "15",
-      "src": "https://res.cloudinary.com/xetzasmy/image/upload/f_auto,q_auto,w_1200,c_limit,dpr_auto/v1782917771/portfolio/ow2xuolz5ohqxlk6phdx.jpg",
-      "alt": "Portrait photography by Prajjwal Pandey 10",
-      "category": "Portraits"
-    }
-  ],
   "videos": [
     {
       "id": "pRxSNAsuj9U",
@@ -82,6 +20,7 @@
   ],
   "about": {
     "name": "Prajjwal Pandey",
+    "headshot": "https://res.cloudinary.com/xetzasmy/image/upload/f_auto,q_auto,w_1200,c_limit,dpr_auto/v1782917762/portfolio/w48w8gzll9azctfnykn6.jpg",
     "tagline": "Capturing moments, telling stories.",
     "bio": "I'm a photographer and filmmaker specializing in cinematic storytelling. With a keen eye for detail and a passion for visual arts, I bring ideas to life through the lens.",
     "gear": ["Sony A7S III", "Canon C70", "Sigma Art 24-70mm", "DJI Ronin S2", "Aputure Lighting"],

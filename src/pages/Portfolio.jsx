@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import portfolioData from '../data/portfolio.json';
 import './Portfolio.css';
@@ -9,12 +9,22 @@ const PortfolioScene = lazy(() => import('./PortfolioScene'));
 export default function Portfolio() {
   const [filter, setFilter] = useState('All');
   const [canvasReady, setCanvasReady] = useState(false);
+  const [photos, setPhotos] = useState([]);
+  const [photosLoaded, setPhotosLoaded] = useState(false);
 
   const categories = portfolioData.categories;
 
+  useEffect(() => {
+    fetch('/api/photos')
+      .then((res) => res.json())
+      .then((data) => setPhotos(data.photos || []))
+      .catch(() => setPhotos([]))
+      .finally(() => setPhotosLoaded(true));
+  }, []);
+
   const filteredPhotos = filter === 'All'
-    ? portfolioData.photos
-    : portfolioData.photos.filter(photo => photo.category === filter);
+    ? photos
+    : photos.filter(photo => photo.category === filter);
 
   const handleMouseMove = (e) => {
     const card = e.currentTarget;
@@ -91,6 +101,12 @@ export default function Portfolio() {
               ))}
             </motion.div>
           </header>
+
+          {photosLoaded && filteredPhotos.length === 0 && (
+            <p className="portfolio-empty-message">
+              {photos.length === 0 ? 'No photos yet — check back soon.' : `No photos in "${filter}" yet.`}
+            </p>
+          )}
 
           <motion.div layout className="masonry-grid">
             <AnimatePresence mode="popLayout">

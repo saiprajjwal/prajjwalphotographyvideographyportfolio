@@ -1,0 +1,125 @@
+.admin-wrapper {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8rem 1.5rem 4rem;
+}
+
+.admin-login-form {
+  width: 100%;
+  max-width: 360px;
+  padding: 2.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+  text-align: center;
+}
+
+.admin-login-form h1 {
+  font-size: 1.6rem;
+}
+
+.admin-panel {
+  width: 100%;
+  max-width: 480px;
+  padding: 2.5rem;
+}
+
+.admin-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+}
+
+.admin-header h1 {
+  font-size: 1.6rem;
+}
+
+.admin-logout-btn {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--text-secondary);
+  padding: 0.5rem 1rem;
+  border-radius: 100px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all var(--transition-speed) ease;
+}
+
+.admin-logout-btn:hover {
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.admin-upload-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+.admin-upload-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  letter-spacing: 0.03em;
+}
+
+.admin-login-form input,
+.admin-upload-form input,
+.admin-upload-form select {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 0.8rem 1rem;
+  color: #ffffff;
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+}
+
+.admin-login-form input:focus,
+.admin-upload-form input:focus,
+.admin-upload-form select:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+.admin-login-form button,
+.admin-upload-form button {
+  border: none;
+  width: 100%;
+  text-align: center;
+}
+
+.admin-upload-form button:disabled,
+.admin-login-form button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.admin-error {
+  color: #ff8080;
+  font-size: 0.85rem;
+}
+
+.admin-results {
+  list-style: none;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.admin-results li.success {
+  color: #8fd694;
+}
+
+.admin-results li.error {
+  color: #ff8080;
+}

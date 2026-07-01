@@ -7,6 +7,7 @@ import Portfolio from './pages/Portfolio';
 import Films from './pages/Films';
 import About from './pages/About';
 import Contact from './pages/Contact';
+import Admin from './pages/Admin';
 import Footer from './components/Footer';
 import './App.css';
 
@@ -64,6 +65,7 @@ function App() {
           <Route path="/films" element={<Films />} />
           <Route path="/about" element={<About />} />
           <Route path="/contact" element={<Contact />} />
+          <Route path="/admin" element={<Admin />} />
         </Routes>
       </AnimatePresence>
       <Footer />

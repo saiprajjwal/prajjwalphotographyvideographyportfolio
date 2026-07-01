@@ -5,8 +5,7 @@ import portfolioData from '../data/portfolio.json';
 import './About.css';
 
 export default function About() {
-  const { name, bio, gear } = portfolioData.about;
-  const headshot = portfolioData.photos.find(p => p.category === 'Portraits')?.src || portfolioData.photos[0]?.src;
+  const { name, headshot, bio, gear } = portfolioData.about;
 
   return (
     <motion.div 
