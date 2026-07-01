@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import AmbientGlassBackground from '../components/AmbientGlassBackground';
 import portfolioData from '../data/portfolio.json';
 import './About.css';
@@ -64,6 +65,17 @@ export default function About() {
                     </motion.li>
                   ))}
                 </ul>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.7 }}
+                style={{ marginTop: '2.5rem' }}
+              >
+                <Link to="/portfolio" className="btn-glass">
+                  See My Work
+                </Link>
               </motion.div>
             </div>
           </div>

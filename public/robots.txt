@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://prajjwalpandey.com/sitemap.xml
+Sitemap: https://www.prajjwalarchive.com/sitemap.xml

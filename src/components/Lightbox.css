@@ -16,16 +16,25 @@
   position: absolute;
   top: 2rem;
   right: 2rem;
-  background: none;
-  border: none;
-  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  padding: 0.8rem;
+  border-radius: 50%;
   cursor: pointer;
-  z-index: 1001;
-  transition: color 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-speed) ease;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  z-index: 1010;
 }
 
 .lightbox-close:hover {
-  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: scale(1.05);
 }
 
 .lightbox-nav {
@@ -84,10 +93,10 @@
   }
   
   .lightbox-nav.prev {
-    left: -1rem;
+    left: 0;
   }
 
   .lightbox-nav.next {
-    right: -1rem;
+    right: 0;
   }
 }

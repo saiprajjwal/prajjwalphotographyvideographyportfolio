@@ -4,13 +4,20 @@ import { X } from 'lucide-react';
 import './VideoLightbox.css';
 
 export default function VideoLightbox({ video, onClose }) {
-  // Prevent body scroll when lightbox is open
+  // Prevent body scroll when lightbox is open, and support closing via Escape
   useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+
     document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', handleKeyDown);
+
     return () => {
       document.body.style.overflow = '';
+      window.removeEventListener('keydown', handleKeyDown);
     };
-  }, []);
+  }, [onClose]);
 
   if (!video) return null;
 

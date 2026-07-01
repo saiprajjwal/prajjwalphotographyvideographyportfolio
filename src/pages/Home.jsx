@@ -10,29 +10,29 @@ import './Home.css';
 function GlassMonolith({ scrollYProgress }) {
   const meshRef = useRef();
   const { viewport } = useThree();
-  
+
   // If the viewport is narrow (mobile phone), scale the glass down
   const isMobile = viewport.width < 6;
   const glassWidth = isMobile ? 2.8 : 4.5;
   const glassHeight = isMobile ? 4.5 : 6.5;
   const glassDepth = isMobile ? 0.5 : 0.8;
-  
+
   useFrame((state) => {
     const t = state.clock.elapsedTime;
     const offset = scrollYProgress.get(); // 0 to 1
-    
+
     // Smooth continuous majestic rotation
-    const baseRotY = t * 0.15; 
+    const baseRotY = t * 0.15;
     const baseRotX = Math.sin(t * 0.5) * 0.1;
 
     // Highly responsive mouse parallax
     const mouseX = (state.mouse.x * Math.PI) / 4;
     const mouseY = (state.mouse.y * Math.PI) / 4;
-    
+
     // SCROLL INTERACTION: Dramatic spin and tilt
     const scrollSpinY = offset * Math.PI * 2; // Full 360 spin on scroll
     const scrollTiltX = offset * Math.PI * 0.5; // Tilt heavily
-    
+
     meshRef.current.rotation.y = THREE.MathUtils.lerp(meshRef.current.rotation.y, baseRotY + mouseX + scrollSpinY, 0.1);
     meshRef.current.rotation.x = THREE.MathUtils.lerp(meshRef.current.rotation.x, baseRotX - mouseY + scrollTiltX, 0.1);
 
@@ -41,13 +41,10 @@ function GlassMonolith({ scrollYProgress }) {
     const targetZ = 2 + (offset * 10);
     meshRef.current.position.z = THREE.MathUtils.lerp(meshRef.current.position.z, targetZ, 0.1);
 
-    // Smoothly fade out the monolith as it approaches the camera lens (Z=7.5 to Z=9.8)
+    // Fade out the monolith directly from scroll progress (not the lerped/lagging
+    // z-position) so the reveal tracks the scrollbar 1:1 regardless of scroll speed.
     if (meshRef.current.material) {
-      const currentZ = meshRef.current.position.z;
-      let opacity = 1;
-      if (currentZ > 7.5) {
-        opacity = Math.max(0, 1 - (currentZ - 7.5) / 2.3);
-      }
+      const opacity = 1 - THREE.MathUtils.clamp((offset - 0.55) / (0.78 - 0.55), 0, 1);
       meshRef.current.material.transparent = true;
       meshRef.current.material.opacity = opacity;
     }
@@ -57,7 +54,7 @@ function GlassMonolith({ scrollYProgress }) {
     <Float speed={1.5} rotationIntensity={0} floatIntensity={0.5}>
       <mesh ref={meshRef} position={[0, 0, 2]}>
         <boxGeometry args={[glassWidth, glassHeight, glassDepth]} />
-        <MeshTransmissionMaterial 
+        <MeshTransmissionMaterial
           transparent={true}
           backside={true}
           samples={isMobile ? 4 : 16}
@@ -88,7 +85,7 @@ function BackgroundGallery({ scrollYProgress }) {
     // Parallax effect on mouse move
     const targetX = -(state.mouse.x * 2);
     const targetY = -(state.mouse.y * 2);
-    
+
     groupRef.current.position.x = THREE.MathUtils.lerp(groupRef.current.position.x, targetX, 0.05);
     groupRef.current.position.y = THREE.MathUtils.lerp(groupRef.current.position.y, targetY, 0.05);
 
@@ -103,21 +100,21 @@ function BackgroundGallery({ scrollYProgress }) {
   return (
     <group ref={groupRef} position={[0, 0, -6]}>
       {/* Massive Background Copy to fill wide screens with color instead of black */}
-      <Image 
-        url="/Home/heroimage.png" 
-        transparent 
-        scale={[40, 50]} 
-        position={[0, 0, -5]} 
+      <Image
+        url="/Home/heroimage.png"
+        transparent
+        scale={[40, 50]}
+        position={[0, 0, -5]}
         opacity={0.3}
         toneMapped={false}
       />
-      
+
       {/* Single Center Hero Image properly scaled to its portrait aspect ratio */}
-      <Image 
-        url="/Home/heroimage.png" 
-        transparent 
-        scale={[10.6, 13.25]} 
-        position={[0, 0, 0]} 
+      <Image
+        url="/Home/heroimage.png"
+        transparent
+        scale={[10.6, 13.25]}
+        position={[0, 0, 0]}
         toneMapped={false}
       />
     </group>
@@ -138,14 +135,14 @@ export default function Home() {
   const enterOpacity = useTransform(scrollYProgress, [0.7, 1], [0, 1]);
 
   return (
-    <motion.div 
+    <motion.div
       className="home-wrapper-full"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0, transition: { duration: 0.5 } }}
     >
       {/* Immediate fallback background image so the user never sees a black screen while Canvas compiles */}
-      <div 
+      <div
         className="home-fallback-bg"
         style={{
           position: 'fixed',
@@ -164,7 +161,7 @@ export default function Home() {
       />
 
       {/* 3D canvas — fades in once GPU shader compiles */}
-      <div 
+      <div
         className="monolith-canvas-fixed"
         style={{
           opacity: canvasReady ? 1 : 0,
@@ -193,7 +190,7 @@ export default function Home() {
 
       {/* 300vh Scroll Container to create the scrollbar without actual HTML content below */}
       <div className="home-scroll-content" style={{ height: '300vh' }}>
-        
+
         {/* Initial Hero Text - Fades out on scroll */}
         <motion.div className="monolith-content-overlay" style={{ opacity: heroTextOpacity, y: heroTextY }}>
           <div className="monolith-text-container">
