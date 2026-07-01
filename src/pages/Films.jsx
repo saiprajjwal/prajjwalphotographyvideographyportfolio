@@ -34,7 +34,11 @@ function AmbientGlass() {
       <mesh ref={meshRef} position={[0, 0, -2]}>
         <boxGeometry args={[glassWidth, glassHeight, 0.5]} />
         <MeshTransmissionMaterial 
-          backside={true} samples={16} resolution={1024} transmission={1} roughness={0.1}
+          backside={true} 
+          samples={isMobile ? 4 : 16} 
+          resolution={isMobile ? 256 : 1024} 
+          transmission={1} 
+          roughness={0.1}
           thickness={1.5} ior={1.3} chromaticAberration={0.05} anisotropy={0.2}
           distortion={0.2} distortionScale={0.5} temporalDistortion={0.05}
           clearcoat={1} attenuationDistance={2} attenuationColor="#ffffff"
