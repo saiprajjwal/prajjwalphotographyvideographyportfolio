@@ -1,15 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import Navigation from './components/Navigation';
-import Home from './pages/Home';
-import Portfolio from './pages/Portfolio';
-import Films from './pages/Films';
-import About from './pages/About';
-import Contact from './pages/Contact';
-import Admin from './pages/Admin';
 import Footer from './components/Footer';
 import './App.css';
+
+// Lazy load route pages to enable code splitting
+const Home = lazy(() => import('./pages/Home'));
+const Portfolio = lazy(() => import('./pages/Portfolio'));
+const Films = lazy(() => import('./pages/Films'));
+const About = lazy(() => import('./pages/About'));
+const Contact = lazy(() => import('./pages/Contact'));
+const Admin = lazy(() => import('./pages/Admin'));
 
 function App() {
   const location = useLocation();
@@ -59,14 +61,31 @@ function App() {
     <div onClick={handleGlobalClick} style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <Navigation />
       <AnimatePresence mode="wait" initial={false}>
-        <Routes location={location} key={location.pathname}>
-          <Route path="/" element={<Home />} />
-          <Route path="/portfolio" element={<Portfolio />} />
-          <Route path="/films" element={<Films />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/contact" element={<Contact />} />
-          <Route path="/admin" element={<Admin />} />
-        </Routes>
+        <Suspense fallback={
+          <div style={{
+            minHeight: '100vh',
+            background: '#030303',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'rgba(255, 255, 255, 0.4)',
+            fontFamily: 'var(--font-sans)',
+            letterSpacing: '0.15em',
+            fontSize: '0.9rem',
+            textTransform: 'uppercase'
+          }}>
+            Loading...
+          </div>
+        }>
+          <Routes location={location} key={location.pathname}>
+            <Route path="/" element={<Home />} />
+            <Route path="/portfolio" element={<Portfolio />} />
+            <Route path="/films" element={<Films />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/admin" element={<Admin />} />
+          </Routes>
+        </Suspense>
       </AnimatePresence>
       <Footer />
 

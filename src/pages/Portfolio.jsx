@@ -108,11 +108,11 @@ export default function Portfolio() {
             </p>
           )}
 
-          <motion.div layout className="masonry-grid">
+          <div className="masonry-grid">
             <AnimatePresence mode="popLayout">
               {filteredPhotos.map((photo) => (
                 <motion.div
-                  layout
+                  layout="position"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95 }}
@@ -138,7 +138,7 @@ export default function Portfolio() {
                 </motion.div>
               ))}
             </AnimatePresence>
-          </motion.div>
+          </div>
         </div>
       </main>
     </motion.div>
