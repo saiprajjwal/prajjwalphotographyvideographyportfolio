@@ -180,10 +180,7 @@
   bottom: 0.8rem; /* Align inside card padding */
   left: 0.8rem;
   width: calc(100% - 1.6rem); /* Full inner width */
-  background: linear-gradient(to top, rgba(10, 10, 10, 0.75) 0%, rgba(10, 10, 10, 0.35) 70%, rgba(10, 10, 10, 0.0) 100%);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-top: 1px solid rgba(255, 255, 255, 0.08); /* Only a top edge highlight to look like floating glass */
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.3) 50%, transparent 100%);
   border-bottom-left-radius: 10px; /* Curve matching image corners */
   border-bottom-right-radius: 10px;
   color: rgba(255, 255, 255, 0.95);
@@ -193,12 +190,11 @@
   letter-spacing: 0.12em;
   text-transform: uppercase;
   text-align: center;
-  padding: 1.5rem 0 1rem; /* Pad top to space text under the top edge */
+  padding: 2.2rem 0 1rem; /* Pad top to space text under transparent fade */
   z-index: 4;
   pointer-events: none;
   opacity: 0;
   transform: translateY(15px);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
   transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
