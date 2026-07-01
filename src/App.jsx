@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import Navigation from './components/Navigation';
@@ -13,6 +13,19 @@ import './App.css';
 function App() {
   const location = useLocation();
   const [ripples, setRipples] = useState([]);
+
+  // Reset scroll on refresh/load and disable browser auto-scroll memory
+  useEffect(() => {
+    if ('scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual';
+    }
+    window.scrollTo(0, 0);
+  }, []);
+
+  // Reset scroll to top when page location changes
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
 
   const handleGlobalClick = (e) => {
     const newRipple = {
