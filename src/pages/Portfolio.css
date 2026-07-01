@@ -183,7 +183,7 @@
   border: 1px solid rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  color: rgba(255, 255, 255, 0.6);
+  color: #ffffff;
   font-family: var(--font-sans);
   font-size: 0.72rem;
   font-weight: 500;
@@ -192,11 +192,14 @@
   border-radius: 100px;
   z-index: 4;
   pointer-events: none;
+  opacity: 0;
+  transform: translateY(-5px);
   transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .masonry-item:hover .card-badge {
-  color: #ffffff;
+  opacity: 1;
+  transform: translateY(0);
   background: rgba(255, 255, 255, 0.15);
   border-color: rgba(255, 255, 255, 0.25);
   box-shadow: 0 4px 15px rgba(255, 255, 255, 0.08);
