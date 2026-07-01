@@ -180,11 +180,11 @@
   bottom: 1.2rem;
   left: 50%;
   transform: translateX(-50%) translateY(15px);
-  background: rgba(10, 10, 10, 0.55);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  color: #ffffff;
+  background: rgba(10, 10, 10, 0.75); /* Dark frosted glass */
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  color: rgba(255, 255, 255, 0.95);
   font-family: var(--font-sans);
   font-size: 0.72rem;
   font-weight: 500;
@@ -200,9 +200,9 @@
 .masonry-item:hover .card-badge {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(10, 10, 10, 0.9); /* Remains dark glass on hover for readability */
   border-color: rgba(255, 255, 255, 0.25);
-  box-shadow: 0 4px 15px rgba(255, 255, 255, 0.08);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
 }
 
 .masonry-item:hover {
