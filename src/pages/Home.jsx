@@ -1,10 +1,24 @@
-import { useRef, Suspense, useState } from 'react';
+import { useRef, Suspense, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Environment, MeshTransmissionMaterial, Sparkles, Image, Float } from '@react-three/drei';
 import * as THREE from 'three';
 import './Home.css';
+
+// Helper component that mounts only AFTER all Suspense resources inside the Canvas have loaded
+function CanvasLoader({ onLoad }) {
+  useEffect(() => {
+    // Set canvasReady to true with a slight frame delay to ensure R3F has fully painted the first frame
+    const handle = requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        onLoad();
+      });
+    });
+    return () => cancelAnimationFrame(handle);
+  }, [onLoad]);
+  return null;
+}
 
 // The Massive Glass Monolith (Reacts to scroll as a single majestic piece)
 function GlassMonolith({ scrollYProgress }) {
@@ -172,9 +186,6 @@ export default function Home() {
         <Canvas
           gl={{ alpha: true }}
           camera={{ position: [0, 0, 10], fov: 45 }}
-          onCreated={() => {
-            requestAnimationFrame(() => requestAnimationFrame(() => setCanvasReady(true)));
-          }}
         >
           <Suspense fallback={null}>
             <ambientLight intensity={0.2} />
@@ -184,6 +195,7 @@ export default function Home() {
             <Sparkles count={800} scale={20} size={1.5} speed={0.4} opacity={0.3} color="#ffffff" />
             <BackgroundGallery scrollYProgress={scrollYProgress} />
             <GlassMonolith scrollYProgress={scrollYProgress} />
+            <CanvasLoader onLoad={() => setCanvasReady(true)} />
           </Suspense>
         </Canvas>
       </div>
