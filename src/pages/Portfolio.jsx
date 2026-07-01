@@ -189,15 +189,13 @@ export default function Portfolio() {
                   onMouseMove={handleMouseMove}
                   onMouseLeave={handleMouseLeave}
                 >
+                  <div className="card-badge">{photo.category}</div>
                   <img
                     src={photo.src}
                     alt={photo.alt}
                     loading="lazy"
                     className="portfolio-image"
                   />
-                  <div className="image-overlay">
-                    <span className="image-category">{photo.category}</span>
-                  </div>
                 </motion.div>
               ))}
             </AnimatePresence>
