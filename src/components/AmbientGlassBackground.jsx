@@ -48,6 +48,7 @@ export default function AmbientGlassBackground() {
       style={{ opacity: canvasReady ? 1 : 0, transition: 'opacity 1s ease-out' }}
     >
       <Canvas 
+        gl={{ alpha: true }}
         camera={{ position: [0, 0, 10], fov: 45 }} 
         style={{ pointerEvents: 'none' }} 
         onCreated={() => requestAnimationFrame(() => requestAnimationFrame(() => setCanvasReady(true)))}

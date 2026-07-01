@@ -89,6 +89,7 @@ export default function Portfolio() {
         }}
       >
         <Canvas
+          gl={{ alpha: true }}
           camera={{ position: [0, 0, 10], fov: 45 }}
           style={{ pointerEvents: 'none' }}
           onCreated={() => {

@@ -130,15 +130,36 @@ export default function Home() {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0, transition: { duration: 0.5 } }}
     >
+      {/* Immediate fallback background image so the user never sees a black screen while Canvas compiles */}
+      <div 
+        className="home-fallback-bg"
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          zIndex: 0,
+          backgroundImage: 'radial-gradient(circle at center, rgba(255, 255, 255, 0.05) 0%, rgba(0, 0, 0, 0) 70%), url("/Home/heroimage.png")',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          opacity: canvasReady ? 0 : 1,
+          transition: 'opacity 1s ease-out',
+          pointerEvents: 'none'
+        }}
+      />
+
       {/* 3D canvas — fades in once GPU shader compiles */}
       <div 
         className="monolith-canvas-fixed"
         style={{
           opacity: canvasReady ? 1 : 0,
           transition: 'opacity 1s ease-out',
+          zIndex: 1
         }}
       >
         <Canvas
+          gl={{ alpha: true }}
           camera={{ position: [0, 0, 10], fov: 45 }}
           onCreated={() => {
             requestAnimationFrame(() => requestAnimationFrame(() => setCanvasReady(true)));

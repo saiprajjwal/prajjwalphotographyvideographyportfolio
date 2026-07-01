@@ -59,7 +59,12 @@ export default function Films() {
         className="films-canvas-fixed"
         style={{ opacity: canvasReady ? 1 : 0, transition: 'opacity 1s ease-out' }}
       >
-        <Canvas camera={{ position: [0, 0, 10], fov: 45 }} style={{ pointerEvents: 'none' }} onCreated={() => requestAnimationFrame(() => requestAnimationFrame(() => setCanvasReady(true)))}>
+        <Canvas 
+          gl={{ alpha: true }}
+          camera={{ position: [0, 0, 10], fov: 45 }} 
+          style={{ pointerEvents: 'none' }} 
+          onCreated={() => requestAnimationFrame(() => requestAnimationFrame(() => setCanvasReady(true)))}
+        >
           <Suspense fallback={null}>
             <ambientLight intensity={0.2} />
             <spotLight position={[10, 10, 10]} intensity={4} color="#ffffff" penumbra={1} angle={0.5} />
