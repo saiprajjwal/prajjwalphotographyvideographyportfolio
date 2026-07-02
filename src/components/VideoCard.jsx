@@ -1,4 +1,5 @@
 import { Play } from 'lucide-react';
+import { motion } from 'framer-motion';
 import './VideoCard.css';
 
 export default function VideoCard({ video, onPlay }) {
@@ -7,8 +8,9 @@ export default function VideoCard({ video, onPlay }) {
   
   return (
     <div className="video-card">
-      <div 
+      <motion.div 
         className="video-thumbnail-container"
+        layoutId={`video-container-${video.id}`}
         onClick={onPlay}
         role="button"
         tabIndex={0}
@@ -25,7 +27,7 @@ export default function VideoCard({ video, onPlay }) {
             <Play size={32} fill="currentColor" />
           </div>
         </div>
-      </div>
+      </motion.div>
       <h3 className="video-title">{video.title}</h3>
     </div>
   );
