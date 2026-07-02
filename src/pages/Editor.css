@@ -655,3 +655,67 @@
   0% { transform: translateY(10px); opacity: 0; }
   100% { transform: translateY(0); opacity: 1; }
 }
+
+/* Numeric readouts on sliders (Lightroom-style) */
+.pe-slider-row-valued {
+  grid-template-columns: 90px 1fr 40px;
+}
+
+.pe-slider-value {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  user-select: none;
+}
+
+.pe-export-info {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  line-height: 1.55;
+  color: var(--text-secondary);
+  margin-top: 0.75rem;
+}
+
+/* Histogram + clipping indicators */
+.pe-histogram-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  justify-content: center;
+  margin-top: 0.4rem;
+}
+
+.pe-histogram {
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  width: 220px;
+  height: 44px;
+}
+
+.pe-clip-dot {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.15);
+  user-select: none;
+  transition: color 0.2s ease;
+}
+
+.pe-clip-dot.is-on {
+  color: #ff5c5c;
+}
+
+/* 1:1 loupe toggle */
+.pe-loupe-btn .pe-loupe-label {
+  font-family: var(--font-sans);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.pe-loupe-btn.is-active {
+  background: var(--brand-color);
+  color: #000;
+  border-color: var(--brand-color);
+}

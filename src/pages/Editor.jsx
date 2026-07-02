@@ -53,10 +53,13 @@ async function idbClear(key) {
 
 const ASPECTS = [
   { id: 'original', label: 'Original' },
-  { id: '1:1', label: 'Square', w: 1080, h: 1080 },
-  { id: '4:5', label: 'Portrait', w: 1080, h: 1350 },
-  { id: '9:16', label: 'Story', w: 1080, h: 1920 },
-  { id: '16:9', label: 'Wide', w: 1920, h: 1080 },
+  { id: '1:1', label: 'Square', ar: 1 },
+  { id: '4:5', label: 'Portrait', ar: 4 / 5 },
+  { id: '3:2', label: '3:2 Classic', ar: 3 / 2 },
+  { id: '2:3', label: '2:3 Tall', ar: 2 / 3 },
+  { id: '5:4', label: '5:4 Print', ar: 5 / 4 },
+  { id: '9:16', label: 'Story', ar: 9 / 16 },
+  { id: '16:9', label: 'Wide', ar: 16 / 9 },
 ];
 
 const DEFAULT_ADJ = { 
@@ -140,24 +143,38 @@ const FONTS = [
   'fantasy'
 ];
 
+// Export at the source's full resolution (capped at a canvas-safe max side).
+// Aspect crops derive their pixel size from the source too, so a 24MP photo
+// cropped to 3:2 exports at 24MP-class resolution, not a fixed social size.
+const MAX_EXPORT_SIDE = 8192;
+
 function getOutputSize(image, aspect) {
-  if (aspect === 'original') {
-    const maxSide = 2000;
-    let w = image.naturalWidth, h = image.naturalHeight;
-    const m = Math.max(w, h);
-    if (m > maxSide) { const k = maxSide / m; w = Math.round(w * k); h = Math.round(h * k); }
-    return { w, h };
+  let w = image.naturalWidth, h = image.naturalHeight;
+
+  if (aspect !== 'original') {
+    const { ar } = ASPECTS.find((x) => x.id === aspect);
+    // Largest centered crop of the source at this aspect ratio
+    if (w / h > ar) w = Math.round(h * ar);
+    else h = Math.round(w / ar);
   }
-  const a = ASPECTS.find((x) => x.id === aspect);
-  return { w: a.w, h: a.h };
+
+  const m = Math.max(w, h);
+  if (m > MAX_EXPORT_SIDE) {
+    const k = MAX_EXPORT_SIDE / m;
+    w = Math.round(w * k);
+    h = Math.round(h * k);
+  }
+  return { w, h };
 }
 
 export default function Editor() {
   const [image, setImage] = useState(null);
+  const [sourceName, setSourceName] = useState('photo');
   const [adj, setAdj] = useState({ ...DEFAULT_ADJ });
   const [preset, setPreset] = useState('None');
   const [aspect, setAspect] = useState('original');
   const [rotation, setRotation] = useState(0);
+  const [straighten, setStraighten] = useState(0);
   const [flipH, setFlipH] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -191,6 +208,11 @@ export default function Editor() {
   const isSectionOpen = (key) => isMobile ? activeTab === key : openSections[key];
 
   const [isComparing, setIsComparing] = useState(false);
+  const [loupe, setLoupe] = useState(false);
+  const [loupePan, setLoupePan] = useState({ x: 0, y: 0 });
+  const [clipping, setClipping] = useState({ lo: false, hi: false });
+  const histRef = useRef(null);
+  const histTimer = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
   const [history, setHistory] = useState([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
@@ -211,8 +233,8 @@ export default function Editor() {
   // Debounced history saving
   const saveStateTimeout = useRef(null);
   const getCurrentState = useCallback(() => ({ 
-    adj, aspect, rotation, flipH, zoom, pan, texts, stickers, drawings 
-  }), [adj, aspect, rotation, flipH, zoom, pan, texts, stickers, drawings]);
+    adj, aspect, rotation, straighten, flipH, zoom, pan, texts, stickers, drawings 
+  }), [adj, aspect, rotation, straighten, flipH, zoom, pan, texts, stickers, drawings]);
 
   const scheduleHistorySave = useCallback(() => {
     clearTimeout(saveStateTimeout.current);
@@ -233,6 +255,7 @@ export default function Editor() {
     if (state.adj) setAdj(state.adj); 
     if (state.aspect) setAspect(state.aspect); 
     if (state.rotation !== undefined) setRotation(state.rotation);
+    setStraighten(state.straighten || 0);
     if (state.flipH !== undefined) setFlipH(state.flipH); 
     if (state.zoom !== undefined) setZoom(state.zoom); 
     if (state.pan) setPan(state.pan);
@@ -261,6 +284,7 @@ export default function Editor() {
       // Restore image from IndexedDB on refresh
       idbLoad('pe-current-image').then((blob) => {
         if (blob) {
+          if (blob.name) setSourceName(blob.name.replace(/\.[^.]+$/, ''));
           const url = URL.createObjectURL(blob);
           const img = new Image();
           img.onload = () => {
@@ -273,7 +297,7 @@ export default function Editor() {
               setHistory([parsed]);
               setHistoryIndex(0);
             } else {
-              const initial = { adj: { ...DEFAULT_ADJ }, aspect: 'original', rotation: 0, flipH: false, zoom: 1, pan: { x: 0, y: 0 }, texts: [], stickers: [], drawings: [] };
+              const initial = { adj: { ...DEFAULT_ADJ }, aspect: 'original', rotation: 0, straighten: 0, flipH: false, zoom: 1, pan: { x: 0, y: 0 }, texts: [], stickers: [], drawings: [] };
               setHistory([initial]);
               setHistoryIndex(0);
             }
@@ -307,10 +331,46 @@ export default function Editor() {
     }
   };
 
+  // Keyboard shortcuts: Cmd/Ctrl+Z undo, Cmd+Shift+Z / Ctrl+Y redo,
+  // hold Space or \ to compare with the original.
+  useEffect(() => {
+    if (!image) return;
+    const isTyping = (e) =>
+      (e.target.tagName === 'INPUT' && e.target.type !== 'range') ||
+      e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT';
+    const onKeyDown = (e) => {
+      if (isTyping(e)) return;
+      const mod = e.metaKey || e.ctrlKey;
+      if (mod && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        if (e.shiftKey) handleRedo(); else handleUndo();
+      } else if (mod && e.key.toLowerCase() === 'y') {
+        e.preventDefault();
+        handleRedo();
+      } else if ((e.key === '\\' || e.code === 'Space') && !e.repeat) {
+        if (e.code === 'Space') e.preventDefault(); // stop page scroll
+        setIsComparing(true);
+      }
+    };
+    const onKeyUp = (e) => {
+      if (e.key === '\\' || e.code === 'Space') setIsComparing(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keyup', onKeyUp);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('keyup', onKeyUp);
+    };
+  });
+
   // Draw the whole scene into a context at the given output size. Shared by the
   // live preview and the export so what you see is exactly what you download.
-  const draw = useCallback((ctx, W, H, forExport = false) => {
+  // `view` (preview-only) overrides zoom/pan for the 1:1 loupe without
+  // touching the real crop state.
+  const draw = useCallback((ctx, W, H, forExport = false, view = null) => {
     if (!image) return;
+    const effZoom = view ? view.zoom : zoom;
+    const effPan = view ? view.pan : pan;
     ctx.save();
     ctx.clearRect(0, 0, W, H);
     ctx.fillStyle = '#000';
@@ -324,19 +384,30 @@ export default function Editor() {
     const swap = rot === 90 || rot === 270;
     const fW = swap ? H : W;
     const fH = swap ? W : H;
-    const scale = Math.max(fW / image.naturalWidth, fH / image.naturalHeight) * zoom;
+
+    // Straighten: fine rotation needs the image scaled up so the rotated
+    // frame stays fully covered (no empty corners). The multiplier is the
+    // rotated frame's bounding box relative to the frame itself.
+    const fine = (straighten * Math.PI) / 180;
+    const cosF = Math.abs(Math.cos(fine));
+    const sinF = Math.abs(Math.sin(fine));
+    const coverMul = straighten !== 0
+      ? Math.max((fW * cosF + fH * sinF) / fW, (fW * sinF + fH * cosF) / fH)
+      : 1;
+
+    const scale = Math.max(fW / image.naturalWidth, fH / image.naturalHeight) * effZoom * coverMul;
     const dw = image.naturalWidth * scale;
     const dh = image.naturalHeight * scale;
 
-    let px = pan.x * W;
-    let py = pan.y * H;
-    const maxPx = Math.max(0, (dw - fW) / 2);
-    const maxPy = Math.max(0, (dh - fH) / 2);
+    let px = effPan.x * W;
+    let py = effPan.y * H;
+    const maxPx = Math.max(0, (dw - fW * coverMul) / 2);
+    const maxPy = Math.max(0, (dh - fH * coverMul) / 2);
     px = Math.max(-maxPx, Math.min(maxPx, px));
     py = Math.max(-maxPy, Math.min(maxPy, py));
 
     ctx.translate(W / 2 + px, H / 2 + py);
-    ctx.rotate((rot * Math.PI) / 180);
+    ctx.rotate((rot * Math.PI) / 180 + fine);
     ctx.scale(flipH ? -1 : 1, 1);
     ctx.drawImage(image, -dw / 2, -dh / 2, dw, dh);
     ctx.restore();
@@ -677,7 +748,7 @@ export default function Editor() {
       ctx.restore();
     });
 
-  }, [image, adj, rotation, flipH, zoom, pan, isComparing, texts, selectedTextId, stickers, selectedStickerId, drawings]);
+  }, [image, adj, rotation, straighten, flipH, zoom, pan, isComparing, texts, selectedTextId, stickers, selectedStickerId, drawings]);
 
   // Redraw the preview whenever anything changes.
   useEffect(() => {
@@ -697,14 +768,60 @@ export default function Editor() {
     previewSize.current = { w: pw, h: ph };
     const ctx = canvas.getContext('2d');
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    draw(ctx, pw, ph);
-  }, [image, aspect, draw]);
+
+    if (loupe) {
+      // 1:1 loupe: one image pixel = one device pixel, with its own pan so
+      // inspecting detail never changes the actual crop.
+      const rot = ((rotation % 360) + 360) % 360;
+      const swap = rot === 90 || rot === 270;
+      const fW = swap ? ph : pw;
+      const fH = swap ? pw : ph;
+      const baseCover = Math.max(fW / image.naturalWidth, fH / image.naturalHeight);
+      const zoom100 = 1 / (baseCover * dpr);
+      draw(ctx, pw, ph, false, { zoom: Math.max(zoom100, 1e-6), pan: loupePan });
+    } else {
+      draw(ctx, pw, ph);
+    }
+
+    // Live histogram with clipping detection, throttled behind the redraw.
+    clearTimeout(histTimer.current);
+    histTimer.current = setTimeout(() => {
+      const hc = histRef.current;
+      if (!hc) return;
+      try {
+        const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+        const bins = new Uint32Array(64);
+        let lo = 0, hi = 0, total = 0;
+        for (let i = 0; i < data.length; i += 16) { // sample every 4th pixel
+          const lum = (data[i] * 54 + data[i + 1] * 183 + data[i + 2] * 19) >> 8;
+          bins[lum >> 2]++;
+          if (lum <= 2) lo++; else if (lum >= 253) hi++;
+          total++;
+        }
+        const hctx = hc.getContext('2d');
+        const HW = hc.width, HH = hc.height;
+        hctx.clearRect(0, 0, HW, HH);
+        hctx.fillStyle = 'rgba(255,255,255,0.06)';
+        hctx.fillRect(0, 0, HW, HH);
+        const peak = Math.max(1, ...bins);
+        hctx.fillStyle = 'rgba(255,255,255,0.75)';
+        const bw = HW / 64;
+        for (let b = 0; b < 64; b++) {
+          const bh = Math.round((bins[b] / peak) * (HH - 4));
+          hctx.fillRect(b * bw, HH - bh, Math.ceil(bw) , bh);
+        }
+        setClipping({ lo: lo / total > 0.005, hi: hi / total > 0.005 });
+      } catch { /* canvas unreadable — skip histogram this frame */ }
+    }, 120);
+  }, [image, aspect, draw, loupe, loupePan, rotation]);
 
   const loadFile = useCallback((file, saveToDb = true) => {
     if (!file || !file.type.startsWith('image/')) return;
     if (saveToDb) {
       idbSave('pe-current-image', file).catch(console.error);
     }
+    // Keep the original basename so exports are traceable to their source
+    setSourceName((file.name || 'photo').replace(/\.[^.]+$/, ''));
     const url = URL.createObjectURL(file);
     const img = new Image();
     img.onload = () => {
@@ -713,7 +830,10 @@ export default function Editor() {
       setPreset('None');
       setAspect('original');
       setRotation(0);
+      setStraighten(0);
       setFlipH(false);
+      setLoupe(false);
+      setLoupePan({ x: 0, y: 0 });
       setZoom(1);
       setPan({ x: 0, y: 0 });
       setTexts([]);
@@ -723,7 +843,7 @@ export default function Editor() {
       setDrawings([]);
       setIsDrawingMode(false);
       // Initialize history
-      const initial = { adj: { ...DEFAULT_ADJ }, aspect: 'original', rotation: 0, flipH: false, zoom: 1, pan: { x: 0, y: 0 }, texts: [], stickers: [], drawings: [] };
+      const initial = { adj: { ...DEFAULT_ADJ }, aspect: 'original', rotation: 0, straighten: 0, flipH: false, zoom: 1, pan: { x: 0, y: 0 }, texts: [], stickers: [], drawings: [] };
       setHistory([initial]);
       setHistoryIndex(0);
       localStorage.setItem('pe-current-state', JSON.stringify(initial));
@@ -790,7 +910,9 @@ export default function Editor() {
 
     setSelectedTextId(null);
     setSelectedStickerId(null);
-    dragRef.current = { type: 'pan', startX: e.clientX, startY: e.clientY, pan: { ...pan } };
+    dragRef.current = loupe
+      ? { type: 'loupe', startX: e.clientX, startY: e.clientY, pan: { ...loupePan } }
+      : { type: 'pan', startX: e.clientX, startY: e.clientY, pan: { ...pan } };
     e.currentTarget.setPointerCapture(e.pointerId);
     setIsDragging(true);
   };
@@ -814,20 +936,32 @@ export default function Editor() {
       const dx = nx - d.startNX;
       const dy = ny - d.startNY;
       setStickers(ts => ts.map(t => t.id === d.id ? { ...t, nx: d.initialNX + dx, ny: d.initialNY + dy } : t));
+    } else if (d.type === 'loupe') {
+      const dx = (e.clientX - d.startX) / previewSize.current.w;
+      const dy = (e.clientY - d.startY) / previewSize.current.h;
+      setLoupePan({ x: d.pan.x + dx, y: d.pan.y + dy });
     } else {
       const dx = (e.clientX - d.startX) / previewSize.current.w;
       const dy = (e.clientY - d.startY) / previewSize.current.h;
       setPan({ x: d.pan.x + dx, y: d.pan.y + dy });
     }
   };
-  const onPointerUp = () => { 
-    dragRef.current = null; 
-    setIsDragging(false); 
-    scheduleHistorySave();
+  const onPointerUp = () => {
+    const wasLoupe = dragRef.current?.type === 'loupe';
+    dragRef.current = null;
+    setIsDragging(false);
+    if (!wasLoupe) scheduleHistorySave(); // loupe panning is view-only, not an edit
   };
 
   const applyPreset = (p) => { setPreset(p.id); setAdj({ ...p.adj }); scheduleHistorySave(); };
   const setAdjKey = (key, value) => { setAdj((a) => ({ ...a, [key]: value })); setPreset('custom'); scheduleHistorySave(); };
+
+  // Lightroom-style readout: sliders whose neutral is 100 read as ± offsets
+  const fmtAdj = (key) => {
+    const v = adj[key];
+    const shown = DEFAULT_ADJ[key] === 100 ? v - 100 : v;
+    return shown > 0 ? `+${shown}` : String(shown);
+  };
   
   const saveCustomPreset = () => {
     const name = prompt('Name your preset:', `Custom ${customPresets.length + 1}`);
@@ -843,6 +977,7 @@ export default function Editor() {
     setAdj({ ...DEFAULT_ADJ });
     setPreset('None');
     setRotation(0);
+    setStraighten(0);
     setFlipH(false);
     setZoom(1);
     setPan({ x: 0, y: 0 });
@@ -907,7 +1042,7 @@ export default function Editor() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `edited-${Date.now()}.${ext}`;
+      a.download = `${sourceName}_edited.${ext}`;
       a.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     }, mimeType, quality);
@@ -981,17 +1116,29 @@ export default function Editor() {
                   <Redo size={18} />
                 </button>
                 <div className="pe-spacer" />
-                <button 
-                  className="pe-btn-icon pe-compare-btn" 
+                <button
+                  className={`pe-btn-icon pe-loupe-btn ${loupe ? 'is-active' : ''}`}
+                  onClick={() => { setLoupe(l => !l); setLoupePan({ x: 0, y: 0 }); }}
+                  title="View at 100% (1:1 pixels) — inspection only, does not change the crop"
+                >
+                  <span className="pe-loupe-label">1:1</span>
+                </button>
+                <button
+                  className="pe-btn-icon pe-compare-btn"
                   onPointerDown={() => setIsComparing(true)}
                   onPointerUp={() => setIsComparing(false)}
                   onPointerLeave={() => setIsComparing(false)}
-                  title="Hold to Compare"
+                  title="Hold to Compare (or hold Space)"
                 >
                   <Eye size={18} />
                 </button>
               </div>
-              <p className="pe-stage-hint">Drag to reposition · Use Zoom to fill</p>
+              <div className="pe-histogram-wrap" title="Luminance histogram">
+                <span className={`pe-clip-dot ${clipping.lo ? 'is-on' : ''}`} title="Shadow clipping">◢</span>
+                <canvas ref={histRef} width={220} height={44} className="pe-histogram" />
+                <span className={`pe-clip-dot ${clipping.hi ? 'is-on' : ''}`} title="Highlight clipping">◣</span>
+              </div>
+              <p className="pe-stage-hint">{loupe ? '1:1 view — drag to inspect · click 1:1 to exit' : 'Drag to reposition · Use Zoom to fill'}</p>
             </>
           )}
         </div>
@@ -1037,12 +1184,21 @@ export default function Editor() {
                     </button>
                   ))}
                 </div>
-                <label className="pe-slider-row">
+                <label className="pe-slider-row pe-slider-row-valued">
                   <span>Zoom</span>
                   <input type="range" min="1" max="3" step="0.01" value={zoom}
                     onChange={(e) => setZoom(parseFloat(e.target.value))}
                     onDoubleClick={() => { setZoom(1); scheduleHistorySave(); }}
                     onPointerUp={scheduleHistorySave} />
+                  <span className="pe-slider-value">{zoom.toFixed(2)}×</span>
+                </label>
+                <label className="pe-slider-row pe-slider-row-valued" title="Double-click to reset">
+                  <span>Straighten</span>
+                  <input type="range" min="-15" max="15" step="0.1" value={straighten}
+                    onChange={(e) => setStraighten(parseFloat(e.target.value))}
+                    onDoubleClick={() => { setStraighten(0); scheduleHistorySave(); }}
+                    onPointerUp={scheduleHistorySave} />
+                  <span className="pe-slider-value" onDoubleClick={() => { setStraighten(0); scheduleHistorySave(); }}>{straighten > 0 ? `+${straighten.toFixed(1)}°` : `${straighten.toFixed(1)}°`}</span>
                 </label>
                 <div className="pe-chips">
                   <button className="pe-chip" onClick={() => { setRotation((r) => (r + 90) % 360); scheduleHistorySave(); }}>
@@ -1123,7 +1279,7 @@ export default function Editor() {
             </div>
             <div className={`pe-section-body ${isSectionOpen('adjust') ? '' : 'is-collapsed'}`} style={{ maxHeight: isSectionOpen('adjust') ? '600px' : '0' }}>
             {SLIDERS.map((s) => (
-              <label key={s.key} className="pe-slider-row">
+              <label key={s.key} className="pe-slider-row pe-slider-row-valued" title="Double-click to reset">
                 <span>{s.label}</span>
                 <input
                   type="range"
@@ -1133,6 +1289,7 @@ export default function Editor() {
                   onChange={(e) => setAdjKey(s.key, parseInt(e.target.value, 10))}
                   onDoubleClick={() => setAdjKey(s.key, DEFAULT_ADJ[s.key])}
                 />
+                <span className="pe-slider-value" onDoubleClick={() => setAdjKey(s.key, DEFAULT_ADJ[s.key])}>{fmtAdj(s.key)}</span>
               </label>
             ))}
             </div>
@@ -1145,7 +1302,7 @@ export default function Editor() {
             </div>
             <div className={`pe-section-body ${isSectionOpen('effects') ? '' : 'is-collapsed'}`} style={{ maxHeight: isSectionOpen('effects') ? '400px' : '0' }}>
             {EFFECT_SLIDERS.map((s) => (
-              <label key={s.key} className="pe-slider-row">
+              <label key={s.key} className="pe-slider-row pe-slider-row-valued" title="Double-click to reset">
                 <span>{s.label}</span>
                 <input
                   type="range"
@@ -1155,6 +1312,7 @@ export default function Editor() {
                   onChange={(e) => setAdjKey(s.key, parseInt(e.target.value, 10))}
                   onDoubleClick={() => setAdjKey(s.key, DEFAULT_ADJ[s.key])}
                 />
+                <span className="pe-slider-value" onDoubleClick={() => setAdjKey(s.key, DEFAULT_ADJ[s.key])}>{fmtAdj(s.key)}</span>
               </label>
             ))}
             </div>
@@ -1381,7 +1539,15 @@ export default function Editor() {
               <label className="pe-slider-row">
                 <span>Quality</span>
                 <input type="range" min="50" max="100" value={exportQuality} onChange={(e) => setExportQuality(parseInt(e.target.value, 10))} />
+                <span className="pe-slider-value">{exportQuality}</span>
               </label>
+            )}
+            {image && (
+              <p className="pe-export-info">
+                {(() => { const { w, h } = getOutputSize(image, aspect); return `Exports at ${w} × ${h}px`; })()}
+                <br />
+                Exports are re-rendered — camera &amp; location metadata (EXIF) are not included.
+              </p>
             )}
             <div className="pe-actions" style={{ marginTop: '1rem' }}>
               <button className="pe-btn pe-btn-ghost" onClick={resetAll}>
