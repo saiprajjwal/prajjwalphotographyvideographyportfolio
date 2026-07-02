@@ -1122,6 +1122,7 @@ export default function Editor() {
               <span>Zoom</span>
               <input type="range" min="1" max="3" step="0.01" value={zoom}
                 onChange={(e) => setZoom(parseFloat(e.target.value))}
+                onDoubleClick={() => { setZoom(1); scheduleHistorySave(); }}
                 onPointerUp={scheduleHistorySave} />
             </label>
             <div className="pe-chips">
@@ -1174,6 +1175,7 @@ export default function Editor() {
                   type="range" min="-100" max="100"
                   value={adj.warmth}
                   onChange={(e) => setAdjKey('warmth', parseInt(e.target.value, 10))}
+                  onDoubleClick={() => setAdjKey('warmth', DEFAULT_ADJ.warmth)}
                   className="pe-wb-slider pe-wb-temp"
                 />
                 <span style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{adj.warmth > 0 ? `+${adj.warmth}` : adj.warmth}</span>
@@ -1185,6 +1187,7 @@ export default function Editor() {
                   type="range" min="-100" max="100"
                   value={adj.tint}
                   onChange={(e) => setAdjKey('tint', parseInt(e.target.value, 10))}
+                  onDoubleClick={() => setAdjKey('tint', DEFAULT_ADJ.tint)}
                   className="pe-wb-slider pe-wb-tint"
                 />
                 <span style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{adj.tint > 0 ? `+${adj.tint}` : adj.tint}</span>
@@ -1203,6 +1206,7 @@ export default function Editor() {
                   max={s.max}
                   value={adj[s.key]}
                   onChange={(e) => setAdjKey(s.key, parseInt(e.target.value, 10))}
+                  onDoubleClick={() => setAdjKey(s.key, DEFAULT_ADJ[s.key])}
                 />
               </label>
             ))}
@@ -1219,6 +1223,7 @@ export default function Editor() {
                   max={s.max}
                   value={adj[s.key]}
                   onChange={(e) => setAdjKey(s.key, parseInt(e.target.value, 10))}
+                  onDoubleClick={() => setAdjKey(s.key, DEFAULT_ADJ[s.key])}
                 />
               </label>
             ))}
@@ -1228,7 +1233,7 @@ export default function Editor() {
             <span className="pe-group-label">Split Toning</span>
             <label className="pe-slider-row">
               <span>Intensity</span>
-              <input type="range" min="0" max="100" value={adj.duotone} onChange={(e) => setAdjKey('duotone', parseInt(e.target.value, 10))} />
+              <input type="range" min="0" max="100" value={adj.duotone} onChange={(e) => setAdjKey('duotone', parseInt(e.target.value, 10))} onDoubleClick={() => setAdjKey('duotone', DEFAULT_ADJ.duotone)} />
             </label>
             {adj.duotone > 0 && (
               <div className="pe-color-row" style={{ marginTop: '0.5rem', justifyContent: 'center', gap: '2rem' }}>
