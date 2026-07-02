@@ -7,6 +7,7 @@ export default function Magnetic({ children, tolerance = 35 }) {
 
   const handleMouseMove = (e) => {
     if (!ref.current) return;
+    
     const { clientX, clientY } = e;
     const { left, top, width, height } = ref.current.getBoundingClientRect();
     const centerX = left + width / 2;
@@ -21,7 +22,16 @@ export default function Magnetic({ children, tolerance = 35 }) {
     // If pointer is within tolerance boundary, pull the element towards cursor
     if (distance < tolerance + Math.max(width, height) / 2) {
       const pullStrength = 0.35; // 35% magnetic pull strength
-      setPosition({ x: distanceX * pullStrength, y: distanceY * pullStrength });
+      
+      let targetX = distanceX * pullStrength;
+      let targetY = distanceY * pullStrength;
+      
+      // Clamp displacement to a maximum of 15px so large mobile menu blocks don't fly out of bounds
+      const maxDisplacement = 15;
+      targetX = Math.max(Math.min(targetX, maxDisplacement), -maxDisplacement);
+      targetY = Math.max(Math.min(targetY, maxDisplacement), -maxDisplacement);
+
+      setPosition({ x: targetX, y: targetY });
     } else {
       setPosition({ x: 0, y: 0 });
     }
@@ -38,7 +48,7 @@ export default function Magnetic({ children, tolerance = 35 }) {
       onMouseLeave={handleMouseLeave}
       animate={{ x: position.x, y: position.y }}
       transition={{ type: 'spring', stiffness: 150, damping: 15, mass: 0.1 }}
-      style={{ display: 'inline-block' }}
+      className="magnetic-wrapper"
     >
       {children}
     </motion.div>

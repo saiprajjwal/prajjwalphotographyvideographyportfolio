@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Volume2, VolumeX } from 'lucide-react';
 import { setSoundEnabled, getSoundEnabled, playFocusTick, playShutterClick } from '../utils/audio';
 import Magnetic from './Magnetic';
@@ -9,6 +9,30 @@ export default function Navigation() {
   const [isOpen, setIsOpen] = useState(false);
   const [soundOn, setSoundOn] = useState(getSoundEnabled());
   const location = useLocation();
+  const navRef = useRef(null);
+
+  // Close menu on click outside or ESC key
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (isOpen && navRef.current && !navRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+
+    const handleEscKey = (event) => {
+      if (isOpen && event.key === 'Escape') {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscKey);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscKey);
+    };
+  }, [isOpen]);
 
   const toggleSound = () => {
     const nextVal = !soundOn;
@@ -29,7 +53,7 @@ export default function Navigation() {
   ];
 
   return (
-    <header className="nav-header">
+    <header className="nav-header" ref={navRef}>
       <div className="container nav-container">
         <Link 
           to="/" 

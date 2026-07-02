@@ -58,7 +58,7 @@ function GlassMonolith({ scrollYProgress }) {
     // Fade out the monolith directly from scroll progress (not the lerped/lagging
     // z-position) so the reveal tracks the scrollbar 1:1 regardless of scroll speed.
     if (meshRef.current.material) {
-      const opacity = 1 - THREE.MathUtils.clamp((offset - 0.55) / (0.78 - 0.55), 0, 1);
+      const opacity = 1 - THREE.MathUtils.clamp((offset - 0.4) / (0.9 - 0.4), 0, 1);
       meshRef.current.material.transparent = true;
       meshRef.current.material.opacity = opacity;
     }
@@ -96,13 +96,6 @@ function BackgroundGallery({ scrollYProgress }) {
   const groupRef = useRef();
 
   useFrame((state) => {
-    // Parallax effect on mouse move
-    const targetX = -(state.mouse.x * 2);
-    const targetY = -(state.mouse.y * 2);
-
-    groupRef.current.position.x = THREE.MathUtils.lerp(groupRef.current.position.x, targetX, 0.05);
-    groupRef.current.position.y = THREE.MathUtils.lerp(groupRef.current.position.y, targetY, 0.05);
-
     // Animate scale to zoom in as the glass lifts away
     if (scrollYProgress) {
       const scrollVal = scrollYProgress.get();

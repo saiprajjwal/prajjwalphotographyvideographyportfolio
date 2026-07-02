@@ -39,6 +39,10 @@
   gap: 1.5rem;
 }
 
+.magnetic-wrapper {
+  display: inline-block;
+}
+
 .nav-link {
   font-size: 0.95rem;
   font-weight: 500;
@@ -164,6 +168,12 @@
     text-align: center;
     border-radius: 0;
     color: rgba(255, 255, 255, 0.8);
+    display: block;
+  }
+  
+  .magnetic-wrapper {
+    display: block;
+    width: 100%;
   }
   
   .nav-link:hover, .nav-link.active {
