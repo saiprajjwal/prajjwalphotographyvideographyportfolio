@@ -71,25 +71,45 @@ const DEFAULT_ADJ = {
   tiltShift: 0, graduated: 0, radial: 0, glitch: 0, halftone: 0
 };
 
+// Curated looks, grouped the way a photographer thinks: quick essentials,
+// film-stock emulations, black & white, and graded cinematic styles.
 const PRESETS = [
-  { id: 'None', adj: { ...DEFAULT_ADJ } },
-  { id: 'Punch', adj: { ...DEFAULT_ADJ, contrast: 116, saturation: 122 } },
-  { id: 'Warm', adj: { ...DEFAULT_ADJ, warmth: 45, brightness: 104 } },
-  { id: 'Cool', adj: { ...DEFAULT_ADJ, warmth: -45 } },
-  { id: 'Mono', adj: { ...DEFAULT_ADJ, saturation: 0, contrast: 112 } },
-  { id: 'Film', adj: { ...DEFAULT_ADJ, contrast: 94, saturation: 88, warmth: 18, vignette: 28, grain: 15 } },
-  { id: 'Vivid', adj: { ...DEFAULT_ADJ, saturation: 138, contrast: 108 } },
-  { id: 'Golden Hour', adj: { ...DEFAULT_ADJ, warmth: 35, tint: 10, brightness: 105, contrast: 110, highlights: -15, shadows: 20 } },
-  { id: 'Moody Dark', adj: { ...DEFAULT_ADJ, brightness: 90, contrast: 125, saturation: 85, warmth: -10, highlights: -30, shadows: -20, vignette: 40 } },
-  { id: 'Matte Film', adj: { ...DEFAULT_ADJ, contrast: 95, saturation: 90, warmth: 15, fade: 40, grain: 25, frame: 'film' } },
-  { id: 'Cyberpunk', adj: { ...DEFAULT_ADJ, contrast: 130, saturation: 140, warmth: -25, tint: 45, highlights: 20, shadows: -10, duotone: 50, duotoneC1: '#0011ff', duotoneC2: '#ff00ee' } },
-  { id: 'Polaroid', adj: { ...DEFAULT_ADJ, brightness: 110, contrast: 90, saturation: 80, warmth: 25, fade: 20, grain: 15, vignette: 20, frame: 'polaroid' } },
-  { id: 'Street Grime', adj: { ...DEFAULT_ADJ, contrast: 140, saturation: 65, tint: -15, shadows: -30, grain: 40, sharpen: 20 } },
-  { id: 'Pastel Dream', adj: { ...DEFAULT_ADJ, brightness: 115, contrast: 85, saturation: 110, tint: 15, fade: 15, shadows: 30 } },
-  { id: 'B&W High Contrast', adj: { ...DEFAULT_ADJ, saturation: 0, contrast: 140, highlights: 20, shadows: -40, grain: 10 } },
-  { id: 'B&W Soft Matte', adj: { ...DEFAULT_ADJ, saturation: 0, contrast: 90, fade: 35, grain: 25 } },
-  { id: 'Teal & Orange', adj: { ...DEFAULT_ADJ, contrast: 115, saturation: 110, warmth: 20, tint: 5, duotone: 30, duotoneC1: '#004466', duotoneC2: '#ff9900' } },
+  // — Essentials —
+  { id: 'None', group: 'Essentials', adj: { ...DEFAULT_ADJ } },
+  { id: 'Punch', group: 'Essentials', adj: { ...DEFAULT_ADJ, contrast: 116, saturation: 122 } },
+  { id: 'Warm', group: 'Essentials', adj: { ...DEFAULT_ADJ, warmth: 45, brightness: 104 } },
+  { id: 'Cool', group: 'Essentials', adj: { ...DEFAULT_ADJ, warmth: -45 } },
+  { id: 'Vivid', group: 'Essentials', adj: { ...DEFAULT_ADJ, saturation: 138, contrast: 108 } },
+  { id: 'Pastel Dream', group: 'Essentials', adj: { ...DEFAULT_ADJ, brightness: 115, contrast: 85, saturation: 110, tint: 15, fade: 15, shadows: 30 } },
+
+  // — Film (stock-inspired) —
+  { id: 'Portrait Film', group: 'Film', adj: { ...DEFAULT_ADJ, warmth: 15, tint: 5, contrast: 96, saturation: 92, highlights: -12, shadows: 15, fade: 12, grain: 8 } },
+  { id: 'Muted Chrome', group: 'Film', adj: { ...DEFAULT_ADJ, saturation: 80, contrast: 108, warmth: -8, shadows: -12, fade: 8, grain: 6 } },
+  { id: 'Vivid Slide', group: 'Film', adj: { ...DEFAULT_ADJ, saturation: 145, contrast: 118, warmth: 8, highlights: -8, sharpen: 12 } },
+  { id: 'Sun-Faded', group: 'Film', adj: { ...DEFAULT_ADJ, brightness: 108, contrast: 88, saturation: 84, warmth: 30, fade: 45, grain: 18 } },
+  { id: 'Film', group: 'Film', adj: { ...DEFAULT_ADJ, contrast: 94, saturation: 88, warmth: 18, vignette: 28, grain: 15 } },
+  { id: 'Matte Film', group: 'Film', adj: { ...DEFAULT_ADJ, contrast: 95, saturation: 90, warmth: 15, fade: 40, grain: 25, frame: 'film' } },
+  { id: 'Polaroid', group: 'Film', adj: { ...DEFAULT_ADJ, brightness: 110, contrast: 90, saturation: 80, warmth: 25, fade: 20, grain: 15, vignette: 20, frame: 'polaroid' } },
+
+  // — Black & White —
+  { id: 'Mono', group: 'B&W', adj: { ...DEFAULT_ADJ, saturation: 0, contrast: 112 } },
+  { id: 'Grain 400', group: 'B&W', adj: { ...DEFAULT_ADJ, saturation: 0, contrast: 120, shadows: -10, grain: 35, sharpen: 10 } },
+  { id: 'Soft Silver', group: 'B&W', adj: { ...DEFAULT_ADJ, saturation: 0, contrast: 100, highlights: -15, shadows: 20, fade: 20, grain: 15 } },
+  { id: 'B&W High Contrast', group: 'B&W', adj: { ...DEFAULT_ADJ, saturation: 0, contrast: 140, highlights: 20, shadows: -40, grain: 10 } },
+  { id: 'B&W Soft Matte', group: 'B&W', adj: { ...DEFAULT_ADJ, saturation: 0, contrast: 90, fade: 35, grain: 25 } },
+
+  // — Cinematic —
+  { id: 'Golden Hour', group: 'Cinematic', adj: { ...DEFAULT_ADJ, warmth: 35, tint: 10, brightness: 105, contrast: 110, highlights: -15, shadows: 20 } },
+  { id: 'Teal & Orange', group: 'Cinematic', adj: { ...DEFAULT_ADJ, contrast: 115, saturation: 110, warmth: 20, tint: 5, duotone: 30, duotoneC1: '#004466', duotoneC2: '#ff9900' } },
+  { id: 'Tungsten Night', group: 'Cinematic', adj: { ...DEFAULT_ADJ, warmth: -35, tint: 8, contrast: 105, saturation: 105, shadows: 10, fade: 15, grain: 20 } },
+  { id: 'Bleach Bypass', group: 'Cinematic', adj: { ...DEFAULT_ADJ, saturation: 45, contrast: 135, highlights: 10, shadows: -20, sharpen: 15 } },
+  { id: 'Editorial Matte', group: 'Cinematic', adj: { ...DEFAULT_ADJ, contrast: 104, saturation: 94, tint: -5, highlights: -20, fade: 25 } },
+  { id: 'Moody Dark', group: 'Cinematic', adj: { ...DEFAULT_ADJ, brightness: 90, contrast: 125, saturation: 85, warmth: -10, highlights: -30, shadows: -20, vignette: 40 } },
+  { id: 'Street Grime', group: 'Cinematic', adj: { ...DEFAULT_ADJ, contrast: 140, saturation: 65, tint: -15, shadows: -30, grain: 40, sharpen: 20 } },
+  { id: 'Cyberpunk', group: 'Cinematic', adj: { ...DEFAULT_ADJ, contrast: 130, saturation: 140, warmth: -25, tint: 45, highlights: 20, shadows: -10, duotone: 50, duotoneC1: '#0011ff', duotoneC2: '#ff00ee' } },
 ];
+
+const PRESET_GROUPS = ['Essentials', 'Film', 'B&W', 'Cinematic'];
 
 const SLIDERS = [
   { key: 'brightness', label: 'Brightness', min: 50, max: 150 },
@@ -1151,18 +1171,39 @@ export default function Editor() {
               <span className="pe-group-label">Presets</span>
               <ChevronDown size={16} className={`pe-section-chevron ${isSectionOpen('presets') ? 'is-open' : ''}`} />
             </div>
-            <div className={`pe-section-body ${isSectionOpen('presets') ? '' : 'is-collapsed'}`} style={{ maxHeight: isSectionOpen('presets') ? '200px' : '0' }}>
-            <div className="pe-chips">
-              {[...PRESETS, ...customPresets].map((p) => (
-                <button
-                  key={p.id}
-                  className={`pe-chip ${preset === p.id ? 'is-active' : ''}`}
-                  onClick={() => applyPreset(p)}
-                >
-                  {p.id}
-                </button>
-              ))}
-            </div>
+            <div className={`pe-section-body ${isSectionOpen('presets') ? '' : 'is-collapsed'}`} style={{ maxHeight: isSectionOpen('presets') ? '640px' : '0' }}>
+            {PRESET_GROUPS.map((groupName) => (
+              <div key={groupName} className="pe-preset-group">
+                <span className="pe-preset-group-label">{groupName}</span>
+                <div className="pe-chips">
+                  {PRESETS.filter((p) => p.group === groupName).map((p) => (
+                    <button
+                      key={p.id}
+                      className={`pe-chip ${preset === p.id ? 'is-active' : ''}`}
+                      onClick={() => applyPreset(p)}
+                    >
+                      {p.id}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+            {customPresets.length > 0 && (
+              <div className="pe-preset-group">
+                <span className="pe-preset-group-label">My Presets</span>
+                <div className="pe-chips">
+                  {customPresets.map((p) => (
+                    <button
+                      key={p.id}
+                      className={`pe-chip ${preset === p.id ? 'is-active' : ''}`}
+                      onClick={() => applyPreset(p)}
+                    >
+                      {p.id}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             </div>
           </div>
 

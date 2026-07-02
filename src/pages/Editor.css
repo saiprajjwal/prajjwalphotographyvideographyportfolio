@@ -719,3 +719,37 @@
   color: #000;
   border-color: var(--brand-color);
 }
+
+/* Grouped presets */
+.pe-preset-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-bottom: 0.9rem;
+}
+
+.pe-preset-group-label {
+  font-family: var(--font-sans);
+  font-size: 0.65rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.35);
+}
+
+/* Narrow desktop / split-screen (761–920px): the controls column can no longer
+   fit beside the stage, so stack them and turn off the sticky canvas —
+   otherwise it floats over the wrapped controls while scrolling. */
+@media (min-width: 761px) and (max-width: 920px) {
+  .pe-workspace {
+    flex-direction: column;
+    align-items: center;
+    flex-wrap: nowrap;
+  }
+  .pe-stage {
+    position: static;
+  }
+  .pe-controls {
+    max-width: 520px;
+    width: 100%;
+  }
+}
