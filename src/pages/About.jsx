@@ -24,6 +24,10 @@ export default function About() {
       });
   }, []);
 
+  useEffect(() => {
+    sessionStorage.setItem('last_visited_page', 'About');
+  }, []);
+
   const { name, headshot, bio, gear } = aboutData;
 
   return (
@@ -52,10 +56,13 @@ export default function About() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.7 }}
-                style={{ display: 'flex', justifyContent: 'center', marginTop: '1.5rem' }}
+                style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: '1rem', marginTop: '1.5rem' }}
               >
                 <Link to="/portfolio" className="about-my-work-btn">
-                  MY WORK
+                  PHOTOS
+                </Link>
+                <Link to="/films" className="about-my-work-btn">
+                  VIDEOS
                 </Link>
               </motion.div>
 
