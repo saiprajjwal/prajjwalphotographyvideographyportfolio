@@ -6,65 +6,6 @@ import './Portfolio.css';
 // Loaded on demand: keeps three.js/@react-three/drei out of this route's critical chunk.
 const PortfolioScene = lazy(() => import('./PortfolioScene'));
 
-const LOCAL_PLACEHOLDERS = [
-  {
-    id: 'placeholder-1',
-    src: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=1000',
-    alt: 'Portrait photography example',
-    category: 'Portraits',
-    session: 'Studio Portrait'
-  },
-  {
-    id: 'placeholder-2',
-    src: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&q=80&w=1000',
-    alt: 'Golden retriever dog example',
-    category: 'Pets',
-    session: 'Spring Dogs'
-  },
-  {
-    id: 'placeholder-3',
-    src: 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&q=80&w=1000',
-    alt: 'Travel adventure scenery example',
-    category: 'Travel',
-    session: 'Summer Alps'
-  },
-  {
-    id: 'placeholder-4',
-    src: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&q=80&w=1000',
-    alt: 'Minimalist product design example',
-    category: 'Products',
-    session: null
-  },
-  {
-    id: 'placeholder-5',
-    src: 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&q=80&w=1000',
-    alt: 'Behind the scenes film crew set example',
-    category: 'Behind The Scene',
-    session: null
-  },
-  {
-    id: 'placeholder-6',
-    src: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&q=80&w=1000',
-    alt: 'Male portrait photography example',
-    category: 'Portraits',
-    session: 'Outdoor Autumn'
-  },
-  {
-    id: 'placeholder-7',
-    src: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&q=80&w=1000',
-    alt: 'Cute puppy portrait example',
-    category: 'Pets',
-    session: 'Winter Cats'
-  },
-  {
-    id: 'placeholder-8',
-    src: 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?auto=format&fit=crop&q=80&w=1000',
-    alt: 'Desert road trip scenery example',
-    category: 'Travel',
-    session: 'Desert Run'
-  }
-];
-
 export default function Portfolio() {
   const categories = portfolioData.categories;
   const [filter, setFilter] = useState(categories[0] || 'Portraits');
@@ -108,15 +49,12 @@ export default function Portfolio() {
         return res.json();
       })
       .then((data) => {
-        if (data.photos && data.photos.length > 0) {
-          setPhotos(data.photos);
-        } else {
-          setPhotos(LOCAL_PLACEHOLDERS);
-        }
+        setPhotos(data.photos || []);
       })
       .catch(() => {
-        // Fallback to static local placeholders if API is offline/unavailable (e.g. running under Vite dev locally)
-        setPhotos(LOCAL_PLACEHOLDERS);
+        // API unavailable (e.g. running under plain Vite dev) — show the
+        // branded empty state rather than stock placeholder photos.
+        setPhotos([]);
       })
       .finally(() => setPhotosLoaded(true));
   }, []);

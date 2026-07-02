@@ -1,9 +1,15 @@
 import fs from 'fs';
 import path from 'path';
+import { verifyToken } from './_auth.js';
 
 export default function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const token = (req.headers.authorization || '').replace('Bearer ', '');
+  if (!verifyToken(token)) {
+    return res.status(401).json({ error: 'Unauthorized — please log in again' });
   }
 
   const { reels } = req.body;

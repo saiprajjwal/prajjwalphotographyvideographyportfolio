@@ -60,7 +60,7 @@ export default function AmbientGlassBackground() {
           <ambientLight intensity={0.2} />
           <spotLight position={[10, 10, 10]} intensity={4} color="#ffffff" penumbra={1} angle={0.5} />
           <spotLight position={[-10, -10, -10]} intensity={2} color="#3b82f6" penumbra={1} angle={0.5} />
-          <Environment preset="studio" />
+          <Environment files="/hdri/studio_small_03_1k.hdr" />
           <Sparkles count={400} scale={20} size={1.2} speed={0.2} opacity={0.2} color="#ffffff" />
           <AmbientGlass />
         </Suspense>

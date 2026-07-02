@@ -230,6 +230,11 @@
     font-size: 2.5rem;
   }
 
+  /* Comfortable thumb-size tap targets */
+  .filter-btn {
+    min-height: 44px;
+  }
+
   .masonry-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 0.8rem;

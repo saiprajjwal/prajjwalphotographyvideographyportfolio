@@ -22,7 +22,7 @@ export default function Footer() {
     },
     {
       name: 'Pinterest',
-      url: 'https://au.pinterest.com/saiprajjwal/?invite_code=af7db456a81d4cf89c2e563fd6486c43&sender=334111003514027156',
+      url: 'https://au.pinterest.com/saiprajjwal/',
       icon: <PinterestIcon />
     }
   ];
