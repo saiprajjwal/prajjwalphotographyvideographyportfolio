@@ -32,18 +32,6 @@ export default function VideoLightbox({ video, onClose }) {
         onClick={onClose}
         style={{ background: '#000000', backdropFilter: 'none' }}
       >
-        <motion.button 
-          className="video-lightbox-close"
-          onClick={onClose}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.6, duration: 0.5 }}
-          aria-label="Close video"
-          style={{ zIndex: 100 }}
-        >
-          <X size={28} />
-        </motion.button>
-
         <motion.div 
           className="video-lightbox-content"
           initial={{ scale: 0.95, opacity: 0 }}
@@ -71,6 +59,18 @@ export default function VideoLightbox({ video, onClose }) {
             ></iframe>
           </div>
         </motion.div>
+
+        <motion.button 
+          className="video-lightbox-close"
+          onClick={onClose}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.6, duration: 0.5 }}
+          aria-label="Close video"
+          style={{ zIndex: 9999 }}
+        >
+          <X size={28} />
+        </motion.button>
       </motion.div>
     </AnimatePresence>
   );
