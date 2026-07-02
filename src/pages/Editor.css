@@ -81,6 +81,8 @@
   flex-direction: column;
   align-items: center;
   gap: 0.75rem;
+  position: sticky;
+  top: 7.5rem;
 }
 
 .pe-canvas-wrapper {
@@ -245,6 +247,71 @@
   cursor: pointer;
 }
 
+/* Lightroom-style White Balance */
+.pe-wb-row {
+  display: grid;
+  grid-template-columns: 45px 1fr 35px;
+  align-items: center;
+  gap: 0.75rem;
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  color: var(--text-primary);
+}
+
+.pe-wb-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  outline: none;
+}
+
+.pe-wb-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #e2e8f0;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.6);
+  border: 1px solid rgba(0,0,0,0.3);
+  margin-top: -5px; /* Adjust if thumb is not centered on track */
+}
+
+.pe-wb-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #e2e8f0;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.6);
+  border: 1px solid rgba(0,0,0,0.3);
+}
+
+.pe-wb-slider::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: inherit;
+}
+
+.pe-wb-slider::-moz-range-track {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: inherit;
+}
+
+.pe-wb-temp {
+  background: linear-gradient(to right, #2a8af6, #e2e8f0, #f6b72a);
+}
+
+.pe-wb-tint {
+  background: linear-gradient(to right, #2af65c, #e2e8f0, #f62ae5);
+}
+
 .pe-actions {
   display: flex;
   gap: 0.6rem;
@@ -368,18 +435,26 @@
 
 @media (max-width: 760px) {
   .pe-page {
-    padding: 6rem 5vw 3rem;
+    padding: 6rem 4vw 3rem;
   }
   .pe-workspace {
-    gap: 1.5rem;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
   }
   .pe-stage {
     position: sticky;
-    top: 5.5rem;
+    top: 3.5rem;
     z-index: 10;
+    background: var(--bg-color);
+    background-image: var(--bg-gradient);
+    width: 100%;
+    padding-bottom: 0.75rem;
+    margin-bottom: 0;
   }
   .pe-controls {
     max-width: 520px;
     width: 100%;
+    padding-top: 1rem;
   }
 }
