@@ -75,6 +75,16 @@ const PRESETS = [
   { id: 'Mono', adj: { ...DEFAULT_ADJ, saturation: 0, contrast: 112 } },
   { id: 'Film', adj: { ...DEFAULT_ADJ, contrast: 94, saturation: 88, warmth: 18, vignette: 28, grain: 15 } },
   { id: 'Vivid', adj: { ...DEFAULT_ADJ, saturation: 138, contrast: 108 } },
+  { id: 'Golden Hour', adj: { ...DEFAULT_ADJ, warmth: 35, tint: 10, brightness: 105, contrast: 110, highlights: -15, shadows: 20 } },
+  { id: 'Moody Dark', adj: { ...DEFAULT_ADJ, brightness: 90, contrast: 125, saturation: 85, warmth: -10, highlights: -30, shadows: -20, vignette: 40 } },
+  { id: 'Matte Film', adj: { ...DEFAULT_ADJ, contrast: 95, saturation: 90, warmth: 15, fade: 40, grain: 25, frame: 'film' } },
+  { id: 'Cyberpunk', adj: { ...DEFAULT_ADJ, contrast: 130, saturation: 140, warmth: -25, tint: 45, highlights: 20, shadows: -10, duotone: 50, duotoneC1: '#0011ff', duotoneC2: '#ff00ee' } },
+  { id: 'Polaroid', adj: { ...DEFAULT_ADJ, brightness: 110, contrast: 90, saturation: 80, warmth: 25, fade: 20, grain: 15, vignette: 20, frame: 'polaroid' } },
+  { id: 'Street Grime', adj: { ...DEFAULT_ADJ, contrast: 140, saturation: 65, tint: -15, shadows: -30, grain: 40, sharpen: 20 } },
+  { id: 'Pastel Dream', adj: { ...DEFAULT_ADJ, brightness: 115, contrast: 85, saturation: 110, tint: 15, fade: 15, shadows: 30 } },
+  { id: 'B&W High Contrast', adj: { ...DEFAULT_ADJ, saturation: 0, contrast: 140, highlights: 20, shadows: -40, grain: 10 } },
+  { id: 'B&W Soft Matte', adj: { ...DEFAULT_ADJ, saturation: 0, contrast: 90, fade: 35, grain: 25 } },
+  { id: 'Teal & Orange', adj: { ...DEFAULT_ADJ, contrast: 115, saturation: 110, warmth: 20, tint: 5, duotone: 30, duotoneC1: '#004466', duotoneC2: '#ff9900' } },
 ];
 
 const SLIDERS = [
@@ -167,7 +177,7 @@ export default function Editor() {
   const [exportFormat, setExportFormat] = useState('jpeg');
   const [exportQuality, setExportQuality] = useState(92);
 
-  const [openSections, setOpenSections] = useState({ presets: true, text: false, stickers: false, crop: true, wb: true, adjust: true, effects: false, splitTone: false, frames: false, export: false, draw: false });
+  const [openSections, setOpenSections] = useState({ presets: false, text: false, stickers: false, crop: true, wb: true, adjust: true, effects: false, splitTone: false, frames: false, export: false, draw: false });
 
   const [isComparing, setIsComparing] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -972,35 +982,6 @@ export default function Editor() {
 
         <div className="pe-controls" style={{ opacity: !image ? 0.5 : 1, pointerEvents: !image ? 'none' : 'auto' }}>
           
-          <div className="pe-group" style={{ background: isDrawingMode ? 'rgba(59, 130, 246, 0.1)' : 'transparent', padding: isDrawingMode ? '1rem' : '0', borderRadius: '12px', border: isDrawingMode ? '1px solid rgba(59, 130, 246, 0.3)' : 'none', transition: 'all 0.3s' }}>
-            <div className="pe-section-header" onClick={() => setOpenSections(s => ({ ...s, draw: !s.draw }))}>
-              <span className="pe-group-label" style={{ color: isDrawingMode ? '#3b82f6' : 'var(--text-secondary)' }}>Freehand Draw</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <button className={`pe-btn pe-btn-ghost ${isDrawingMode ? 'is-active' : ''}`} style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', borderColor: isDrawingMode ? '#3b82f6' : 'transparent', color: isDrawingMode ? '#3b82f6' : 'var(--text-primary)' }} onClick={(e) => { e.stopPropagation(); setIsDrawingMode(!isDrawingMode); setOpenSections(s => ({ ...s, draw: true })); }}>
-                  {isDrawingMode ? 'Done' : 'Draw'}
-                </button>
-                <ChevronDown size={16} className={`pe-section-chevron ${openSections.draw ? 'is-open' : ''}`} />
-              </div>
-            </div>
-            <div className={`pe-section-body ${openSections.draw ? '' : 'is-collapsed'}`} style={{ maxHeight: openSections.draw ? '300px' : '0' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', marginTop: '0.8rem' }}>
-                <label className="pe-color-label" style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                  Brush Color
-                  <div className="pe-color-swatch-wrapper">
-                    <input type="color" value={brushColor} onChange={e => setBrushColor(e.target.value)} />
-                  </div>
-                </label>
-                <label className="pe-slider-row">
-                  <span>Size</span>
-                  <input type="range" min="0.005" max="0.1" step="0.001" value={brushSize} onChange={e => setBrushSize(parseFloat(e.target.value))} />
-                </label>
-                <button onClick={() => { setDrawings([]); scheduleHistorySave(); }} className="pe-btn pe-btn-delete" style={{ padding: '0.4rem', fontSize: '0.75rem' }}>
-                  Clear All Drawings
-                </button>
-              </div>
-            </div>
-          </div>
-
           <div className="pe-group">
             <div className="pe-section-header" onClick={() => setOpenSections(s => ({ ...s, presets: !s.presets }))}>
               <span className="pe-group-label">Presets</span>
@@ -1022,159 +1003,39 @@ export default function Editor() {
           </div>
 
           <div className="pe-group">
-            <div className="pe-section-header" onClick={() => setOpenSections(s => ({ ...s, text: !s.text }))}>
-              <span className="pe-group-label">Text</span>
-              <ChevronDown size={16} className={`pe-section-chevron ${openSections.text ? 'is-open' : ''}`} />
-            </div>
-            <div className={`pe-section-body ${openSections.text ? '' : 'is-collapsed'}`} style={{ maxHeight: openSections.text ? '600px' : '0' }}>
-            <button 
-              onClick={handleAddText}
-              style={{ 
-                width: '100%',
-                padding: '0.65rem 1rem',
-                borderRadius: '10px',
-                border: '1px dashed rgba(255,255,255,0.15)',
-                background: 'rgba(255,255,255,0.03)',
-                color: 'var(--text-secondary)',
-                fontSize: '0.85rem',
-                fontFamily: 'var(--font-sans)',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.5rem',
-                transition: 'all 0.2s ease'
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.35)'; e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'; e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
-            >
-              <Type size={16} /> Add Text Layer
-            </button>
-            
-            {selectedTextId && texts.find(t => t.id === selectedTextId) && (() => {
-              const t = texts.find(t => t.id === selectedTextId);
-              const updateT = (changes) => {
-                setTexts(ts => ts.map(txt => txt.id === t.id ? { ...txt, ...changes } : txt));
-                scheduleHistorySave();
-              };
-              return (
-                <div className="pe-text-editor">
-                  <input 
-                    type="text" 
-                    value={t.text} 
-                    onChange={e => updateT({ text: e.target.value })} 
-                    className="pe-text-input" 
-                    placeholder="Enter text..."
-                  />
-                  
-                  <div className="pe-text-controls-grid">
-                    <select value={t.fontFamily} onChange={e => updateT({ fontFamily: e.target.value })} className="pe-select">
-                      {FONTS.map(f => <option key={f} value={f}>{f}</option>)}
-                    </select>
-                    <label className="pe-color-label" title="Text Color">
-                      <div className="pe-color-swatch-wrapper">
-                        <input type="color" value={t.color} onChange={e => updateT({ color: e.target.value })} />
-                      </div>
-                      Text
-                    </label>
-                    <label className="pe-color-label" title="Background Color">
-                      <div className="pe-color-swatch-wrapper" style={{ opacity: t.bgColor === 'transparent' ? 0.3 : 1 }}>
-                        <input type="color" value={t.bgColor === 'transparent' ? '#000000' : t.bgColor} onChange={e => updateT({ bgColor: e.target.value })} disabled={t.bgColor === 'transparent'} />
-                      </div>
-                      Bg
-                    </label>
-                  </div>
-
-                  <label className="pe-slider-row">
-                    <span>Size</span>
-                    <input type="range" min="0.02" max="0.3" step="0.01" value={t.fontSize} onChange={e => updateT({ fontSize: parseFloat(e.target.value) })} />
-                  </label>
-                  <label className="pe-slider-row">
-                    <span>Radius</span>
-                    <input type="range" min="0" max="0.1" step="0.01" value={t.borderRadius} onChange={e => updateT({ borderRadius: parseFloat(e.target.value) })} />
-                  </label>
-                  
-                  <label className="pe-checkbox-label">
-                    <input type="checkbox" checked={t.bgColor === 'transparent'} onChange={e => updateT({ bgColor: e.target.checked ? 'transparent' : '#000000' })} /> 
-                    Transparent Background
-                  </label>
-
-                  <button onClick={() => { setTexts(ts => ts.filter(txt => txt.id !== t.id)); setSelectedTextId(null); scheduleHistorySave(); }} className="pe-btn pe-btn-delete">
-                    Delete Layer
-                  </button>
-                </div>
-              );
-            })()}
-            </div>
-          </div>
-
-          <div className="pe-group">
-            <div className="pe-section-header" onClick={() => setOpenSections(s => ({ ...s, stickers: !s.stickers }))}>
-              <span className="pe-group-label">Stickers</span>
-              <ChevronDown size={16} className={`pe-section-chevron ${openSections.stickers ? 'is-open' : ''}`} />
-            </div>
-            <div className={`pe-section-body ${openSections.stickers ? '' : 'is-collapsed'}`} style={{ maxHeight: openSections.stickers ? '400px' : '0' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div className="pe-chips">
-                {['✨', '🔥', '❤️', '📸', '🎬'].map(emoji => (
-                  <button key={emoji} className="pe-btn pe-btn-ghost" style={{ padding: '0.2rem 0.4rem', fontSize: '1rem' }} onClick={() => handleAddSticker(emoji)}>
-                    {emoji}
-                  </button>
-                ))}
-              </div>
-            </div>
-            {selectedStickerId && stickers.find(t => t.id === selectedStickerId) && (() => {
-              const s = stickers.find(t => t.id === selectedStickerId);
-              return (
-                <div className="pe-text-editor">
-                  <label className="pe-slider-row">
-                    <span>Size</span>
-                    <input type="range" min="0.05" max="0.8" step="0.01" value={s.size} onChange={e => {
-                      setStickers(ts => ts.map(txt => txt.id === s.id ? { ...txt, size: parseFloat(e.target.value) } : txt));
-                      scheduleHistorySave();
-                    }} />
-                  </label>
-                  <button onClick={() => { setStickers(ts => ts.filter(txt => txt.id !== s.id)); setSelectedStickerId(null); scheduleHistorySave(); }} className="pe-btn pe-btn-delete">
-                    Delete Sticker
-                  </button>
-                </div>
-              );
-            })()}
-            </div>
-          </div>
-
-          <div className="pe-group">
             <div className="pe-section-header" onClick={() => setOpenSections(s => ({ ...s, crop: !s.crop }))}>
               <span className="pe-group-label">Crop</span>
               <ChevronDown size={16} className={`pe-section-chevron ${openSections.crop ? 'is-open' : ''}`} />
             </div>
             <div className={`pe-section-body ${openSections.crop ? '' : 'is-collapsed'}`} style={{ maxHeight: openSections.crop ? '300px' : '0' }}>
-            <div className="pe-chips">
-              {ASPECTS.map((a) => (
-                <button
-                  key={a.id}
-                  className={`pe-chip ${aspect === a.id ? 'is-active' : ''}`}
-                  onClick={() => { setAspect(a.id); scheduleHistorySave(); }}
-                >
-                  {a.label}
-                </button>
-              ))}
-            </div>
-            <label className="pe-slider-row">
-              <span>Zoom</span>
-              <input type="range" min="1" max="3" step="0.01" value={zoom}
-                onChange={(e) => setZoom(parseFloat(e.target.value))}
-                onDoubleClick={() => { setZoom(1); scheduleHistorySave(); }}
-                onPointerUp={scheduleHistorySave} />
-            </label>
-            <div className="pe-chips">
-              <button className="pe-chip" onClick={() => { setRotation((r) => (r + 90) % 360); scheduleHistorySave(); }}>
-                <RotateCw size={15} /> Rotate
-              </button>
-              <button className={`pe-chip ${flipH ? 'is-active' : ''}`} onClick={() => { setFlipH((f) => !f); scheduleHistorySave(); }}>
-                Flip
-              </button>
-            </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                <div className="pe-chips">
+                  {ASPECTS.map((a) => (
+                    <button
+                      key={a.id}
+                      className={`pe-chip ${aspect === a.id ? 'is-active' : ''}`}
+                      onClick={() => { setAspect(a.id); scheduleHistorySave(); }}
+                    >
+                      {a.label}
+                    </button>
+                  ))}
+                </div>
+                <label className="pe-slider-row">
+                  <span>Zoom</span>
+                  <input type="range" min="1" max="3" step="0.01" value={zoom}
+                    onChange={(e) => setZoom(parseFloat(e.target.value))}
+                    onDoubleClick={() => { setZoom(1); scheduleHistorySave(); }}
+                    onPointerUp={scheduleHistorySave} />
+                </label>
+                <div className="pe-chips">
+                  <button className="pe-chip" onClick={() => { setRotation((r) => (r + 90) % 360); scheduleHistorySave(); }}>
+                    <RotateCw size={15} /> Rotate
+                  </button>
+                  <button className={`pe-chip ${flipH ? 'is-active' : ''}`} onClick={() => { setFlipH((f) => !f); scheduleHistorySave(); }}>
+                    Flip
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -1329,6 +1190,157 @@ export default function Editor() {
                 </button>
               ))}
             </div>
+            </div>
+          </div>
+
+          <div className="pe-group">
+            <div className="pe-section-header" onClick={() => setOpenSections(s => ({ ...s, text: !s.text }))}>
+              <span className="pe-group-label">Text</span>
+              <ChevronDown size={16} className={`pe-section-chevron ${openSections.text ? 'is-open' : ''}`} />
+            </div>
+            <div className={`pe-section-body ${openSections.text ? '' : 'is-collapsed'}`} style={{ maxHeight: openSections.text ? '600px' : '0' }}>
+            <button 
+              onClick={handleAddText}
+              style={{ 
+                width: '100%',
+                padding: '0.65rem 1rem',
+                borderRadius: '10px',
+                border: '1px dashed rgba(255,255,255,0.15)',
+                background: 'rgba(255,255,255,0.03)',
+                color: 'var(--text-secondary)',
+                fontSize: '0.85rem',
+                fontFamily: 'var(--font-sans)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.35)'; e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'; e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+            >
+              <Type size={16} /> Add Text Layer
+            </button>
+            
+            {selectedTextId && texts.find(t => t.id === selectedTextId) && (() => {
+              const t = texts.find(t => t.id === selectedTextId);
+              const updateT = (changes) => {
+                setTexts(ts => ts.map(txt => txt.id === t.id ? { ...txt, ...changes } : txt));
+                scheduleHistorySave();
+              };
+              return (
+                <div className="pe-text-editor">
+                  <input 
+                    type="text" 
+                    value={t.text} 
+                    onChange={e => updateT({ text: e.target.value })} 
+                    className="pe-text-input" 
+                    placeholder="Enter text..."
+                  />
+                  
+                  <div className="pe-text-controls-grid">
+                    <select value={t.fontFamily} onChange={e => updateT({ fontFamily: e.target.value })} className="pe-select">
+                      {FONTS.map(f => <option key={f} value={f}>{f}</option>)}
+                    </select>
+                    <label className="pe-color-label" title="Text Color">
+                      <div className="pe-color-swatch-wrapper">
+                        <input type="color" value={t.color} onChange={e => updateT({ color: e.target.value })} />
+                      </div>
+                      Text
+                    </label>
+                    <label className="pe-color-label" title="Background Color">
+                      <div className="pe-color-swatch-wrapper" style={{ opacity: t.bgColor === 'transparent' ? 0.3 : 1 }}>
+                        <input type="color" value={t.bgColor === 'transparent' ? '#000000' : t.bgColor} onChange={e => updateT({ bgColor: e.target.value })} disabled={t.bgColor === 'transparent'} />
+                      </div>
+                      Bg
+                    </label>
+                  </div>
+
+                  <label className="pe-slider-row">
+                    <span>Size</span>
+                    <input type="range" min="0.02" max="0.3" step="0.01" value={t.fontSize} onChange={e => updateT({ fontSize: parseFloat(e.target.value) })} />
+                  </label>
+                  <label className="pe-slider-row">
+                    <span>Radius</span>
+                    <input type="range" min="0" max="0.1" step="0.01" value={t.borderRadius} onChange={e => updateT({ borderRadius: parseFloat(e.target.value) })} />
+                  </label>
+                  
+                  <label className="pe-checkbox-label">
+                    <input type="checkbox" checked={t.bgColor === 'transparent'} onChange={e => updateT({ bgColor: e.target.checked ? 'transparent' : '#000000' })} /> 
+                    Transparent Background
+                  </label>
+
+                  <button onClick={() => { setTexts(ts => ts.filter(txt => txt.id !== t.id)); setSelectedTextId(null); scheduleHistorySave(); }} className="pe-btn pe-btn-delete">
+                    Delete Layer
+                  </button>
+                </div>
+              );
+            })()}
+            </div>
+          </div>
+
+          <div className="pe-group">
+            <div className="pe-section-header" onClick={() => setOpenSections(s => ({ ...s, stickers: !s.stickers }))}>
+              <span className="pe-group-label">Stickers</span>
+              <ChevronDown size={16} className={`pe-section-chevron ${openSections.stickers ? 'is-open' : ''}`} />
+            </div>
+            <div className={`pe-section-body ${openSections.stickers ? '' : 'is-collapsed'}`} style={{ maxHeight: openSections.stickers ? '400px' : '0' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div className="pe-chips">
+                {['✨', '🔥', '❤️', '📸', '🎬'].map(emoji => (
+                  <button key={emoji} className="pe-btn pe-btn-ghost" style={{ padding: '0.2rem 0.4rem', fontSize: '1rem' }} onClick={() => handleAddSticker(emoji)}>
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {selectedStickerId && stickers.find(t => t.id === selectedStickerId) && (() => {
+              const s = stickers.find(t => t.id === selectedStickerId);
+              return (
+                <div className="pe-text-editor">
+                  <label className="pe-slider-row">
+                    <span>Size</span>
+                    <input type="range" min="0.05" max="0.8" step="0.01" value={s.size} onChange={e => {
+                      setStickers(ts => ts.map(txt => txt.id === s.id ? { ...txt, size: parseFloat(e.target.value) } : txt));
+                      scheduleHistorySave();
+                    }} />
+                  </label>
+                  <button onClick={() => { setStickers(ts => ts.filter(txt => txt.id !== s.id)); setSelectedStickerId(null); scheduleHistorySave(); }} className="pe-btn pe-btn-delete">
+                    Delete Sticker
+                  </button>
+                </div>
+              );
+            })()}
+            </div>
+          </div>
+
+          <div className="pe-group" style={{ background: isDrawingMode ? 'rgba(59, 130, 246, 0.1)' : 'transparent', padding: isDrawingMode ? '1rem' : '0', borderRadius: '12px', border: isDrawingMode ? '1px solid rgba(59, 130, 246, 0.3)' : 'none', transition: 'all 0.3s' }}>
+            <div className="pe-section-header" onClick={() => setOpenSections(s => ({ ...s, draw: !s.draw }))}>
+              <span className="pe-group-label" style={{ color: isDrawingMode ? '#3b82f6' : 'var(--text-secondary)' }}>Freehand Draw</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <button className={`pe-btn pe-btn-ghost ${isDrawingMode ? 'is-active' : ''}`} style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', borderColor: isDrawingMode ? '#3b82f6' : 'transparent', color: isDrawingMode ? '#3b82f6' : 'var(--text-primary)' }} onClick={(e) => { e.stopPropagation(); setIsDrawingMode(!isDrawingMode); setOpenSections(s => ({ ...s, draw: true })); }}>
+                  {isDrawingMode ? 'Done' : 'Draw'}
+                </button>
+                <ChevronDown size={16} className={`pe-section-chevron ${openSections.draw ? 'is-open' : ''}`} />
+              </div>
+            </div>
+            <div className={`pe-section-body ${openSections.draw ? '' : 'is-collapsed'}`} style={{ maxHeight: openSections.draw ? '300px' : '0' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', marginTop: '0.8rem' }}>
+                <label className="pe-color-label" style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                  Brush Color
+                  <div className="pe-color-swatch-wrapper">
+                    <input type="color" value={brushColor} onChange={e => setBrushColor(e.target.value)} />
+                  </div>
+                </label>
+                <label className="pe-slider-row">
+                  <span>Size</span>
+                  <input type="range" min="0.005" max="0.1" step="0.001" value={brushSize} onChange={e => setBrushSize(parseFloat(e.target.value))} />
+                </label>
+                <button onClick={() => { setDrawings([]); scheduleHistorySave(); }} className="pe-btn pe-btn-delete" style={{ padding: '0.4rem', fontSize: '0.75rem' }}>
+                  Clear All Drawings
+                </button>
+              </div>
             </div>
           </div>
 
