@@ -44,20 +44,16 @@ export default function About() {
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.2, duration: 0.5 }}
+                style={{ position: 'relative' }}
               >
                 <img src={headshot} alt={name} className="about-image" />
+                <div className="about-image-overlay-btn">
+                  <Link to="/portfolio" className="btn-glass" style={{ background: 'rgba(255, 255, 255, 0.15)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', letterSpacing: '0.2em' }}>
+                    MY WORK
+                  </Link>
+                </div>
               </motion.div>
 
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.7 }}
-                style={{ display: 'flex', justifyContent: 'center' }}
-              >
-                <Link to="/portfolio" className="btn-glass">
-                  See My Work
-                </Link>
-              </motion.div>
             </div>
             
             <div className="about-content">
