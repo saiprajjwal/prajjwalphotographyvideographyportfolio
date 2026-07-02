@@ -19,7 +19,7 @@ export default function handler(req, res) {
     return;
   }
 
-  const { category, altText } = req.body || {};
+  const { category, session, altText } = req.body || {};
   if (!category) {
     res.status(400).json({ error: 'category is required' });
     return;
@@ -29,9 +29,13 @@ export default function handler(req, res) {
   const folder = 'portfolio';
   const context = `alt=${altText || `${category} photo by Prajjwal Pandey`}`;
 
+  // If a session name is provided, combine it with category as a comma-separated tag list.
+  // We prefix the session name with 'session_' to reliably identify it later.
+  const tags = session ? `${category},session_${session.trim()}` : category;
+
   // Every non-file param the client will send must be included here, or
   // Cloudinary will reject the upload with a signature mismatch.
-  const paramsToSign = { timestamp, folder, tags: category, context };
+  const paramsToSign = { timestamp, folder, tags, context };
   const signature = cloudinary.utils.api_sign_request(paramsToSign, process.env.CLOUDINARY_API_SECRET);
 
   res.status(200).json({
@@ -40,7 +44,7 @@ export default function handler(req, res) {
     cloudName: process.env.CLOUDINARY_CLOUD_NAME,
     apiKey: process.env.CLOUDINARY_API_KEY,
     folder,
-    tags: category,
+    tags,
     context,
   });
 }

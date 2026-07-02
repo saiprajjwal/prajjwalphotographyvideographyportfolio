@@ -184,7 +184,8 @@ export default function Home() {
         }}
       >
         <Canvas
-          gl={{ alpha: true }}
+          gl={{ alpha: true, antialias: false }}
+          dpr={[1, 1.5]}
           camera={{ position: [0, 0, 10], fov: 45 }}
         >
           <Suspense fallback={null}>

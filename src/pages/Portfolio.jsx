@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState, useEffect } from 'react';
+import { lazy, Suspense, useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import portfolioData from '../data/portfolio.json';
 import './Portfolio.css';
@@ -11,59 +11,90 @@ const LOCAL_PLACEHOLDERS = [
     id: 'placeholder-1',
     src: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=1000',
     alt: 'Portrait photography example',
-    category: 'Portraits'
+    category: 'Portraits',
+    session: 'Studio Portrait'
   },
   {
     id: 'placeholder-2',
     src: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&q=80&w=1000',
     alt: 'Golden retriever dog example',
-    category: 'Pets'
+    category: 'Pets',
+    session: 'Spring Dogs'
   },
   {
     id: 'placeholder-3',
     src: 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&q=80&w=1000',
     alt: 'Travel adventure scenery example',
-    category: 'Travel'
+    category: 'Travel',
+    session: 'Summer Alps'
   },
   {
     id: 'placeholder-4',
     src: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&q=80&w=1000',
     alt: 'Minimalist product design example',
-    category: 'Products'
+    category: 'Products',
+    session: null
   },
   {
     id: 'placeholder-5',
     src: 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&q=80&w=1000',
     alt: 'Behind the scenes film crew set example',
-    category: 'Behind The Scene'
+    category: 'Behind The Scene',
+    session: null
   },
   {
     id: 'placeholder-6',
     src: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&q=80&w=1000',
     alt: 'Male portrait photography example',
-    category: 'Portraits'
+    category: 'Portraits',
+    session: 'Outdoor Autumn'
   },
   {
     id: 'placeholder-7',
     src: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&q=80&w=1000',
     alt: 'Cute puppy portrait example',
-    category: 'Pets'
+    category: 'Pets',
+    session: 'Winter Cats'
   },
   {
     id: 'placeholder-8',
     src: 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?auto=format&fit=crop&q=80&w=1000',
     alt: 'Desert road trip scenery example',
-    category: 'Travel'
+    category: 'Travel',
+    session: 'Desert Run'
   }
 ];
 
 export default function Portfolio() {
-  const [filter, setFilter] = useState('All');
+  const categories = portfolioData.categories;
+  const [filter, setFilter] = useState(categories[0] || 'Portraits');
+  const [activeSession, setActiveSession] = useState(null);
   const [canvasReady, setCanvasReady] = useState(false);
   const [photos, setPhotos] = useState([]);
   const [photosLoaded, setPhotosLoaded] = useState(false);
+  const [introDone, setIntroDone] = useState(false);
+  const [doorsOpen, setDoorsOpen] = useState(false);
+  
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  const categories = portfolioData.categories;
+  useEffect(() => {
+    if (introDone) return;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [introDone]);
+
+  const finishIntro = useCallback(() => {
+    setDoorsOpen(true);
+    setTimeout(() => setIntroDone(true), reducedMotion ? 250 : 1400);
+  }, [reducedMotion]);
+
+  useEffect(() => {
+    if (introDone || !photosLoaded) return;
+    const t = setTimeout(finishIntro, reducedMotion ? 900 : 3000);
+    return () => clearTimeout(t);
+  }, [introDone, photosLoaded, finishIntro, reducedMotion]);
 
   useEffect(() => {
     fetch('/api/photos')
@@ -85,9 +116,45 @@ export default function Portfolio() {
       .finally(() => setPhotosLoaded(true));
   }, []);
 
-  const filteredPhotos = filter === 'All'
-    ? photos
-    : photos.filter(photo => photo.category === filter);
+  const categoryPhotos = photos.filter(photo => photo.category === filter);
+  const distinctSessions = [...new Set(categoryPhotos.map(p => p.session).filter(Boolean))];
+
+  const shouldShowTiers = distinctSessions.length >= 2;
+
+  let displayItems = [];
+
+  if (shouldShowTiers) {
+    const sessionCovers = distinctSessions.map(sessionName => {
+      const firstPhoto = categoryPhotos.find(p => p.session === sessionName);
+      return {
+        ...firstPhoto,
+        isSessionCover: true,
+        id: `session-${sessionName}`, // Use unique id to avoid collisions
+        sessionName
+      };
+    });
+    const noSessionPhotos = categoryPhotos.filter(p => !p.session);
+    displayItems = [...sessionCovers, ...noSessionPhotos];
+  } else {
+    displayItems = categoryPhotos;
+  }
+
+  // Active session photos for the overlay modal
+  const activeSessionPhotos = activeSession
+    ? categoryPhotos.filter(p => p.session === activeSession)
+    : [];
+
+  // Lock body scroll when overlay is active
+  useEffect(() => {
+    if (activeSession) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [activeSession]);
 
   const handleMouseMove = (e) => {
     const card = e.currentTarget;
@@ -122,6 +189,46 @@ export default function Portfolio() {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0, transition: { duration: 0.5 } }}
     >
+      {/* Landing: THE ARCHIVE doors */}
+      <AnimatePresence>
+        {!introDone && (
+          <motion.div
+            className="archive-intro"
+            onClick={finishIntro}
+            exit={{ opacity: 0, transition: { duration: 0.9, ease: 'easeInOut' } }}
+          >
+            <div className={`archive-door archive-door-left ${doorsOpen ? 'open' : ''}`} aria-hidden="true" />
+            <div className={`archive-door archive-door-right ${doorsOpen ? 'open' : ''}`} aria-hidden="true" />
+            <div className={`archive-intro-text ${doorsOpen ? 'leaving' : ''}`}>
+              <motion.p
+                className="archive-eyebrow"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.4, duration: 1.2 }}
+              >
+                Prajjwal Pandey — Photography
+              </motion.p>
+              <motion.h1
+                initial={{ opacity: 0, y: 30, letterSpacing: '0.35em' }}
+                animate={{ opacity: 1, y: 0, letterSpacing: '0.18em' }}
+                transition={{ delay: 0.6, duration: 1.6, ease: [0.16, 1, 0.3, 1] }}
+              >
+                The Archive
+              </motion.h1>
+              <motion.p
+                className="archive-tagline"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 1.5, duration: 1.4 }}
+              >
+                Every frame has a story waiting to be discovered.
+              </motion.p>
+              {!photosLoaded && <p className="archive-loading">Opening the vault…</p>}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* 3D Background Canvas */}
       <div
         className="portfolio-canvas-fixed"
@@ -157,7 +264,10 @@ export default function Portfolio() {
                 <button
                   key={cat}
                   className={`filter-btn ${filter === cat ? 'active' : ''}`}
-                  onClick={() => setFilter(cat)}
+                  onClick={() => {
+                    setFilter(cat);
+                    setActiveSession(null);
+                  }}
                 >
                   {cat}
                 </button>
@@ -165,7 +275,7 @@ export default function Portfolio() {
             </motion.div>
           </header>
 
-          {photosLoaded && filteredPhotos.length === 0 && (
+          {photosLoaded && categoryPhotos.length === 0 && (
             <p className="portfolio-empty-message">
               {photos.length === 0 ? 'No photos yet — check back soon.' : `No photos in "${filter}" yet.`}
             </p>
@@ -173,7 +283,7 @@ export default function Portfolio() {
 
           <div className="masonry-grid">
             <AnimatePresence mode="popLayout">
-              {filteredPhotos.map((photo) => (
+              {displayItems.map((photo) => (
                 <motion.div
                   layout="position"
                   initial={{ opacity: 0, y: 20 }}
@@ -188,8 +298,10 @@ export default function Portfolio() {
                   className="masonry-item"
                   onMouseMove={handleMouseMove}
                   onMouseLeave={handleMouseLeave}
+                  onClick={photo.isSessionCover ? () => setActiveSession(photo.sessionName) : undefined}
+                  style={photo.isSessionCover ? { cursor: 'pointer' } : {}}
                 >
-                  <div className="card-badge">{photo.category}</div>
+                  <div className="card-badge">{photo.isSessionCover ? photo.sessionName : photo.category}</div>
                   <img
                     src={photo.src}
                     alt={photo.alt}
@@ -202,6 +314,59 @@ export default function Portfolio() {
           </div>
         </div>
       </main>
+
+      {/* Glassy Album Overlay */}
+      <AnimatePresence>
+        {activeSession && (
+          <motion.div
+            className="album-modal-backdrop"
+            initial={{ opacity: 0, backdropFilter: 'blur(0px)' }}
+            animate={{ opacity: 1, backdropFilter: 'blur(4px)' }}
+            exit={{ opacity: 0, backdropFilter: 'blur(0px)' }}
+            transition={{ duration: 0.4 }}
+            onClick={() => setActiveSession(null)}
+          >
+            <motion.div
+              className="album-overlay"
+              initial={{ y: 40, opacity: 0, scale: 0.98 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              exit={{ y: 20, opacity: 0, scale: 0.98 }}
+              transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="album-overlay-header container">
+                <h2>{activeSession}</h2>
+                <button className="album-overlay-close" onClick={() => setActiveSession(null)}>
+                  Close &times;
+                </button>
+              </div>
+              
+              <div className="album-overlay-content container">
+                <div className="masonry-grid">
+                  {activeSessionPhotos.map((photo) => (
+                    <motion.div
+                      key={photo.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                      className="masonry-item"
+                      onMouseMove={handleMouseMove}
+                      onMouseLeave={handleMouseLeave}
+                    >
+                      <img
+                        src={photo.src}
+                        alt={photo.alt}
+                        loading="lazy"
+                        className="portfolio-image"
+                      />
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

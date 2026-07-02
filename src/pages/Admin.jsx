@@ -11,6 +11,7 @@ export default function Admin() {
   const [loggingIn, setLoggingIn] = useState(false);
 
   const [category, setCategory] = useState(CATEGORIES[0]);
+  const [session, setSession] = useState('');
   const [altText, setAltText] = useState('');
   const [files, setFiles] = useState([]);
   const [results, setResults] = useState([]);
@@ -58,7 +59,7 @@ export default function Admin() {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ category, altText }),
+          body: JSON.stringify({ category, session, altText }),
         });
         const sigData = await sigRes.json();
         if (!sigRes.ok) throw new Error(sigData.error || 'Could not get an upload signature');
@@ -127,6 +128,16 @@ export default function Admin() {
                 <option key={cat} value={cat}>{cat}</option>
               ))}
             </select>
+          </label>
+
+          <label>
+            Session / Album Name (optional)
+            <input
+              type="text"
+              value={session}
+              onChange={(e) => setSession(e.target.value)}
+              placeholder="e.g. Summer Bloom 2026, Neon Nights"
+            />
           </label>
 
           <label>

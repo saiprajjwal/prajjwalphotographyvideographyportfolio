@@ -7,10 +7,12 @@ import * as THREE from 'three';
 function AmbientGlass() {
   const meshRef = useRef();
   const { viewport } = useThree();
-  
+
   const isMobile = viewport.width < 6;
   const glassWidth = isMobile ? 3 : 6;
   const glassHeight = isMobile ? 5 : 8;
+  const samples = isMobile ? 4 : 8;
+  const resolution = isMobile ? 256 : 512;
 
   useFrame((state) => {
     const t = state.clock.elapsedTime;
@@ -28,8 +30,8 @@ function AmbientGlass() {
     <Float speed={1} rotationIntensity={0} floatIntensity={0.5}>
       <mesh ref={meshRef} position={[0, 0, -2]}>
         <boxGeometry args={[glassWidth, glassHeight, 0.5]} />
-        <MeshTransmissionMaterial 
-          backside={true} samples={16} resolution={1024} transmission={1} roughness={0.1}
+        <MeshTransmissionMaterial
+          backside={true} samples={samples} resolution={resolution} transmission={1} roughness={0.1}
           thickness={1.5} ior={1.3} chromaticAberration={0.05} anisotropy={0.2}
           distortion={0.2} distortionScale={0.5} temporalDistortion={0.05}
           clearcoat={1} attenuationDistance={2} attenuationColor="#ffffff"
@@ -47,10 +49,11 @@ export default function AmbientGlassBackground() {
       className="glass-canvas-fixed"
       style={{ opacity: canvasReady ? 1 : 0, transition: 'opacity 1s ease-out' }}
     >
-      <Canvas 
-        gl={{ alpha: true }}
-        camera={{ position: [0, 0, 10], fov: 45 }} 
-        style={{ pointerEvents: 'none' }} 
+      <Canvas
+        gl={{ alpha: true, antialias: false }}
+        dpr={[1, 1.5]}
+        camera={{ position: [0, 0, 10], fov: 45 }}
+        style={{ pointerEvents: 'none' }}
         onCreated={() => requestAnimationFrame(() => requestAnimationFrame(() => setCanvasReady(true)))}
       >
         <Suspense fallback={null}>
