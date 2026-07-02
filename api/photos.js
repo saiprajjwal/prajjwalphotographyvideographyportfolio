@@ -18,9 +18,10 @@ export default async function handler(req, res) {
 
     const photos = result.resources.map((resource) => {
       const tags = resource.tags || [];
-      const category = tags.find(t => !t.startsWith('session_')) || 'Uncategorized';
+      const category = tags.find(t => !t.startsWith('session_') && !t.startsWith('cover_')) || 'Uncategorized';
       const sessionTag = tags.find(t => t.startsWith('session_'));
       const session = sessionTag ? sessionTag.replace(/^session_/, '').replace(/_/g, ' ') : null;
+      const isCover = tags.some(t => t.startsWith('cover_'));
 
       const alt =
         resource.context?.custom?.alt ||
@@ -33,6 +34,7 @@ export default async function handler(req, res) {
         alt,
         category,
         session,
+        isCover,
       };
     });
 

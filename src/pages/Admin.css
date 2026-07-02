@@ -229,3 +229,8 @@
 .admin-library-actions button.delete-btn:hover {
   background: rgba(255, 80, 80, 0.2);
 }
+
+.admin-library-actions button.cover-active {
+  background: rgba(255, 215, 0, 0.15);
+  color: #ffd700;
+}

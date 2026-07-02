@@ -58,6 +58,28 @@ export default function Admin() {
     }
   };
 
+  const handleSetCover = async (id, session) => {
+    try {
+      const res = await fetch('/api/set-cover', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ id, session })
+      });
+      if (!res.ok) throw new Error('Failed to set cover');
+      // Update local state to reflect the new cover
+      setLibraryPhotos(prev => prev.map(p => ({
+        ...p,
+        isCover: p.id === id ? true : (p.session === session ? false : p.isCover)
+      })));
+      alert('Album cover updated!');
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
   const handleUpdatePhoto = async (id, category, currentSession) => {
     const newSession = window.prompt(`Update Album name for this ${category} photo (leave blank for no album):`, currentSession || '');
     if (newSession === null) return; // User cancelled
@@ -256,6 +278,14 @@ export default function Admin() {
                     </div>
                     <div className="admin-library-actions">
                       <button onClick={() => handleUpdatePhoto(photo.id, photo.category, photo.session)}>Edit Album</button>
+                      {photo.session && (
+                        <button 
+                          className={photo.isCover ? 'cover-active' : ''} 
+                          onClick={() => handleSetCover(photo.id, photo.session)}
+                        >
+                          {photo.isCover ? '★ Cover' : 'Set Cover'}
+                        </button>
+                      )}
                       <button className="delete-btn" onClick={() => handleDeletePhoto(photo.id)}>Delete</button>
                     </div>
                   </div>

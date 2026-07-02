@@ -119,13 +119,14 @@ export default function Portfolio() {
   const categoryPhotos = photos.filter(photo => photo.category === filter);
   const distinctSessions = [...new Set(categoryPhotos.map(p => p.session).filter(Boolean))];
 
-  const shouldShowTiers = distinctSessions.length >= 2;
+  const shouldShowTiers = distinctSessions.length >= 1;
 
   let displayItems = [];
 
   if (shouldShowTiers) {
     const sessionCovers = distinctSessions.map(sessionName => {
-      const firstPhoto = categoryPhotos.find(p => p.session === sessionName);
+      const sessionPhotos = categoryPhotos.filter(p => p.session === sessionName);
+      const firstPhoto = sessionPhotos.find(p => p.isCover) || sessionPhotos[0];
       return {
         ...firstPhoto,
         isSessionCover: true,
