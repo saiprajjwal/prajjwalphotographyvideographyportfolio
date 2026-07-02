@@ -29,7 +29,7 @@ export default function Admin() {
   const [aboutName, setAboutName] = useState(portfolioData.about.name);
   const [aboutBio, setAboutBio] = useState(portfolioData.about.bio);
   const [aboutTagline, setAboutTagline] = useState(portfolioData.about.tagline);
-  const [aboutGear, setAboutGear] = useState(portfolioData.about.gear.join(', '));
+  const [aboutGear, setAboutGear] = useState(portfolioData.about.gear || []);
   const [aboutEmail, setAboutEmail] = useState(portfolioData.about.email);
   const [aboutHeadshot, setAboutHeadshot] = useState(null);
   const [savingAbout, setSavingAbout] = useState(false);
@@ -42,7 +42,7 @@ export default function Admin() {
           setAboutName(data.name || '');
           setAboutBio(data.bio || '');
           setAboutTagline(data.tagline || '');
-          setAboutGear((data.gear || []).join(', '));
+          setAboutGear(data.gear || []);
           setAboutEmail(data.email || '');
         }
       })
@@ -106,6 +106,26 @@ export default function Admin() {
     } catch (err) {
       alert(err.message);
     }
+  };
+
+  const updateCategoryName = (idx, newName) => {
+    const newGear = [...aboutGear];
+    newGear[idx].category = newName;
+    setAboutGear(newGear);
+  };
+
+  const updateCategoryItems = (idx, text) => {
+    const newGear = [...aboutGear];
+    newGear[idx].items = text.split('\n');
+    setAboutGear(newGear);
+  };
+
+  const addCategory = () => {
+    setAboutGear([...aboutGear, { category: 'New Category', items: [] }]);
+  };
+
+  const removeCategory = (idx) => {
+    setAboutGear(aboutGear.filter((_, i) => i !== idx));
   };
 
   const startEditing = (photo) => {
@@ -251,19 +271,18 @@ export default function Admin() {
         headshotUrl = uploadData.secure_url;
       }
 
-      let parsedGear = [];
-      try {
-        parsedGear = typeof aboutGear === 'string' ? JSON.parse(aboutGear) : aboutGear;
-      } catch (err) {
-        throw new Error('Gear must be valid JSON format');
-      }
+      // Filter out any completely empty categories or empty items
+      const cleanedGear = aboutGear.map(cat => ({
+        category: cat.category.trim(),
+        items: (cat.items || []).map(i => i.trim()).filter(Boolean)
+      })).filter(cat => cat.category || cat.items.length > 0);
 
       const aboutPayload = {
         name: aboutName,
         bio: aboutBio,
         tagline: aboutTagline,
         email: aboutEmail,
-        gear: parsedGear,
+        gear: cleanedGear,
         headshot: headshotUrl
       };
 
@@ -440,15 +459,33 @@ export default function Admin() {
               Bio
               <textarea value={aboutBio} onChange={e => setAboutBio(e.target.value)} rows="5" required />
             </label>
-            <label>
-              Gear (JSON format)
-              <textarea 
-                value={typeof aboutGear === 'string' ? aboutGear : JSON.stringify(aboutGear, null, 2)} 
-                onChange={e => setAboutGear(e.target.value)} 
-                rows="15" 
-                style={{ fontFamily: 'monospace', fontSize: '0.85rem', background: 'rgba(0,0,0,0.3)' }}
-              />
-            </label>
+            
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label>Gear List Categories</label>
+              {aboutGear.map((cat, idx) => (
+                <div key={idx} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', padding: '1rem', marginBottom: '1rem', borderRadius: '8px' }}>
+                  <div style={{ display: 'flex', gap: '1rem', marginBottom: '0.5rem' }}>
+                    <input 
+                      type="text" 
+                      value={cat.category} 
+                      onChange={e => updateCategoryName(idx, e.target.value)} 
+                      style={{ flex: 1, margin: 0 }}
+                      placeholder="Category Title (e.g. CAMERAS)"
+                    />
+                    <button type="button" onClick={() => removeCategory(idx)} style={{ background: '#d32f2f', margin: 0, padding: '0 1rem' }}>Remove</button>
+                  </div>
+                  <textarea 
+                    value={(cat.items || []).join('\n')}
+                    onChange={e => updateCategoryItems(idx, e.target.value)}
+                    rows="5"
+                    style={{ margin: 0 }}
+                    placeholder="One item per line"
+                  />
+                </div>
+              ))}
+              <button type="button" onClick={addCategory} style={{ background: 'rgba(0, 240, 255, 0.1)', color: '#00f0ff', border: '1px solid #00f0ff', width: '100%' }}>+ Add New Category</button>
+            </div>
+
             <label>
               Email
               <input type="email" value={aboutEmail} onChange={e => setAboutEmail(e.target.value)} />
