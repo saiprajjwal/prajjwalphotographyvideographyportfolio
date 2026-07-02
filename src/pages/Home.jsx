@@ -66,7 +66,7 @@ function GlassMonolith({ scrollYProgress }) {
 
   return (
     <Float speed={1.5} rotationIntensity={0} floatIntensity={0.5}>
-      <mesh ref={meshRef} position={[0, 0, 2]}>
+      <mesh ref={meshRef} position={[0, 0, 2]} scale={1}>
         <boxGeometry args={[glassWidth, glassHeight, glassDepth]} />
         <MeshTransmissionMaterial
           transparent={true}
@@ -141,12 +141,14 @@ export default function Home() {
   // Native window scroll tracker
   const { scrollYProgress } = useScroll();
 
-  // Fade out ONLY the hero text as you scroll
-  const heroTextOpacity = useTransform(scrollYProgress, [0, 0.2], [1, 0]);
-  const heroTextY = useTransform(scrollYProgress, [0, 0.2], [0, -50]);
+  // Fly-through effect on the hero text as you scroll
+  const heroTextOpacity = useTransform(scrollYProgress, [0, 0.15], [1, 0]);
+  const heroTextScale = useTransform(scrollYProgress, [0, 0.15], [1, 6]);
+  const heroTextBlur = useTransform(scrollYProgress, [0, 0.15], ['blur(0px)', 'blur(20px)']);
 
   // Bring in the "Enter" text at the end of the scroll
   const enterOpacity = useTransform(scrollYProgress, [0.7, 1], [0, 1]);
+  const enterScale = useTransform(scrollYProgress, [0.7, 1], [0.8, 1]);
 
   return (
     <motion.div
@@ -200,12 +202,20 @@ export default function Home() {
           </Suspense>
         </Canvas>
       </div>
+    
 
       {/* 300vh Scroll Container to create the scrollbar without actual HTML content below */}
       <div className="home-scroll-content" style={{ height: '300vh' }}>
 
-        {/* Initial Hero Text - Fades out on scroll */}
-        <motion.div className="monolith-content-overlay" style={{ opacity: heroTextOpacity, y: heroTextY }}>
+        {/* Initial Hero Text - Flies forward and blurs on scroll */}
+        <motion.div 
+          className="monolith-content-overlay" 
+          style={{ 
+            opacity: heroTextOpacity, 
+            scale: heroTextScale,
+            filter: heroTextBlur
+          }}
+        >
           <div className="monolith-text-container">
             <h1 className="hero-title">Prajjwal Pandey</h1>
             <p className="hero-subtitle">Photographer | Storyteller</p>
@@ -218,7 +228,7 @@ export default function Home() {
         </motion.div>
 
         {/* Final Text at bottom of scroll */}
-        <motion.div className="monolith-content-overlay" style={{ opacity: enterOpacity }}>
+        <motion.div className="monolith-content-overlay" style={{ opacity: enterOpacity, scale: enterScale }}>
           <div className="monolith-text-container">
             <h2 className="section-heading">The Vision is Clear.</h2>
             <Link to="/portfolio" className="btn-monolith mt-8">
