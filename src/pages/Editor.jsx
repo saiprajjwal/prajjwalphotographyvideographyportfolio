@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Upload, Download, RotateCw, RefreshCw, Undo, Redo, Save, Eye, Type, Crosshair } from 'lucide-react';
+import { Upload, Download, RotateCw, RefreshCw, Undo, Redo, Save, Eye, Type, Crosshair, ChevronDown } from 'lucide-react';
 import './Editor.css';
 
 // Fully client-side basic photo editor for social posts. Nothing is uploaded to
@@ -166,6 +166,8 @@ export default function Editor() {
 
   const [exportFormat, setExportFormat] = useState('jpeg');
   const [exportQuality, setExportQuality] = useState(92);
+
+  const [openSections, setOpenSections] = useState({ presets: true, text: false, stickers: false, crop: true, wb: true, adjust: true, effects: false, splitTone: false, frames: false, export: false, draw: false });
 
   const [isComparing, setIsComparing] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -971,13 +973,16 @@ export default function Editor() {
         <div className="pe-controls" style={{ opacity: !image ? 0.5 : 1, pointerEvents: !image ? 'none' : 'auto' }}>
           
           <div className="pe-group" style={{ background: isDrawingMode ? 'rgba(59, 130, 246, 0.1)' : 'transparent', padding: isDrawingMode ? '1rem' : '0', borderRadius: '12px', border: isDrawingMode ? '1px solid rgba(59, 130, 246, 0.3)' : 'none', transition: 'all 0.3s' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="pe-section-header" onClick={() => setOpenSections(s => ({ ...s, draw: !s.draw }))}>
               <span className="pe-group-label" style={{ color: isDrawingMode ? '#3b82f6' : 'var(--text-secondary)' }}>Freehand Draw</span>
-              <button className={`pe-btn pe-btn-ghost ${isDrawingMode ? 'is-active' : ''}`} style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', borderColor: isDrawingMode ? '#3b82f6' : 'transparent', color: isDrawingMode ? '#3b82f6' : 'var(--text-primary)' }} onClick={() => setIsDrawingMode(!isDrawingMode)}>
-                {isDrawingMode ? 'Done Drawing' : 'Draw'}
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <button className={`pe-btn pe-btn-ghost ${isDrawingMode ? 'is-active' : ''}`} style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', borderColor: isDrawingMode ? '#3b82f6' : 'transparent', color: isDrawingMode ? '#3b82f6' : 'var(--text-primary)' }} onClick={(e) => { e.stopPropagation(); setIsDrawingMode(!isDrawingMode); setOpenSections(s => ({ ...s, draw: true })); }}>
+                  {isDrawingMode ? 'Done' : 'Draw'}
+                </button>
+                <ChevronDown size={16} className={`pe-section-chevron ${openSections.draw ? 'is-open' : ''}`} />
+              </div>
             </div>
-            {isDrawingMode && (
+            <div className={`pe-section-body ${openSections.draw ? '' : 'is-collapsed'}`} style={{ maxHeight: openSections.draw ? '300px' : '0' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', marginTop: '0.8rem' }}>
                 <label className="pe-color-label" style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                   Brush Color
@@ -993,11 +998,15 @@ export default function Editor() {
                   Clear All Drawings
                 </button>
               </div>
-            )}
+            </div>
           </div>
 
           <div className="pe-group">
-            <span className="pe-group-label">Presets</span>
+            <div className="pe-section-header" onClick={() => setOpenSections(s => ({ ...s, presets: !s.presets }))}>
+              <span className="pe-group-label">Presets</span>
+              <ChevronDown size={16} className={`pe-section-chevron ${openSections.presets ? 'is-open' : ''}`} />
+            </div>
+            <div className={`pe-section-body ${openSections.presets ? '' : 'is-collapsed'}`} style={{ maxHeight: openSections.presets ? '200px' : '0' }}>
             <div className="pe-chips">
               {[...PRESETS, ...customPresets].map((p) => (
                 <button
@@ -1009,15 +1018,38 @@ export default function Editor() {
                 </button>
               ))}
             </div>
+            </div>
           </div>
 
           <div className="pe-group">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="pe-section-header" onClick={() => setOpenSections(s => ({ ...s, text: !s.text }))}>
               <span className="pe-group-label">Text</span>
-              <button className="pe-btn pe-btn-ghost" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }} onClick={handleAddText}>
-                <Type size={14} /> Add Text
-              </button>
+              <ChevronDown size={16} className={`pe-section-chevron ${openSections.text ? 'is-open' : ''}`} />
             </div>
+            <div className={`pe-section-body ${openSections.text ? '' : 'is-collapsed'}`} style={{ maxHeight: openSections.text ? '600px' : '0' }}>
+            <button 
+              onClick={handleAddText}
+              style={{ 
+                width: '100%',
+                padding: '0.65rem 1rem',
+                borderRadius: '10px',
+                border: '1px dashed rgba(255,255,255,0.15)',
+                background: 'rgba(255,255,255,0.03)',
+                color: 'var(--text-secondary)',
+                fontSize: '0.85rem',
+                fontFamily: 'var(--font-sans)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.35)'; e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'; e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+            >
+              <Type size={16} /> Add Text Layer
+            </button>
             
             {selectedTextId && texts.find(t => t.id === selectedTextId) && (() => {
               const t = texts.find(t => t.id === selectedTextId);
@@ -1073,11 +1105,16 @@ export default function Editor() {
                 </div>
               );
             })()}
+            </div>
           </div>
 
           <div className="pe-group">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="pe-section-header" onClick={() => setOpenSections(s => ({ ...s, stickers: !s.stickers }))}>
               <span className="pe-group-label">Stickers</span>
+              <ChevronDown size={16} className={`pe-section-chevron ${openSections.stickers ? 'is-open' : ''}`} />
+            </div>
+            <div className={`pe-section-body ${openSections.stickers ? '' : 'is-collapsed'}`} style={{ maxHeight: openSections.stickers ? '400px' : '0' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div className="pe-chips">
                 {['✨', '🔥', '❤️', '📸', '🎬'].map(emoji => (
                   <button key={emoji} className="pe-btn pe-btn-ghost" style={{ padding: '0.2rem 0.4rem', fontSize: '1rem' }} onClick={() => handleAddSticker(emoji)}>
@@ -1103,10 +1140,15 @@ export default function Editor() {
                 </div>
               );
             })()}
+            </div>
           </div>
 
           <div className="pe-group">
-            <span className="pe-group-label">Crop</span>
+            <div className="pe-section-header" onClick={() => setOpenSections(s => ({ ...s, crop: !s.crop }))}>
+              <span className="pe-group-label">Crop</span>
+              <ChevronDown size={16} className={`pe-section-chevron ${openSections.crop ? 'is-open' : ''}`} />
+            </div>
+            <div className={`pe-section-body ${openSections.crop ? '' : 'is-collapsed'}`} style={{ maxHeight: openSections.crop ? '300px' : '0' }}>
             <div className="pe-chips">
               {ASPECTS.map((a) => (
                 <button
@@ -1132,6 +1174,7 @@ export default function Editor() {
               <button className={`pe-chip ${flipH ? 'is-active' : ''}`} onClick={() => { setFlipH((f) => !f); scheduleHistorySave(); }}>
                 Flip
               </button>
+            </div>
             </div>
           </div>
 
@@ -1196,7 +1239,11 @@ export default function Editor() {
           </div>
 
           <div className="pe-group">
-            <span className="pe-group-label">Adjust</span>
+            <div className="pe-section-header" onClick={() => setOpenSections(s => ({ ...s, adjust: !s.adjust }))}>
+              <span className="pe-group-label">Adjust</span>
+              <ChevronDown size={16} className={`pe-section-chevron ${openSections.adjust ? 'is-open' : ''}`} />
+            </div>
+            <div className={`pe-section-body ${openSections.adjust ? '' : 'is-collapsed'}`} style={{ maxHeight: openSections.adjust ? '600px' : '0' }}>
             {SLIDERS.map((s) => (
               <label key={s.key} className="pe-slider-row">
                 <span>{s.label}</span>
@@ -1210,10 +1257,15 @@ export default function Editor() {
                 />
               </label>
             ))}
+            </div>
           </div>
 
           <div className="pe-group">
-            <span className="pe-group-label">Creative Effects</span>
+            <div className="pe-section-header" onClick={() => setOpenSections(s => ({ ...s, effects: !s.effects }))}>
+              <span className="pe-group-label">Creative Effects</span>
+              <ChevronDown size={16} className={`pe-section-chevron ${openSections.effects ? 'is-open' : ''}`} />
+            </div>
+            <div className={`pe-section-body ${openSections.effects ? '' : 'is-collapsed'}`} style={{ maxHeight: openSections.effects ? '400px' : '0' }}>
             {EFFECT_SLIDERS.map((s) => (
               <label key={s.key} className="pe-slider-row">
                 <span>{s.label}</span>
@@ -1227,10 +1279,15 @@ export default function Editor() {
                 />
               </label>
             ))}
+            </div>
           </div>
 
           <div className="pe-group">
-            <span className="pe-group-label">Split Toning</span>
+            <div className="pe-section-header" onClick={() => setOpenSections(s => ({ ...s, splitTone: !s.splitTone }))}>
+              <span className="pe-group-label">Split Toning</span>
+              <ChevronDown size={16} className={`pe-section-chevron ${openSections.splitTone ? 'is-open' : ''}`} />
+            </div>
+            <div className={`pe-section-body ${openSections.splitTone ? '' : 'is-collapsed'}`} style={{ maxHeight: openSections.splitTone ? '400px' : '0' }}>
             <label className="pe-slider-row">
               <span>Intensity</span>
               <input type="range" min="0" max="100" value={adj.duotone} onChange={(e) => setAdjKey('duotone', parseInt(e.target.value, 10))} onDoubleClick={() => setAdjKey('duotone', DEFAULT_ADJ.duotone)} />
@@ -1251,10 +1308,15 @@ export default function Editor() {
                 </label>
               </div>
             )}
+            </div>
           </div>
 
           <div className="pe-group">
-            <span className="pe-group-label">Frames</span>
+            <div className="pe-section-header" onClick={() => setOpenSections(s => ({ ...s, frames: !s.frames }))}>
+              <span className="pe-group-label">Frames</span>
+              <ChevronDown size={16} className={`pe-section-chevron ${openSections.frames ? 'is-open' : ''}`} />
+            </div>
+            <div className={`pe-section-body ${openSections.frames ? '' : 'is-collapsed'}`} style={{ maxHeight: openSections.frames ? '200px' : '0' }}>
             <div className="pe-chips">
               {['none', 'thin-white', 'thin-black', 'polaroid', 'film'].map((f) => (
                 <button
@@ -1267,6 +1329,7 @@ export default function Editor() {
                 </button>
               ))}
             </div>
+            </div>
           </div>
 
           <div className="pe-actions" style={{ marginTop: '1rem' }}>
@@ -1276,7 +1339,11 @@ export default function Editor() {
           </div>
 
           <div className="pe-group" style={{ marginTop: '0.5rem', background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-            <span className="pe-group-label">Export Settings</span>
+            <div className="pe-section-header" onClick={() => setOpenSections(s => ({ ...s, export: !s.export }))}>
+              <span className="pe-group-label">Export Settings</span>
+              <ChevronDown size={16} className={`pe-section-chevron ${openSections.export ? 'is-open' : ''}`} />
+            </div>
+            <div className={`pe-section-body ${openSections.export ? '' : 'is-collapsed'}`} style={{ maxHeight: openSections.export ? '300px' : '0' }}>
             <div className="pe-chips" style={{ marginBottom: '1rem' }}>
               <button className={`pe-chip ${exportFormat === 'jpeg' ? 'is-active' : ''}`} onClick={() => setExportFormat('jpeg')}>JPG</button>
               <button className={`pe-chip ${exportFormat === 'png' ? 'is-active' : ''}`} onClick={() => setExportFormat('png')}>PNG</button>
@@ -1297,6 +1364,7 @@ export default function Editor() {
               <button className="pe-btn pe-btn-primary" onClick={handleExport}>
                 <Download size={16} /> Download
               </button>
+            </div>
             </div>
           </div>
         </div>

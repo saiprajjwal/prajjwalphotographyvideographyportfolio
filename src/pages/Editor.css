@@ -188,6 +188,8 @@
   display: flex;
   flex-direction: column;
   gap: 0.7rem;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  padding-bottom: 1rem;
 }
 
 .pe-group-label {
@@ -196,6 +198,40 @@
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--text-secondary);
+}
+
+.pe-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  padding: 0.3rem 0;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.pe-section-header:hover .pe-group-label {
+  color: var(--text-primary);
+}
+
+.pe-section-chevron {
+  transition: transform 0.25s ease;
+  color: var(--text-secondary);
+}
+
+.pe-section-chevron.is-open {
+  transform: rotate(180deg);
+}
+
+.pe-section-body {
+  overflow: hidden;
+  transition: max-height 0.3s ease, opacity 0.25s ease;
+}
+
+.pe-section-body.is-collapsed {
+  max-height: 0 !important;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .pe-chips {
