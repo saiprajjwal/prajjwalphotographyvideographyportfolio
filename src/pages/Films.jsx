@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Play, Info, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import VideoCard from '../components/VideoCard';
 import VideoLightbox from '../components/VideoLightbox';
-import InstagramReel from '../components/InstagramReel';
+import TikTokReel from '../components/TikTokReel';
 import ReelViewer from '../components/ReelViewer';
 import ParticleIntro from './ParticleIntro';
 import portfolioData from '../data/portfolio.json';
@@ -258,10 +258,10 @@ export default function Films() {
                 onPointerLeave={endReelsDrag}
                 onClickCapture={onReelsClickCapture}
               >
-                {reels.map((shortcode, i) => (
-                  <InstagramReel
-                    key={shortcode}
-                    shortcode={shortcode}
+                {reels.map((videoId, i) => (
+                  <TikTokReel
+                    key={videoId}
+                    videoId={videoId}
                     onOpen={() => setActiveReelIndex(i)}
                   />
                 ))}
