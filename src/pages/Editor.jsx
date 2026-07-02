@@ -7,6 +7,49 @@ import './Editor.css';
 // a server — everything runs in the browser via <canvas>. This page is lazily
 // loaded (see App.jsx) so it never affects the rest of the site's load time.
 
+// --- IndexedDB Helper for Large File Storage ---
+const DB_NAME = 'PhotoEditorDB';
+const STORE_NAME = 'images';
+
+function idbOpen() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = (e) => { e.target.result.createObjectStore(STORE_NAME); };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function idbSave(key, blob) {
+  const db = await idbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    tx.objectStore(STORE_NAME).put(blob, key);
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function idbLoad(key) {
+  const db = await idbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readonly');
+    const req = tx.objectStore(STORE_NAME).get(key);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function idbClear(key) {
+  const db = await idbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    tx.objectStore(STORE_NAME).delete(key);
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
 const ASPECTS = [
   { id: 'original', label: 'Original' },
   { id: '1:1', label: 'Square', w: 1080, h: 1080 },
@@ -85,19 +128,78 @@ export default function Editor() {
   const scheduleHistorySave = useCallback(() => {
     clearTimeout(saveStateTimeout.current);
     saveStateTimeout.current = setTimeout(() => {
+      const state = getCurrentState();
       setHistory(h => {
         const nextHistory = h.slice(0, historyIndex + 1);
-        nextHistory.push(getCurrentState());
+        nextHistory.push(state);
         setHistoryIndex(nextHistory.length - 1);
         return nextHistory;
       });
+      localStorage.setItem('pe-current-state', JSON.stringify(state));
     }, 400);
   }, [getCurrentState, historyIndex]);
 
   const applyState = (state) => {
-    setAdj(state.adj); setAspect(state.aspect); setRotation(state.rotation);
-    setFlipH(state.flipH); setZoom(state.zoom); setPan(state.pan);
+    if (!state) return;
+    if (state.adj) setAdj(state.adj); 
+    if (state.aspect) setAspect(state.aspect); 
+    if (state.rotation !== undefined) setRotation(state.rotation);
+    if (state.flipH !== undefined) setFlipH(state.flipH); 
+    if (state.zoom !== undefined) setZoom(state.zoom); 
+    if (state.pan) setPan(state.pan);
   };
+
+  useEffect(() => {
+    // Cancel any pending clear from a StrictMode unmount
+    if (window.peClearTimeout) {
+      clearTimeout(window.peClearTimeout);
+    }
+
+    const savedPresets = localStorage.getItem('pe-custom-presets');
+    if (savedPresets) setCustomPresets(JSON.parse(savedPresets));
+
+    const isNewSession = !sessionStorage.getItem('pe-active-session');
+    sessionStorage.setItem('pe-active-session', 'true');
+
+    if (isNewSession) {
+      // Clear data if this is a brand new tab/window
+      idbClear('pe-current-image').catch(console.error);
+      localStorage.removeItem('pe-current-state');
+    } else {
+      // Restore image from IndexedDB on refresh
+      idbLoad('pe-current-image').then((blob) => {
+        if (blob) {
+          const url = URL.createObjectURL(blob);
+          const img = new Image();
+          img.onload = () => {
+            setImage(img);
+            // Restore state from localStorage
+            const savedState = localStorage.getItem('pe-current-state');
+            if (savedState) {
+              const parsed = JSON.parse(savedState);
+              applyState(parsed);
+              setHistory([parsed]);
+              setHistoryIndex(0);
+            } else {
+              const initial = { adj: { ...DEFAULT_ADJ }, aspect: 'original', rotation: 0, flipH: false, zoom: 1, pan: { x: 0, y: 0 } };
+              setHistory([initial]);
+              setHistoryIndex(0);
+            }
+          };
+          img.src = url;
+        }
+      }).catch(console.error);
+    }
+
+    // Cleanup: clear DB when unmounting (navigating away to another page)
+    // We use a small timeout so React 18 Strict Mode doesn't clear the photo during dev mode remounts
+    return () => {
+      window.peClearTimeout = setTimeout(() => {
+        idbClear('pe-current-image').catch(console.error);
+        localStorage.removeItem('pe-current-state');
+      }, 100);
+    };
+  }, []);
 
   const handleUndo = () => {
     if (historyIndex > 0) {
@@ -238,8 +340,11 @@ export default function Editor() {
     draw(ctx, pw, ph);
   }, [image, aspect, draw]);
 
-  const loadFile = useCallback((file) => {
+  const loadFile = useCallback((file, saveToDb = true) => {
     if (!file || !file.type.startsWith('image/')) return;
+    if (saveToDb) {
+      idbSave('pe-current-image', file).catch(console.error);
+    }
     const url = URL.createObjectURL(file);
     const img = new Image();
     img.onload = () => {
@@ -255,6 +360,7 @@ export default function Editor() {
       const initial = { adj: { ...DEFAULT_ADJ }, aspect: 'original', rotation: 0, flipH: false, zoom: 1, pan: { x: 0, y: 0 } };
       setHistory([initial]);
       setHistoryIndex(0);
+      localStorage.setItem('pe-current-state', JSON.stringify(initial));
     };
     img.src = url;
   }, []);
@@ -333,148 +439,150 @@ export default function Editor() {
         <p className="pe-sub">Quick edits for social — crop, adjust, and download. Everything stays in your browser.</p>
       </header>
 
-      {!image ? (
-        <div
-          className="pe-drop"
-          onClick={() => fileRef.current?.click()}
-          onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('is-over'); }}
-          onDragLeave={(e) => e.currentTarget.classList.remove('is-over')}
-          onDrop={(e) => { e.preventDefault(); e.currentTarget.classList.remove('is-over'); loadFile(e.dataTransfer.files[0]); }}
-        >
-          <Upload size={40} />
-          <p className="pe-drop-title">Drop a photo here or click to upload</p>
-          <p className="pe-drop-hint">JPG or PNG</p>
+      <div className="pe-workspace">
+        <div className="pe-stage">
+          {!image ? (
+            <div
+              className="pe-drop"
+              onClick={() => fileRef.current?.click()}
+              onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('is-over'); }}
+              onDragLeave={(e) => e.currentTarget.classList.remove('is-over')}
+              onDrop={(e) => { e.preventDefault(); e.currentTarget.classList.remove('is-over'); loadFile(e.dataTransfer.files[0]); }}
+            >
+              <Upload size={40} />
+              <p className="pe-drop-title">Drop a photo here or click to upload</p>
+              <p className="pe-drop-hint">JPG or PNG</p>
+            </div>
+          ) : (
+            <>
+              <div className="pe-canvas-wrapper">
+                <canvas
+                  ref={previewRef}
+                  className="pe-canvas"
+                  onPointerDown={onPointerDown}
+                  onPointerMove={onPointerMove}
+                  onPointerUp={onPointerUp}
+                  onPointerCancel={onPointerUp}
+                />
+                {isDragging && (
+                  <div className="pe-grid-overlay">
+                    <div className="pe-grid-line h-1"></div>
+                    <div className="pe-grid-line h-2"></div>
+                    <div className="pe-grid-line v-1"></div>
+                    <div className="pe-grid-line v-2"></div>
+                  </div>
+                )}
+              </div>
+              
+              <div className="pe-stage-toolbar">
+                <button 
+                  className={`pe-btn-icon ${historyIndex <= 0 ? 'is-disabled' : ''}`} 
+                  onClick={handleUndo} title="Undo"
+                >
+                  <Undo size={18} />
+                </button>
+                <button 
+                  className={`pe-btn-icon ${historyIndex >= history.length - 1 ? 'is-disabled' : ''}`} 
+                  onClick={handleRedo} title="Redo"
+                >
+                  <Redo size={18} />
+                </button>
+                <div className="pe-spacer" />
+                <button 
+                  className="pe-btn-icon pe-compare-btn" 
+                  onPointerDown={() => setIsComparing(true)}
+                  onPointerUp={() => setIsComparing(false)}
+                  onPointerLeave={() => setIsComparing(false)}
+                  title="Hold to Compare"
+                >
+                  <Eye size={18} />
+                </button>
+              </div>
+              <p className="pe-stage-hint">Drag to reposition · Use Zoom to fill</p>
+            </>
+          )}
         </div>
-      ) : (
-        <div className="pe-workspace">
-          <div className="pe-stage">
-            <div className="pe-canvas-wrapper">
-              <canvas
-                ref={previewRef}
-                className="pe-canvas"
-                onPointerDown={onPointerDown}
-                onPointerMove={onPointerMove}
-                onPointerUp={onPointerUp}
-                onPointerCancel={onPointerUp}
-              />
-              {isDragging && (
-                <div className="pe-grid-overlay">
-                  <div className="pe-grid-line h-1"></div>
-                  <div className="pe-grid-line h-2"></div>
-                  <div className="pe-grid-line v-1"></div>
-                  <div className="pe-grid-line v-2"></div>
-                </div>
-              )}
-            </div>
-            
-            <div className="pe-stage-toolbar">
-              <button 
-                className={`pe-btn-icon ${historyIndex <= 0 ? 'is-disabled' : ''}`} 
-                onClick={handleUndo} title="Undo"
-              >
-                <Undo size={18} />
-              </button>
-              <button 
-                className={`pe-btn-icon ${historyIndex >= history.length - 1 ? 'is-disabled' : ''}`} 
-                onClick={handleRedo} title="Redo"
-              >
-                <Redo size={18} />
-              </button>
-              <div className="pe-spacer" />
-              <button 
-                className="pe-btn-icon pe-compare-btn" 
-                onPointerDown={() => setIsComparing(true)}
-                onPointerUp={() => setIsComparing(false)}
-                onPointerLeave={() => setIsComparing(false)}
-                title="Hold to Compare"
-              >
-                <Eye size={18} />
-              </button>
-            </div>
-            <p className="pe-stage-hint">Drag to reposition · Use Zoom to fill</p>
-          </div>
 
-          <div className="pe-controls">
-            <div className="pe-group">
-              <span className="pe-group-label">Presets</span>
-              <div className="pe-chips">
-                {[...PRESETS, ...customPresets].map((p) => (
-                  <button
-                    key={p.id}
-                    className={`pe-chip ${preset === p.id ? 'is-active' : ''}`}
-                    onClick={() => applyPreset(p)}
-                  >
-                    {p.id}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="pe-group">
-              <span className="pe-group-label">Crop</span>
-              <div className="pe-chips">
-                {ASPECTS.map((a) => (
-                  <button
-                    key={a.id}
-                    className={`pe-chip ${aspect === a.id ? 'is-active' : ''}`}
-                    onClick={() => { setAspect(a.id); scheduleHistorySave(); }}
-                  >
-                    {a.label}
-                  </button>
-                ))}
-              </div>
-              <label className="pe-slider-row">
-                <span>Zoom</span>
-                <input type="range" min="1" max="3" step="0.01" value={zoom}
-                  onChange={(e) => setZoom(parseFloat(e.target.value))}
-                  onPointerUp={scheduleHistorySave} />
-              </label>
-              <div className="pe-chips">
-                <button className="pe-chip" onClick={() => { setRotation((r) => (r + 90) % 360); scheduleHistorySave(); }}>
-                  <RotateCw size={15} /> Rotate
+        <div className="pe-controls" style={{ opacity: !image ? 0.5 : 1, pointerEvents: !image ? 'none' : 'auto' }}>
+          <div className="pe-group">
+            <span className="pe-group-label">Presets</span>
+            <div className="pe-chips">
+              {[...PRESETS, ...customPresets].map((p) => (
+                <button
+                  key={p.id}
+                  className={`pe-chip ${preset === p.id ? 'is-active' : ''}`}
+                  onClick={() => applyPreset(p)}
+                >
+                  {p.id}
                 </button>
-                <button className={`pe-chip ${flipH ? 'is-active' : ''}`} onClick={() => { setFlipH((f) => !f); scheduleHistorySave(); }}>
-                  Flip
-                </button>
-              </div>
-            </div>
-
-            <div className="pe-group">
-              <span className="pe-group-label">Adjust</span>
-              {SLIDERS.map((s) => (
-                <label key={s.key} className="pe-slider-row">
-                  <span>{s.label}</span>
-                  <input
-                    type="range"
-                    min={s.min}
-                    max={s.max}
-                    value={adj[s.key]}
-                    onChange={(e) => setAdjKey(s.key, parseInt(e.target.value, 10))}
-                  />
-                </label>
               ))}
             </div>
+          </div>
 
-            <div className="pe-actions" style={{ marginTop: '1rem' }}>
-              <button className="pe-btn pe-btn-ghost" onClick={saveCustomPreset} title="Save current settings as a new preset">
-                <Save size={16} /> Save Preset
-              </button>
+          <div className="pe-group">
+            <span className="pe-group-label">Crop</span>
+            <div className="pe-chips">
+              {ASPECTS.map((a) => (
+                <button
+                  key={a.id}
+                  className={`pe-chip ${aspect === a.id ? 'is-active' : ''}`}
+                  onClick={() => { setAspect(a.id); scheduleHistorySave(); }}
+                >
+                  {a.label}
+                </button>
+              ))}
             </div>
-
-            <div className="pe-actions">
-              <button className="pe-btn pe-btn-ghost" onClick={resetAll}>
-                <RefreshCw size={16} /> Reset
+            <label className="pe-slider-row">
+              <span>Zoom</span>
+              <input type="range" min="1" max="3" step="0.01" value={zoom}
+                onChange={(e) => setZoom(parseFloat(e.target.value))}
+                onPointerUp={scheduleHistorySave} />
+            </label>
+            <div className="pe-chips">
+              <button className="pe-chip" onClick={() => { setRotation((r) => (r + 90) % 360); scheduleHistorySave(); }}>
+                <RotateCw size={15} /> Rotate
               </button>
-              <button className="pe-btn pe-btn-ghost" onClick={() => fileRef.current?.click()}>
-                <Upload size={16} /> New
-              </button>
-              <button className="pe-btn pe-btn-primary" onClick={handleExport}>
-                <Download size={16} /> Download
+              <button className={`pe-chip ${flipH ? 'is-active' : ''}`} onClick={() => { setFlipH((f) => !f); scheduleHistorySave(); }}>
+                Flip
               </button>
             </div>
           </div>
+
+          <div className="pe-group">
+            <span className="pe-group-label">Adjust</span>
+            {SLIDERS.map((s) => (
+              <label key={s.key} className="pe-slider-row">
+                <span>{s.label}</span>
+                <input
+                  type="range"
+                  min={s.min}
+                  max={s.max}
+                  value={adj[s.key]}
+                  onChange={(e) => setAdjKey(s.key, parseInt(e.target.value, 10))}
+                />
+              </label>
+            ))}
+          </div>
+
+          <div className="pe-actions" style={{ marginTop: '1rem' }}>
+            <button className="pe-btn pe-btn-ghost" onClick={saveCustomPreset} title="Save current settings as a new preset">
+              <Save size={16} /> Save Preset
+            </button>
+          </div>
+
+          <div className="pe-actions">
+            <button className="pe-btn pe-btn-ghost" onClick={resetAll}>
+              <RefreshCw size={16} /> Reset
+            </button>
+            <button className="pe-btn pe-btn-ghost" onClick={() => fileRef.current?.click()} style={{ pointerEvents: 'auto' }}>
+              <Upload size={16} /> New
+            </button>
+            <button className="pe-btn pe-btn-primary" onClick={handleExport}>
+              <Download size={16} /> Download
+            </button>
+          </div>
         </div>
-      )}
+      </div>
 
       <input
         ref={fileRef}

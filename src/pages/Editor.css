@@ -28,8 +28,11 @@
 /* Upload drop zone */
 .pe-drop {
   max-width: 620px;
+  width: 100%;
   margin: 0 auto;
   min-height: 320px;
+  padding: 2rem;
+  text-align: center;
   border: 1.5px dashed rgba(255, 255, 255, 0.2);
   border-radius: 16px;
   background: var(--glass-bg);
