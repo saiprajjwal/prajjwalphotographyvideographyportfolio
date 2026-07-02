@@ -286,6 +286,7 @@
   border-radius: 4px;
   outline: none;
   cursor: pointer;
+  touch-action: none; /* Prevents vertical scrolling when trying to drag sliders */
 }
 
 .pe-slider-row input[type='range']::-webkit-slider-thumb {
@@ -576,7 +577,7 @@
     margin: 0 !important;
     padding: 0 1.5rem !important;
     box-shadow: none !important;
-    gap: 1.25rem !important; /* Creative spacing for touch */
+    gap: 2rem !important; /* Huge vertical spacing for thick thumbs so you don't hit the neighbor */
   }
   
   .pe-section-body.is-collapsed {
