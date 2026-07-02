@@ -157,6 +157,18 @@ export default function Portfolio() {
     };
   }, [activeSession]);
 
+  // Handle ESC key to close modal
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && activeSession) {
+        setActiveSession(null);
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeSession]);
+
   const handleMouseMove = (e) => {
     const card = e.currentTarget;
     const rect = card.getBoundingClientRect();
@@ -244,7 +256,7 @@ export default function Portfolio() {
       </div>
 
       {/* Main Content Overlay */}
-      <main className="page-wrapper section-padding portfolio-content-overlay">
+      <main className="page-wrapper section-padding portfolio-content-overlay" style={{ pointerEvents: activeSession ? 'none' : 'auto' }}>
         <div className="container">
           <header className="page-header">
             <motion.h1
@@ -284,24 +296,29 @@ export default function Portfolio() {
 
           <div className="masonry-grid">
             <AnimatePresence mode="popLayout">
-              {displayItems.map((photo) => (
-                <motion.div
-                  layout="position"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  transition={{
-                    duration: 0.5,
-                    ease: [0.16, 1, 0.3, 1],
-                    layout: { duration: 0.5, ease: [0.16, 1, 0.3, 1] }
-                  }}
-                  key={photo.id}
-                  className="masonry-item"
-                  onMouseMove={handleMouseMove}
-                  onMouseLeave={handleMouseLeave}
-                  onClick={photo.isSessionCover ? () => setActiveSession(photo.sessionName) : undefined}
-                  style={photo.isSessionCover ? { cursor: 'pointer' } : {}}
-                >
+              {displayItems.map((photo, i) => (
+                  <motion.div
+                    key={photo.id}
+                    layout="position"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={activeSession ? {
+                      opacity: 0,
+                      x: i % 2 === 0 ? '-100vw' : '100vw',
+                      y: (i % 3) * 50,
+                      rotate: i % 2 === 0 ? -15 : 15
+                    } : { opacity: 1, y: 0, x: 0, rotate: 0 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{
+                      duration: activeSession ? 0.8 : 0.5,
+                      ease: [0.16, 1, 0.3, 1],
+                      layout: { duration: 0.5, ease: [0.16, 1, 0.3, 1] }
+                    }}
+                    className="masonry-item"
+                    onMouseMove={handleMouseMove}
+                    onMouseLeave={handleMouseLeave}
+                    onClick={photo.isSessionCover ? () => setActiveSession(photo.sessionName) : undefined}
+                    style={photo.isSessionCover ? { cursor: 'pointer' } : {}}
+                  >
                   <div className="card-badge">{photo.isSessionCover ? photo.sessionName : photo.category}</div>
                   <img
                     src={photo.src}
