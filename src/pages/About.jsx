@@ -52,9 +52,9 @@ export default function About() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.7 }}
-                style={{ display: 'flex', justifyContent: 'center', marginTop: '1rem' }}
+                style={{ display: 'flex', justifyContent: 'center', marginTop: '1.5rem' }}
               >
-                <Link to="/portfolio" className="btn-glass" style={{ background: 'rgba(255, 255, 255, 0.15)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', letterSpacing: '0.2em' }}>
+                <Link to="/portfolio" className="about-my-work-btn">
                   MY WORK
                 </Link>
               </motion.div>
