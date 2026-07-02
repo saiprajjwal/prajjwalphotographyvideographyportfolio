@@ -10,7 +10,6 @@ export default function VideoCard({ video, onPlay }) {
     <div className="video-card">
       <motion.div 
         className="video-thumbnail-container"
-        layoutId={`video-container-${video.id}`}
         onClick={onPlay}
         role="button"
         tabIndex={0}
