@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Upload, Download, RotateCw, RefreshCw } from 'lucide-react';
+import { Upload, Download, RotateCw, RefreshCw, Undo, Redo, Save, Eye } from 'lucide-react';
 import './Editor.css';
 
 // Fully client-side basic photo editor for social posts. Nothing is uploaded to
@@ -15,7 +15,7 @@ const ASPECTS = [
   { id: '16:9', label: 'Wide', w: 1920, h: 1080 },
 ];
 
-const DEFAULT_ADJ = { brightness: 100, contrast: 100, saturation: 100, warmth: 0, vignette: 0 };
+const DEFAULT_ADJ = { brightness: 100, contrast: 100, saturation: 100, warmth: 0, tint: 0, highlights: 0, shadows: 0, vignette: 0, grain: 0 };
 
 const PRESETS = [
   { id: 'None', adj: { ...DEFAULT_ADJ } },
@@ -23,7 +23,7 @@ const PRESETS = [
   { id: 'Warm', adj: { ...DEFAULT_ADJ, warmth: 45, brightness: 104 } },
   { id: 'Cool', adj: { ...DEFAULT_ADJ, warmth: -45 } },
   { id: 'Mono', adj: { ...DEFAULT_ADJ, saturation: 0, contrast: 112 } },
-  { id: 'Film', adj: { ...DEFAULT_ADJ, contrast: 94, saturation: 88, warmth: 18, vignette: 28 } },
+  { id: 'Film', adj: { ...DEFAULT_ADJ, contrast: 94, saturation: 88, warmth: 18, vignette: 28, grain: 15 } },
   { id: 'Vivid', adj: { ...DEFAULT_ADJ, saturation: 138, contrast: 108 } },
 ];
 
@@ -31,8 +31,12 @@ const SLIDERS = [
   { key: 'brightness', label: 'Brightness', min: 50, max: 150 },
   { key: 'contrast', label: 'Contrast', min: 50, max: 150 },
   { key: 'saturation', label: 'Saturation', min: 0, max: 200 },
-  { key: 'warmth', label: 'Warmth', min: -100, max: 100 },
+  { key: 'warmth', label: 'Temp', min: -100, max: 100 },
+  { key: 'tint', label: 'Tint', min: -100, max: 100 },
+  { key: 'highlights', label: 'Highlights', min: -100, max: 100 },
+  { key: 'shadows', label: 'Shadows', min: -100, max: 100 },
   { key: 'vignette', label: 'Vignette', min: 0, max: 100 },
+  { key: 'grain', label: 'Grain', min: 0, max: 100 },
 ];
 
 function getOutputSize(image, aspect) {
@@ -57,20 +61,70 @@ export default function Editor() {
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
 
+  const [isComparing, setIsComparing] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [history, setHistory] = useState([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  const [customPresets, setCustomPresets] = useState([]);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('pe-custom-presets');
+    if (saved) setCustomPresets(JSON.parse(saved));
+  }, []);
+
   const previewRef = useRef(null);
   const fileRef = useRef(null);
   const previewSize = useRef({ w: 1, h: 1 });
   const dragRef = useRef(null);
+  const grainCanvasRef = useRef(null); // Offscreen canvas for grain
+
+  // Debounced history saving
+  const saveStateTimeout = useRef(null);
+  const getCurrentState = useCallback(() => ({ adj, aspect, rotation, flipH, zoom, pan }), [adj, aspect, rotation, flipH, zoom, pan]);
+
+  const scheduleHistorySave = useCallback(() => {
+    clearTimeout(saveStateTimeout.current);
+    saveStateTimeout.current = setTimeout(() => {
+      setHistory(h => {
+        const nextHistory = h.slice(0, historyIndex + 1);
+        nextHistory.push(getCurrentState());
+        setHistoryIndex(nextHistory.length - 1);
+        return nextHistory;
+      });
+    }, 400);
+  }, [getCurrentState, historyIndex]);
+
+  const applyState = (state) => {
+    setAdj(state.adj); setAspect(state.aspect); setRotation(state.rotation);
+    setFlipH(state.flipH); setZoom(state.zoom); setPan(state.pan);
+  };
+
+  const handleUndo = () => {
+    if (historyIndex > 0) {
+      applyState(history[historyIndex - 1]);
+      setHistoryIndex(historyIndex - 1);
+    }
+  };
+
+  const handleRedo = () => {
+    if (historyIndex < history.length - 1) {
+      applyState(history[historyIndex + 1]);
+      setHistoryIndex(historyIndex + 1);
+    }
+  };
 
   // Draw the whole scene into a context at the given output size. Shared by the
   // live preview and the export so what you see is exactly what you download.
-  const draw = useCallback((ctx, W, H) => {
+  const draw = useCallback((ctx, W, H, forExport = false) => {
     if (!image) return;
     ctx.save();
     ctx.clearRect(0, 0, W, H);
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, W, H);
-    ctx.filter = `brightness(${adj.brightness}%) contrast(${adj.contrast}%) saturate(${adj.saturation}%)`;
+    
+    if (!isComparing) {
+      ctx.filter = `brightness(${adj.brightness}%) contrast(${adj.contrast}%) saturate(${adj.saturation}%)`;
+    }
 
     const rot = ((rotation % 360) + 360) % 360;
     const swap = rot === 90 || rot === 270;
@@ -93,14 +147,42 @@ export default function Editor() {
     ctx.drawImage(image, -dw / 2, -dh / 2, dw, dh);
     ctx.restore();
 
-    if (adj.warmth !== 0) {
+    if (isComparing) return;
+
+    // Highlights & Shadows approximation via composite operations
+    if (adj.shadows !== 0) {
       ctx.save();
-      ctx.globalCompositeOperation = 'soft-light';
-      ctx.globalAlpha = Math.min(Math.abs(adj.warmth) / 100, 1) * 0.6;
-      ctx.fillStyle = adj.warmth > 0 ? '#ff8a1e' : '#1e7bff';
-      ctx.fillRect(0, 0, W, H);
+      ctx.globalCompositeOperation = adj.shadows > 0 ? 'screen' : 'multiply';
+      ctx.globalAlpha = Math.abs(adj.shadows) / 200; // max 50% opacity screen/multiply
+      ctx.drawImage(ctx.canvas, 0, 0); // Self-blend
       ctx.restore();
     }
+    
+    if (adj.highlights !== 0) {
+      ctx.save();
+      ctx.globalCompositeOperation = adj.highlights > 0 ? 'color-dodge' : 'color-burn';
+      ctx.globalAlpha = Math.abs(adj.highlights) / 200;
+      ctx.drawImage(ctx.canvas, 0, 0); // Self-blend
+      ctx.restore();
+    }
+
+    // Temperature (Warmth) and Tint
+    if (adj.warmth !== 0 || adj.tint !== 0) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'soft-light';
+      if (adj.warmth !== 0) {
+        ctx.globalAlpha = Math.min(Math.abs(adj.warmth) / 100, 1) * 0.6;
+        ctx.fillStyle = adj.warmth > 0 ? '#ff8a1e' : '#1e7bff';
+        ctx.fillRect(0, 0, W, H);
+      }
+      if (adj.tint !== 0) {
+        ctx.globalAlpha = Math.min(Math.abs(adj.tint) / 100, 1) * 0.6;
+        ctx.fillStyle = adj.tint > 0 ? '#ff00ff' : '#00ff00';
+        ctx.fillRect(0, 0, W, H);
+      }
+      ctx.restore();
+    }
+    
     if (adj.vignette > 0) {
       ctx.save();
       const g = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.max(W, H) * 0.72);
@@ -110,7 +192,30 @@ export default function Editor() {
       ctx.fillRect(0, 0, W, H);
       ctx.restore();
     }
-  }, [image, adj, rotation, flipH, zoom, pan]);
+
+    if (adj.grain > 0) {
+      ctx.save();
+      if (!grainCanvasRef.current) {
+        const gc = document.createElement('canvas');
+        gc.width = 128; gc.height = 128;
+        const gctx = gc.getContext('2d');
+        const imgData = gctx.createImageData(128, 128);
+        for (let i = 0; i < imgData.data.length; i += 4) {
+          const v = Math.random() * 255;
+          imgData.data[i] = imgData.data[i + 1] = imgData.data[i + 2] = v;
+          imgData.data[i + 3] = 255; // alpha
+        }
+        gctx.putImageData(imgData, 0, 0);
+        grainCanvasRef.current = gc;
+      }
+      ctx.globalCompositeOperation = 'overlay';
+      ctx.globalAlpha = (adj.grain / 100) * 0.5; // Max 50% opacity
+      const pat = ctx.createPattern(grainCanvasRef.current, 'repeat');
+      ctx.fillStyle = pat;
+      ctx.fillRect(0, 0, W, H);
+      ctx.restore();
+    }
+  }, [image, adj, rotation, flipH, zoom, pan, isComparing]);
 
   // Redraw the preview whenever anything changes.
   useEffect(() => {
@@ -146,6 +251,10 @@ export default function Editor() {
       setFlipH(false);
       setZoom(1);
       setPan({ x: 0, y: 0 });
+      // Initialize history
+      const initial = { adj: { ...DEFAULT_ADJ }, aspect: 'original', rotation: 0, flipH: false, zoom: 1, pan: { x: 0, y: 0 } };
+      setHistory([initial]);
+      setHistoryIndex(0);
     };
     img.src = url;
   }, []);
@@ -154,6 +263,7 @@ export default function Editor() {
     if (!image) return;
     dragRef.current = { startX: e.clientX, startY: e.clientY, pan: { ...pan } };
     e.currentTarget.setPointerCapture(e.pointerId);
+    setIsDragging(true);
   };
   const onPointerMove = (e) => {
     const d = dragRef.current;
@@ -162,10 +272,24 @@ export default function Editor() {
     const dy = (e.clientY - d.startY) / previewSize.current.h;
     setPan({ x: d.pan.x + dx, y: d.pan.y + dy });
   };
-  const onPointerUp = () => { dragRef.current = null; };
+  const onPointerUp = () => { 
+    dragRef.current = null; 
+    setIsDragging(false); 
+    scheduleHistorySave();
+  };
 
-  const applyPreset = (p) => { setPreset(p.id); setAdj({ ...p.adj }); };
-  const setAdjKey = (key, value) => { setAdj((a) => ({ ...a, [key]: value })); setPreset('custom'); };
+  const applyPreset = (p) => { setPreset(p.id); setAdj({ ...p.adj }); scheduleHistorySave(); };
+  const setAdjKey = (key, value) => { setAdj((a) => ({ ...a, [key]: value })); setPreset('custom'); scheduleHistorySave(); };
+  
+  const saveCustomPreset = () => {
+    const name = prompt('Name your preset:', `Custom ${customPresets.length + 1}`);
+    if (!name) return;
+    const newPreset = { id: name, adj: { ...adj } };
+    const updated = [...customPresets, newPreset];
+    setCustomPresets(updated);
+    localStorage.setItem('pe-custom-presets', JSON.stringify(updated));
+    setPreset(name);
+  };
 
   const resetAll = () => {
     setAdj({ ...DEFAULT_ADJ });
@@ -174,6 +298,7 @@ export default function Editor() {
     setFlipH(false);
     setZoom(1);
     setPan({ x: 0, y: 0 });
+    scheduleHistorySave();
   };
 
   const handleExport = () => {
@@ -223,22 +348,57 @@ export default function Editor() {
       ) : (
         <div className="pe-workspace">
           <div className="pe-stage">
-            <canvas
-              ref={previewRef}
-              className="pe-canvas"
-              onPointerDown={onPointerDown}
-              onPointerMove={onPointerMove}
-              onPointerUp={onPointerUp}
-              onPointerCancel={onPointerUp}
-            />
-            <p className="pe-stage-hint">Drag the photo to reposition · use Zoom to fill the crop</p>
+            <div className="pe-canvas-wrapper">
+              <canvas
+                ref={previewRef}
+                className="pe-canvas"
+                onPointerDown={onPointerDown}
+                onPointerMove={onPointerMove}
+                onPointerUp={onPointerUp}
+                onPointerCancel={onPointerUp}
+              />
+              {isDragging && (
+                <div className="pe-grid-overlay">
+                  <div className="pe-grid-line h-1"></div>
+                  <div className="pe-grid-line h-2"></div>
+                  <div className="pe-grid-line v-1"></div>
+                  <div className="pe-grid-line v-2"></div>
+                </div>
+              )}
+            </div>
+            
+            <div className="pe-stage-toolbar">
+              <button 
+                className={`pe-btn-icon ${historyIndex <= 0 ? 'is-disabled' : ''}`} 
+                onClick={handleUndo} title="Undo"
+              >
+                <Undo size={18} />
+              </button>
+              <button 
+                className={`pe-btn-icon ${historyIndex >= history.length - 1 ? 'is-disabled' : ''}`} 
+                onClick={handleRedo} title="Redo"
+              >
+                <Redo size={18} />
+              </button>
+              <div className="pe-spacer" />
+              <button 
+                className="pe-btn-icon pe-compare-btn" 
+                onPointerDown={() => setIsComparing(true)}
+                onPointerUp={() => setIsComparing(false)}
+                onPointerLeave={() => setIsComparing(false)}
+                title="Hold to Compare"
+              >
+                <Eye size={18} />
+              </button>
+            </div>
+            <p className="pe-stage-hint">Drag to reposition · Use Zoom to fill</p>
           </div>
 
           <div className="pe-controls">
             <div className="pe-group">
               <span className="pe-group-label">Presets</span>
               <div className="pe-chips">
-                {PRESETS.map((p) => (
+                {[...PRESETS, ...customPresets].map((p) => (
                   <button
                     key={p.id}
                     className={`pe-chip ${preset === p.id ? 'is-active' : ''}`}
@@ -257,7 +417,7 @@ export default function Editor() {
                   <button
                     key={a.id}
                     className={`pe-chip ${aspect === a.id ? 'is-active' : ''}`}
-                    onClick={() => setAspect(a.id)}
+                    onClick={() => { setAspect(a.id); scheduleHistorySave(); }}
                   >
                     {a.label}
                   </button>
@@ -266,13 +426,14 @@ export default function Editor() {
               <label className="pe-slider-row">
                 <span>Zoom</span>
                 <input type="range" min="1" max="3" step="0.01" value={zoom}
-                  onChange={(e) => setZoom(parseFloat(e.target.value))} />
+                  onChange={(e) => setZoom(parseFloat(e.target.value))}
+                  onPointerUp={scheduleHistorySave} />
               </label>
               <div className="pe-chips">
-                <button className="pe-chip" onClick={() => setRotation((r) => (r + 90) % 360)}>
+                <button className="pe-chip" onClick={() => { setRotation((r) => (r + 90) % 360); scheduleHistorySave(); }}>
                   <RotateCw size={15} /> Rotate
                 </button>
-                <button className={`pe-chip ${flipH ? 'is-active' : ''}`} onClick={() => setFlipH((f) => !f)}>
+                <button className={`pe-chip ${flipH ? 'is-active' : ''}`} onClick={() => { setFlipH((f) => !f); scheduleHistorySave(); }}>
                   Flip
                 </button>
               </div>
@@ -292,6 +453,12 @@ export default function Editor() {
                   />
                 </label>
               ))}
+            </div>
+
+            <div className="pe-actions" style={{ marginTop: '1rem' }}>
+              <button className="pe-btn pe-btn-ghost" onClick={saveCustomPreset} title="Save current settings as a new preset">
+                <Save size={16} /> Save Preset
+              </button>
             </div>
 
             <div className="pe-actions">
