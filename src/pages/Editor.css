@@ -283,6 +283,89 @@
   justify-content: center;
 }
 
+.pe-text-editor {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--glass-border);
+  padding: 1rem;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  margin-top: 0.2rem;
+}
+
+.pe-text-input {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  padding: 0.6rem 0.8rem;
+  border-radius: 8px;
+  outline: none;
+  font-size: 0.9rem;
+  transition: border-color 0.2s;
+}
+
+.pe-text-input:focus {
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.pe-select {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  outline: none;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.pe-select option {
+  background: #111;
+  color: #fff;
+}
+
+.pe-color-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+  align-items: center;
+}
+
+.pe-color-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.pe-color-label input[type="color"] {
+  -webkit-appearance: none;
+  border: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 0;
+  background: none;
+}
+.pe-color-label input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+.pe-color-label input[type="color"]::-webkit-color-swatch {
+  border: 1px solid var(--glass-border);
+  border-radius: 4px;
+}
+.pe-color-label input[type="color"]:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
 @media (max-width: 760px) {
   .pe-page {
     padding: 6rem 5vw 3rem;

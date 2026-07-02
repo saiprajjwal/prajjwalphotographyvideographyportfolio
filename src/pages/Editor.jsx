@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Upload, Download, RotateCw, RefreshCw, Undo, Redo, Save, Eye } from 'lucide-react';
+import { Upload, Download, RotateCw, RefreshCw, Undo, Redo, Save, Eye, Type } from 'lucide-react';
 import './Editor.css';
 
 // Fully client-side basic photo editor for social posts. Nothing is uploaded to
@@ -82,6 +82,8 @@ const SLIDERS = [
   { key: 'grain', label: 'Grain', min: 0, max: 100 },
 ];
 
+const FONTS = ['Inter', 'sans-serif', 'serif', 'monospace', 'Impact', 'Comic Sans MS'];
+
 function getOutputSize(image, aspect) {
   if (aspect === 'original') {
     const maxSide = 2000;
@@ -104,6 +106,9 @@ export default function Editor() {
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
 
+  const [texts, setTexts] = useState([]);
+  const [selectedTextId, setSelectedTextId] = useState(null);
+
   const [isComparing, setIsComparing] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [history, setHistory] = useState([]);
@@ -120,10 +125,11 @@ export default function Editor() {
   const previewSize = useRef({ w: 1, h: 1 });
   const dragRef = useRef(null);
   const grainCanvasRef = useRef(null); // Offscreen canvas for grain
+  const textBounds = useRef([]); // Stores bounding boxes for text hit-testing
 
   // Debounced history saving
   const saveStateTimeout = useRef(null);
-  const getCurrentState = useCallback(() => ({ adj, aspect, rotation, flipH, zoom, pan }), [adj, aspect, rotation, flipH, zoom, pan]);
+  const getCurrentState = useCallback(() => ({ adj, aspect, rotation, flipH, zoom, pan, texts }), [adj, aspect, rotation, flipH, zoom, pan, texts]);
 
   const scheduleHistorySave = useCallback(() => {
     clearTimeout(saveStateTimeout.current);
@@ -147,6 +153,7 @@ export default function Editor() {
     if (state.flipH !== undefined) setFlipH(state.flipH); 
     if (state.zoom !== undefined) setZoom(state.zoom); 
     if (state.pan) setPan(state.pan);
+    if (state.texts) setTexts(state.texts);
   };
 
   useEffect(() => {
@@ -181,7 +188,7 @@ export default function Editor() {
               setHistory([parsed]);
               setHistoryIndex(0);
             } else {
-              const initial = { adj: { ...DEFAULT_ADJ }, aspect: 'original', rotation: 0, flipH: false, zoom: 1, pan: { x: 0, y: 0 } };
+              const initial = { adj: { ...DEFAULT_ADJ }, aspect: 'original', rotation: 0, flipH: false, zoom: 1, pan: { x: 0, y: 0 }, texts: [] };
               setHistory([initial]);
               setHistoryIndex(0);
             }
@@ -317,7 +324,57 @@ export default function Editor() {
       ctx.fillRect(0, 0, W, H);
       ctx.restore();
     }
-  }, [image, adj, rotation, flipH, zoom, pan, isComparing]);
+
+    // Draw Texts
+    if (!forExport) textBounds.current = [];
+    texts.forEach(t => {
+      ctx.save();
+      const actualSize = t.fontSize * H;
+      ctx.font = `${actualSize}px ${t.fontFamily}`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const actualX = t.nx * W;
+      const actualY = t.ny * H;
+      const metrics = ctx.measureText(t.text);
+      const padding = t.padding * H;
+      
+      const width = metrics.width + padding * 2;
+      const height = actualSize * 1.2 + padding * 2;
+      const left = actualX - width / 2;
+      const top = actualY - height / 2;
+
+      if (!forExport) {
+        textBounds.current.push({
+          id: t.id,
+          nx1: left / W, nx2: (left + width) / W,
+          ny1: top / H, ny2: (top + height) / H
+        });
+      }
+
+      if (t.bgColor !== 'transparent') {
+         ctx.fillStyle = t.bgColor;
+         if (ctx.roundRect) {
+           ctx.beginPath();
+           ctx.roundRect(left, top, width, height, t.borderRadius * H);
+           ctx.fill();
+         } else {
+           ctx.fillRect(left, top, width, height);
+         }
+      }
+      
+      ctx.fillStyle = t.color;
+      ctx.fillText(t.text, actualX, actualY);
+      
+      if (!forExport && t.id === selectedTextId) {
+         ctx.strokeStyle = '#3b82f6';
+         ctx.lineWidth = 2;
+         ctx.setLineDash([4, 4]);
+         ctx.strokeRect(left, top, width, height);
+      }
+      ctx.restore();
+    });
+
+  }, [image, adj, rotation, flipH, zoom, pan, isComparing, texts, selectedTextId]);
 
   // Redraw the preview whenever anything changes.
   useEffect(() => {
@@ -356,8 +413,10 @@ export default function Editor() {
       setFlipH(false);
       setZoom(1);
       setPan({ x: 0, y: 0 });
+      setTexts([]);
+      setSelectedTextId(null);
       // Initialize history
-      const initial = { adj: { ...DEFAULT_ADJ }, aspect: 'original', rotation: 0, flipH: false, zoom: 1, pan: { x: 0, y: 0 } };
+      const initial = { adj: { ...DEFAULT_ADJ }, aspect: 'original', rotation: 0, flipH: false, zoom: 1, pan: { x: 0, y: 0 }, texts: [] };
       setHistory([initial]);
       setHistoryIndex(0);
       localStorage.setItem('pe-current-state', JSON.stringify(initial));
@@ -367,16 +426,42 @@ export default function Editor() {
 
   const onPointerDown = (e) => {
     if (!image) return;
-    dragRef.current = { startX: e.clientX, startY: e.clientY, pan: { ...pan } };
+    const rect = e.currentTarget.getBoundingClientRect();
+    const nx = (e.clientX - rect.left) / rect.width;
+    const ny = (e.clientY - rect.top) / rect.height;
+
+    // Hit test texts (top to bottom)
+    for (let i = texts.length - 1; i >= 0; i--) {
+      const b = textBounds.current.find(tb => tb.id === texts[i].id);
+      if (b && nx >= b.nx1 && nx <= b.nx2 && ny >= b.ny1 && ny <= b.ny2) {
+        setSelectedTextId(texts[i].id);
+        dragRef.current = { type: 'text', id: texts[i].id, startNX: nx, startNY: ny, initialNX: texts[i].nx, initialNY: texts[i].ny };
+        e.currentTarget.setPointerCapture(e.pointerId);
+        setIsDragging(true);
+        return;
+      }
+    }
+
+    setSelectedTextId(null);
+    dragRef.current = { type: 'pan', startX: e.clientX, startY: e.clientY, pan: { ...pan } };
     e.currentTarget.setPointerCapture(e.pointerId);
     setIsDragging(true);
   };
   const onPointerMove = (e) => {
     const d = dragRef.current;
     if (!d) return;
-    const dx = (e.clientX - d.startX) / previewSize.current.w;
-    const dy = (e.clientY - d.startY) / previewSize.current.h;
-    setPan({ x: d.pan.x + dx, y: d.pan.y + dy });
+    if (d.type === 'text') {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const nx = (e.clientX - rect.left) / rect.width;
+      const ny = (e.clientY - rect.top) / rect.height;
+      const dx = nx - d.startNX;
+      const dy = ny - d.startNY;
+      setTexts(ts => ts.map(t => t.id === d.id ? { ...t, nx: d.initialNX + dx, ny: d.initialNY + dy } : t));
+    } else {
+      const dx = (e.clientX - d.startX) / previewSize.current.w;
+      const dy = (e.clientY - d.startY) / previewSize.current.h;
+      setPan({ x: d.pan.x + dx, y: d.pan.y + dy });
+    }
   };
   const onPointerUp = () => { 
     dragRef.current = null; 
@@ -404,6 +489,25 @@ export default function Editor() {
     setFlipH(false);
     setZoom(1);
     setPan({ x: 0, y: 0 });
+    setTexts([]);
+    setSelectedTextId(null);
+    scheduleHistorySave();
+  };
+
+  const handleAddText = () => {
+    const newText = {
+      id: Date.now().toString(),
+      text: 'Double Tap to Edit',
+      nx: 0.5, ny: 0.5,
+      fontFamily: 'Inter',
+      fontSize: 0.08,
+      color: '#ffffff',
+      bgColor: 'transparent',
+      borderRadius: 0,
+      padding: 0.02
+    };
+    setTexts(ts => [...ts, newText]);
+    setSelectedTextId(newText.id);
     scheduleHistorySave();
   };
 
@@ -517,6 +621,70 @@ export default function Editor() {
                 </button>
               ))}
             </div>
+          </div>
+
+          <div className="pe-group">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span className="pe-group-label">Text</span>
+              <button className="pe-btn pe-btn-ghost" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }} onClick={handleAddText}>
+                <Type size={14} /> Add Text
+              </button>
+            </div>
+            
+            {selectedTextId && texts.find(t => t.id === selectedTextId) && (() => {
+              const t = texts.find(t => t.id === selectedTextId);
+              const updateT = (changes) => {
+                setTexts(ts => ts.map(txt => txt.id === t.id ? { ...txt, ...changes } : txt));
+                scheduleHistorySave();
+              };
+              return (
+                <div className="pe-text-editor">
+                  <input 
+                    type="text" 
+                    value={t.text} 
+                    onChange={e => updateT({ text: e.target.value })} 
+                    className="pe-text-input" 
+                    placeholder="Enter text..."
+                  />
+                  
+                  <div className="pe-text-controls-grid">
+                    <select value={t.fontFamily} onChange={e => updateT({ fontFamily: e.target.value })} className="pe-select">
+                      {FONTS.map(f => <option key={f} value={f}>{f}</option>)}
+                    </select>
+                    <label className="pe-color-label" title="Text Color">
+                      <div className="pe-color-swatch-wrapper">
+                        <input type="color" value={t.color} onChange={e => updateT({ color: e.target.value })} />
+                      </div>
+                      Text
+                    </label>
+                    <label className="pe-color-label" title="Background Color">
+                      <div className="pe-color-swatch-wrapper" style={{ opacity: t.bgColor === 'transparent' ? 0.3 : 1 }}>
+                        <input type="color" value={t.bgColor === 'transparent' ? '#000000' : t.bgColor} onChange={e => updateT({ bgColor: e.target.value })} disabled={t.bgColor === 'transparent'} />
+                      </div>
+                      Bg
+                    </label>
+                  </div>
+
+                  <label className="pe-slider-row">
+                    <span>Size</span>
+                    <input type="range" min="0.02" max="0.3" step="0.01" value={t.fontSize} onChange={e => updateT({ fontSize: parseFloat(e.target.value) })} />
+                  </label>
+                  <label className="pe-slider-row">
+                    <span>Radius</span>
+                    <input type="range" min="0" max="0.1" step="0.01" value={t.borderRadius} onChange={e => updateT({ borderRadius: parseFloat(e.target.value) })} />
+                  </label>
+                  
+                  <label className="pe-checkbox-label">
+                    <input type="checkbox" checked={t.bgColor === 'transparent'} onChange={e => updateT({ bgColor: e.target.checked ? 'transparent' : '#000000' })} /> 
+                    Transparent Background
+                  </label>
+
+                  <button onClick={() => { setTexts(ts => ts.filter(txt => txt.id !== t.id)); setSelectedTextId(null); scheduleHistorySave(); }} className="pe-btn pe-btn-delete">
+                    Delete Layer
+                  </button>
+                </div>
+              );
+            })()}
           </div>
 
           <div className="pe-group">
