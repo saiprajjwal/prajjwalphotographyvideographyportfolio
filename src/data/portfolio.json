@@ -23,7 +23,17 @@
     "headshot": "https://res.cloudinary.com/xetzasmy/image/upload/f_auto,q_auto,w_1200,c_limit,dpr_auto/v1782917762/portfolio/w48w8gzll9azctfnykn6.jpg",
     "tagline": "Capturing moments, telling stories.",
     "bio": "I'm a photographer and filmmaker specializing in cinematic storytelling. With a keen eye for detail and a passion for visual arts, I bring ideas to life through the lens.",
-    "gear": ["Sony A7S III", "Canon C70", "Sigma Art 24-70mm", "DJI Ronin S2", "Aputure Lighting"],
+    "gear": [
+      "Sony a7 IV", "Sony a7S III", "DJI Osmo Pocket 3", "Sony 50mm f/1.2 GM", 
+      "Sony 24-70mm f/2.8 GM II", "Sony 70-200mm f/2.8 GM II", "Godox AD200 Pro II", 
+      "Godox AD600 Pro", "Flashpoint XPLORER 400 Pro", "ZHIYUN MOLUS G200", 
+      "ZHIYUN Molus X60", "ZHIYUN C100 Tube Light", "Amaran PT4C 2-Light Kit", 
+      "Hollyland Lark M2S Combo", "DJI RS 3 Gimbal", "SmallRig AD-01 Tripod", 
+      "SmallRig Tripod Dolly", "K&F Concept 90” Overhead", "Godox X3 Trigger", 
+      "Portkeys LH7P Monitor", "Ulanzi Fog Ace Pro", "PolarPro Chroma VND/PL", 
+      "Helix ND 2–5 Stop", "Sony Tough V60 SD Cards", "Sony Tough V90 SD Cards", 
+      "SanDisk Extreme Pro V90", "NOMATIC McKinnon 25L", "NOMATIC McKinnon Sling 8L"
+    ],
     "email": "designer.prajjwal@gmail.com",
     "social": {
       "instagram": "https://www.instagram.com/saiprajjwal",
