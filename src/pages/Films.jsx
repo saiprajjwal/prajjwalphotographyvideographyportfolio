@@ -13,10 +13,14 @@ const FilmsScene = lazy(() => import('./FilmsScene'));
 export default function Films() {
   const [canvasReady, setCanvasReady] = useState(false);
   const [activeVideo, setActiveVideo] = useState(null);
-  const [introDone, setIntroDone] = useState(false);
-  const [doorsOpen, setDoorsOpen] = useState(false);
+  const [introDone, setIntroDone] = useState(() => sessionStorage.getItem('last_visited_page') === 'Films');
+  const [doorsOpen, setDoorsOpen] = useState(() => sessionStorage.getItem('last_visited_page') === 'Films');
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [hoveredVideo, setHoveredVideo] = useState(null);
+
+  useEffect(() => {
+    sessionStorage.setItem('last_visited_page', 'Films');
+  }, []);
   
   const videos = portfolioData.videos;
   const heroVideo = videos[0];

@@ -72,8 +72,13 @@ export default function Portfolio() {
   const [canvasReady, setCanvasReady] = useState(false);
   const [photos, setPhotos] = useState([]);
   const [photosLoaded, setPhotosLoaded] = useState(false);
-  const [introDone, setIntroDone] = useState(false);
-  const [doorsOpen, setDoorsOpen] = useState(false);
+  const [introDone, setIntroDone] = useState(() => sessionStorage.getItem('last_visited_page') === 'Portfolio');
+  const [doorsOpen, setDoorsOpen] = useState(() => sessionStorage.getItem('last_visited_page') === 'Portfolio');
+  const [hoveredPhotoId, setHoveredPhotoId] = useState(null);
+
+  useEffect(() => {
+    sessionStorage.setItem('last_visited_page', 'Portfolio');
+  }, []);
   
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
