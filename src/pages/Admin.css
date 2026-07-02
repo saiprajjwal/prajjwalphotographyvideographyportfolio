@@ -234,3 +234,63 @@
   background: rgba(255, 215, 0, 0.15);
   color: #ffd700;
 }
+
+/* Inline Edit Form */
+.admin-library-edit-form {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.admin-library-edit-form select,
+.admin-library-edit-form input {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  padding: 0.5rem;
+  color: #ffffff;
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+}
+
+.admin-library-edit-form select:focus,
+.admin-library-edit-form input:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+.admin-library-edit-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.admin-library-edit-actions button {
+  flex: 1;
+  border: none;
+  padding: 0.5rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.admin-library-edit-actions .save-btn {
+  background: rgba(143, 214, 148, 0.2);
+  color: #8fd694;
+}
+
+.admin-library-edit-actions .save-btn:hover {
+  background: rgba(143, 214, 148, 0.3);
+}
+
+.admin-library-edit-actions .cancel-btn {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.admin-library-edit-actions .cancel-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}

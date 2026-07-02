@@ -27,6 +27,9 @@ export default async function handler(req, res) {
         resource.context?.custom?.alt ||
         resource.context?.alt ||
         `${category} photo by Prajjwal Pandey`;
+        
+      const photoOrder = parseInt(resource.context?.custom?.photo_order, 10) || 0;
+      const albumOrder = parseInt(resource.context?.custom?.album_order, 10) || 0;
 
       return {
         id: resource.public_id,
@@ -35,6 +38,8 @@ export default async function handler(req, res) {
         category,
         session,
         isCover,
+        photoOrder,
+        albumOrder,
       };
     });
 

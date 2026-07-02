@@ -20,6 +20,10 @@ export default function Admin() {
   const [activeTab, setActiveTab] = useState('upload'); // 'upload' or 'library'
   const [libraryPhotos, setLibraryPhotos] = useState([]);
   const [loadingLibrary, setLoadingLibrary] = useState(false);
+  
+  const [editingPhoto, setEditingPhoto] = useState(null);
+  const [editCategory, setEditCategory] = useState('');
+  const [editSession, setEditSession] = useState('');
 
   const fetchLibrary = async () => {
     setLoadingLibrary(true);
@@ -80,10 +84,14 @@ export default function Admin() {
     }
   };
 
-  const handleUpdatePhoto = async (id, category, currentSession) => {
-    const newSession = window.prompt(`Update Album name for this ${category} photo (leave blank for no album):`, currentSession || '');
-    if (newSession === null) return; // User cancelled
-    
+  const startEditing = (photo) => {
+    setEditingPhoto(photo);
+    setEditCategory(photo.category || CATEGORIES[0]);
+    setEditSession(photo.session || '');
+  };
+
+  const saveEdit = async () => {
+    if (!editingPhoto) return;
     try {
       const res = await fetch('/api/update-photo', {
         method: 'POST',
@@ -91,10 +99,16 @@ export default function Admin() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ id, category, session: newSession })
+        body: JSON.stringify({ id: editingPhoto.id, category: editCategory, session: editSession })
       });
       if (!res.ok) throw new Error('Update failed');
-      setLibraryPhotos(prev => prev.map(p => p.id === id ? { ...p, session: newSession.trim() || null } : p));
+      
+      setLibraryPhotos(prev => prev.map(p => p.id === editingPhoto.id ? { 
+        ...p, 
+        category: editCategory,
+        session: editSession.trim() || null 
+      } : p));
+      setEditingPhoto(null);
     } catch (err) {
       alert(err.message);
     }
@@ -272,22 +286,42 @@ export default function Admin() {
                 {libraryPhotos.map(photo => (
                   <div key={photo.id} className="admin-library-card">
                     <img src={photo.src} alt={photo.alt} />
-                    <div className="admin-library-details">
-                      <span className="cat-badge">{photo.category}</span>
-                      <span className="session-badge">{photo.session || 'No Album'}</span>
-                    </div>
-                    <div className="admin-library-actions">
-                      <button onClick={() => handleUpdatePhoto(photo.id, photo.category, photo.session)}>Edit Album</button>
-                      {photo.session && (
-                        <button 
-                          className={photo.isCover ? 'cover-active' : ''} 
-                          onClick={() => handleSetCover(photo.id, photo.session)}
-                        >
-                          {photo.isCover ? '★ Cover' : 'Set Cover'}
-                        </button>
-                      )}
-                      <button className="delete-btn" onClick={() => handleDeletePhoto(photo.id)}>Delete</button>
-                    </div>
+                    {editingPhoto?.id === photo.id ? (
+                      <div className="admin-library-edit-form">
+                        <select value={editCategory} onChange={(e) => setEditCategory(e.target.value)}>
+                          {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                        </select>
+                        <input 
+                          type="text" 
+                          value={editSession} 
+                          onChange={(e) => setEditSession(e.target.value)} 
+                          placeholder="Album name (optional)"
+                        />
+                        <div className="admin-library-edit-actions">
+                          <button className="save-btn" onClick={saveEdit}>Save</button>
+                          <button className="cancel-btn" onClick={() => setEditingPhoto(null)}>Cancel</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="admin-library-details">
+                          <span className="cat-badge">{photo.category}</span>
+                          <span className="session-badge">{photo.session || 'No Album'}</span>
+                        </div>
+                        <div className="admin-library-actions">
+                          <button onClick={() => startEditing(photo)}>Edit</button>
+                          {photo.session && (
+                            <button 
+                              className={photo.isCover ? 'cover-active' : ''} 
+                              onClick={() => handleSetCover(photo.id, photo.session)}
+                            >
+                              {photo.isCover ? '★ Cover' : 'Set Cover'}
+                            </button>
+                          )}
+                          <button className="delete-btn" onClick={() => handleDeletePhoto(photo.id)}>Delete</button>
+                        </div>
+                      </>
+                    )}
                   </div>
                 ))}
                 {libraryPhotos.length === 0 && <p>No photos found.</p>}
