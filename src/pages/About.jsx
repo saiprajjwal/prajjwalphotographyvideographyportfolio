@@ -52,8 +52,9 @@ export default function About() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.7 }}
+                style={{ display: 'flex', justifyContent: 'center' }}
               >
-                <Link to="/portfolio" className="btn-glass" style={{ width: '100%', textAlign: 'center' }}>
+                <Link to="/portfolio" className="btn-glass">
                   See My Work
                 </Link>
               </motion.div>
