@@ -58,9 +58,11 @@ function App() {
     }, 650);
   };
 
+  const isEditor = location.pathname === '/editor';
+
   return (
     <div onClick={handleGlobalClick} style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <Navigation />
+      {!isEditor && <Navigation />}
       <AnimatePresence mode="wait" initial={false}>
         <Suspense fallback={
           <div style={{
@@ -89,7 +91,7 @@ function App() {
           </Routes>
         </Suspense>
       </AnimatePresence>
-      <Footer />
+      {!isEditor && <Footer />}
 
       {/* Dynamic expanding glass ripples */}
       {ripples.map((ripple) => (
