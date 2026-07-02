@@ -59,10 +59,10 @@ export default function About() {
                 style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: '1rem', marginTop: '1.5rem' }}
               >
                 <Link to="/portfolio" className="about-my-work-btn">
-                  PHOTOS
+                  THE ARCHIVE
                 </Link>
                 <Link to="/films" className="about-my-work-btn">
-                  VIDEOS
+                  THE REEL
                 </Link>
               </motion.div>
 
