@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { Upload, Download, RotateCw, RefreshCw, Undo, Redo, Save, Eye, Type, Crosshair, ChevronDown, SlidersHorizontal, Crop, LayoutTemplate, Palette, Sparkles, Droplet, Frame, Brush, Settings, Smile } from 'lucide-react';
+import { Upload, Download, RotateCw, RefreshCw, Undo, Redo, Save, Eye, Type, Crosshair, ChevronDown, SlidersHorizontal, Crop, LayoutTemplate, Palette, Sparkles, Droplet, Frame, Brush, Settings, Smile, PenTool, Trash2 } from 'lucide-react';
 import './Editor.css';
 
 // Fully client-side basic photo editor for social posts. Nothing is uploaded to
@@ -212,10 +212,16 @@ export default function Editor() {
   
   const [isPickingWB, setIsPickingWB] = useState(false);
 
+  const [masks, setMasks] = useState([]);
+  const [activeMaskId, setActiveMaskId] = useState(null);
+  const [isMaskingMode, setIsMaskingMode] = useState(false);
+  const [maskBrushSize, setMaskBrushSize] = useState(0.05);
+  const [showMaskOverlay, setShowMaskOverlay] = useState(true);
+  const [isDraggingMaskSlider, setIsDraggingMaskSlider] = useState(false);
   const [exportFormat, setExportFormat] = useState('jpeg');
   const [exportQuality, setExportQuality] = useState(92);
 
-    const [openSections, setOpenSections] = useState({ presets: false, text: false, stickers: false, crop: true, wb: true, adjust: true, effects: false, splitTone: false, frames: false, export: false, draw: false });
+    const [openSections, setOpenSections] = useState({ presets: false, text: false, stickers: false, crop: true, wb: true, adjust: true, effects: false, splitTone: false, frames: false, export: false, draw: false, masks: false });
   const [activeTab, setActiveTab] = useState('crop');
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 760);
 
@@ -226,6 +232,39 @@ export default function Editor() {
   }, []);
 
   const isSectionOpen = (key) => isMobile ? activeTab === key : openSections[key];
+
+  const toggleMaskingMode = (id) => {
+    if (activeMaskId === id && isMaskingMode) {
+      setIsMaskingMode(false);
+      setActiveMaskId(null);
+    } else {
+      setActiveMaskId(id);
+      setIsMaskingMode(true);
+    }
+  };
+
+  const addMask = () => {
+    const id = 'Mask ' + (masks.length + 1);
+    setMasks([...masks, { id, adj: { ...DEFAULT_ADJ }, paths: [] }]);
+    setActiveMaskId(id);
+    setIsMaskingMode(true);
+    scheduleHistorySave();
+  };
+
+  const deleteMask = (id, e) => {
+    e.stopPropagation();
+    setMasks(masks.filter(m => m.id !== id));
+    if (activeMaskId === id) {
+      setActiveMaskId(null);
+      setIsMaskingMode(false);
+    }
+    scheduleHistorySave();
+  };
+
+  const setMaskAdj = (key, value) => {
+    setMasks(masks.map(m => m.id === activeMaskId ? { ...m, adj: { ...m.adj, [key]: value } } : m));
+    scheduleHistorySave();
+  };
 
   const [isComparing, setIsComparing] = useState(false);
   const [loupe, setLoupe] = useState(false);
@@ -248,13 +287,15 @@ export default function Editor() {
   const previewSize = useRef({ w: 1, h: 1 });
   const dragRef = useRef(null);
   const grainCanvasRef = useRef(null); // Offscreen canvas for grain
+  const adjCanvasRef = useRef(null); // Offscreen canvas for mask adjustments
+  const maskCanvasRef = useRef(null); // Offscreen canvas for mask shape
   const textBounds = useRef([]); // Stores bounding boxes for text & stickers hit-testing
 
   // Debounced history saving
   const saveStateTimeout = useRef(null);
   const getCurrentState = useCallback(() => ({ 
-    adj, aspect, rotation, straighten, flipH, zoom, pan, texts, stickers, drawings 
-  }), [adj, aspect, rotation, straighten, flipH, zoom, pan, texts, stickers, drawings]);
+    adj, aspect, rotation, straighten, flipH, zoom, pan, texts, stickers, drawings, masks 
+  }), [adj, aspect, rotation, straighten, flipH, zoom, pan, texts, stickers, drawings, masks]);
 
   const scheduleHistorySave = useCallback(() => {
     clearTimeout(saveStateTimeout.current);
@@ -282,6 +323,7 @@ export default function Editor() {
     if (state.texts) setTexts(state.texts);
     if (state.stickers) setStickers(state.stickers);
     if (state.drawings) setDrawings(state.drawings);
+    if (state.masks) setMasks(state.masks);
   };
 
   useEffect(() => {
@@ -606,6 +648,99 @@ export default function Editor() {
       ctx.restore();
     }
 
+    // Mask Compositing
+    if (masks && masks.length > 0 && !isComparing) {
+      if (!adjCanvasRef.current) adjCanvasRef.current = document.createElement('canvas');
+      if (!maskCanvasRef.current) maskCanvasRef.current = document.createElement('canvas');
+      
+      const ac = adjCanvasRef.current;
+      const mc = maskCanvasRef.current;
+      if (ac.width !== W || ac.height !== H) { ac.width = W; ac.height = H; }
+      if (mc.width !== W || mc.height !== H) { mc.width = W; mc.height = H; }
+      
+      masks.forEach(m => {
+        if (!m.paths || m.paths.length === 0) return;
+        
+        // 1. Draw the brush mask to mc
+        const mCtx = mc.getContext('2d');
+        mCtx.globalCompositeOperation = 'source-over';
+        mCtx.clearRect(0, 0, W, H);
+        mCtx.lineCap = 'round';
+        mCtx.lineJoin = 'round';
+        m.paths.forEach(stroke => {
+          if (stroke.points.length === 0) return;
+          mCtx.strokeStyle = 'white';
+          mCtx.lineWidth = stroke.size * H;
+          mCtx.beginPath();
+          mCtx.moveTo(stroke.points[0].nx * W, stroke.points[0].ny * H);
+          for (let i = 1; i < stroke.points.length; i++) {
+            mCtx.lineTo(stroke.points[i].nx * W, stroke.points[i].ny * H);
+          }
+          // Add feathering to the brush based on its size
+          mCtx.filter = `blur(${Math.max(2, stroke.size * H * 0.25)}px)`;
+          mCtx.stroke();
+          mCtx.filter = 'none';
+        });
+
+        // 2. Draw the image with m.adj applied to ac
+        const aCtx = ac.getContext('2d');
+        aCtx.clearRect(0, 0, W, H);
+        aCtx.filter = `brightness(${m.adj.brightness}%) contrast(${m.adj.contrast}%) saturate(${m.adj.saturation}%)`;
+        
+        aCtx.translate(W / 2 + px, H / 2 + py);
+        aCtx.rotate((rot * Math.PI) / 180 + fine);
+        aCtx.scale(flipH ? -1 : 1, 1);
+        aCtx.drawImage(image, -dw / 2, -dh / 2, dw, dh);
+        aCtx.resetTransform();
+        aCtx.filter = 'none';
+
+        // Localized Highlights & Shadows
+        if (m.adj.shadows !== 0) {
+          aCtx.globalCompositeOperation = m.adj.shadows > 0 ? 'screen' : 'multiply';
+          aCtx.globalAlpha = Math.abs(m.adj.shadows) / 200;
+          aCtx.drawImage(aCtx.canvas, 0, 0);
+        }
+        if (m.adj.highlights !== 0) {
+          aCtx.globalCompositeOperation = m.adj.highlights > 0 ? 'color-dodge' : 'color-burn';
+          aCtx.globalAlpha = Math.abs(m.adj.highlights) / 200;
+          aCtx.drawImage(aCtx.canvas, 0, 0);
+        }
+
+        // Localized Warmth & Tint
+        aCtx.globalAlpha = 1;
+        if (m.adj.warmth !== 0 || m.adj.tint !== 0) {
+          aCtx.globalCompositeOperation = 'soft-light';
+          if (m.adj.warmth !== 0) {
+            aCtx.globalAlpha = Math.min(Math.abs(m.adj.warmth) / 100, 1) * 0.6;
+            aCtx.fillStyle = m.adj.warmth > 0 ? '#ff8a1e' : '#1e7bff';
+            aCtx.fillRect(0, 0, W, H);
+          }
+          if (m.adj.tint !== 0) {
+            aCtx.globalAlpha = Math.min(Math.abs(m.adj.tint) / 100, 1) * 0.6;
+            aCtx.fillStyle = m.adj.tint > 0 ? '#ff00ff' : '#00ff00';
+            aCtx.fillRect(0, 0, W, H);
+          }
+        }
+
+        // 3. Clip the adjusted layer to the mask
+        aCtx.globalAlpha = 1;
+        aCtx.globalCompositeOperation = 'destination-in';
+        aCtx.drawImage(mc, 0, 0);
+        
+        // 4. Composite the clipped layer onto the main canvas
+        aCtx.globalCompositeOperation = 'source-over';
+        ctx.drawImage(ac, 0, 0);
+
+        // 5. Draw red overlay if this is the active mask being edited
+        if (!forExport && isMaskingMode && m.id === activeMaskId && showMaskOverlay && !isDraggingMaskSlider) {
+          mCtx.globalCompositeOperation = 'source-in';
+          mCtx.fillStyle = 'rgba(255, 0, 0, 0.3)';
+          mCtx.fillRect(0, 0, W, H);
+          ctx.drawImage(mc, 0, 0);
+        }
+      });
+    }
+
     // Tilt-Shift Blur
     if (adj.tiltShift > 0 && !isComparing) {
       const off = document.createElement('canvas');
@@ -768,7 +903,7 @@ export default function Editor() {
       ctx.restore();
     });
 
-  }, [image, adj, rotation, straighten, flipH, zoom, pan, isComparing, texts, selectedTextId, stickers, selectedStickerId, drawings]);
+  }, [image, adj, rotation, straighten, flipH, zoom, pan, isComparing, texts, selectedTextId, stickers, selectedStickerId, drawings, masks, isMaskingMode, activeMaskId, showMaskOverlay, isDraggingMaskSlider]);
 
   // Redraw the preview whenever anything changes.
   useEffect(() => {
@@ -863,7 +998,7 @@ export default function Editor() {
       setDrawings([]);
       setIsDrawingMode(false);
       // Initialize history
-      const initial = { adj: { ...DEFAULT_ADJ }, aspect: 'original', rotation: 0, straighten: 0, flipH: false, zoom: 1, pan: { x: 0, y: 0 }, texts: [], stickers: [], drawings: [] };
+      const initial = { adj: { ...DEFAULT_ADJ }, aspect: 'original', rotation: 0, straighten: 0, flipH: false, zoom: 1, pan: { x: 0, y: 0 }, texts: [], stickers: [], drawings: [], masks: [] };
       setHistory([initial]);
       setHistoryIndex(0);
       localStorage.setItem('pe-current-state', JSON.stringify(initial));
@@ -902,6 +1037,14 @@ export default function Editor() {
     if (isDrawingMode) {
       dragRef.current = { type: 'draw', currentStroke: { color: brushColor, size: brushSize, points: [{nx, ny}] } };
       setDrawings(d => [...d, dragRef.current.currentStroke]);
+      e.currentTarget.setPointerCapture(e.pointerId);
+      setIsDragging(true);
+      return;
+    }
+
+    if (isMaskingMode && activeMaskId) {
+      dragRef.current = { type: 'mask', currentStroke: { size: maskBrushSize, points: [{nx, ny}] } };
+      setMasks(m => m.map(mask => mask.id === activeMaskId ? { ...mask, paths: [...(mask.paths || []), dragRef.current.currentStroke] } : mask));
       e.currentTarget.setPointerCapture(e.pointerId);
       setIsDragging(true);
       return;
@@ -948,6 +1091,10 @@ export default function Editor() {
       d.currentStroke.points.push({nx, ny});
       // Force re-render to show drawing live
       setDrawings(arr => [...arr]);
+    } else if (d.type === 'mask') {
+      d.currentStroke.points.push({nx, ny});
+      // Force re-render to show mask live
+      setMasks(arr => [...arr]);
     } else if (d.type === 'text') {
       const dx = nx - d.startNX;
       const dy = ny - d.startNY;
@@ -1106,7 +1253,7 @@ export default function Editor() {
                 <canvas
                   ref={previewRef}
                   className="pe-canvas"
-                  style={{ cursor: isPickingWB ? `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="white" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m2 22 1-1h3l9-9"/><path d="M3 21v-3l9-9"/><path d="m15 6 3.4-3.4a2.1 2.1 0 1 1 3 3L18 9l.4.4a2.1 2.1 0 1 1-3 3l-3.8-3.8a2.1 2.1 0 1 1 3-3l.4.4Z"/></svg>') 2 22, crosshair` : (isDrawingMode ? 'crosshair' : 'grab') }}
+                  style={{ cursor: isPickingWB ? `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="white" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m2 22 1-1h3l9-9"/><path d="M3 21v-3l9-9"/><path d="m15 6 3.4-3.4a2.1 2.1 0 1 1 3 3L18 9l.4.4a2.1 2.1 0 1 1-3 3l-3.8-3.8a2.1 2.1 0 1 1 3-3l.4.4Z"/></svg>') 2 22, crosshair` : (isMaskingMode ? `url('data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${Math.max(10, Math.round(maskBrushSize * (previewSize.current.h || 500)))}" height="${Math.max(10, Math.round(maskBrushSize * (previewSize.current.h || 500)))}" viewBox="0 0 ${Math.max(10, Math.round(maskBrushSize * (previewSize.current.h || 500)))} ${Math.max(10, Math.round(maskBrushSize * (previewSize.current.h || 500)))}"><circle cx="${Math.max(10, Math.round(maskBrushSize * (previewSize.current.h || 500)))/2}" cy="${Math.max(10, Math.round(maskBrushSize * (previewSize.current.h || 500)))/2}" r="${Math.max(10, Math.round(maskBrushSize * (previewSize.current.h || 500)))/2 - 1}" fill="rgba(255,0,0,0.2)" stroke="white" stroke-width="1.5" /></svg>`)}') ${Math.max(10, Math.round(maskBrushSize * (previewSize.current.h || 500)))/2} ${Math.max(10, Math.round(maskBrushSize * (previewSize.current.h || 500)))/2}, crosshair` : (isDrawingMode ? 'crosshair' : 'grab')) }}
                   onPointerDown={onPointerDown}
                   onPointerMove={onPointerMove}
                   onPointerUp={onPointerUp}
@@ -1531,6 +1678,61 @@ export default function Editor() {
             </div>
           </div>
 
+          <div className="pe-group" style={{ background: isMaskingMode ? 'rgba(236, 72, 153, 0.1)' : 'transparent', padding: isMaskingMode ? '1rem' : '0', borderRadius: '12px', border: isMaskingMode ? '1px solid rgba(236, 72, 153, 0.3)' : 'none', transition: 'all 0.3s', display: (!isMobile || activeTab === 'masks') ? 'block' : 'none' }}>
+            <div className="pe-section-header" onClick={() => setOpenSections(s => ({ ...s, masks: !s.masks }))}>
+              <span className="pe-group-label" style={{ color: isMaskingMode ? '#ec4899' : 'var(--text-secondary)' }}>Brush Masks</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <button className={`pe-btn pe-btn-ghost ${isMaskingMode ? 'is-active' : ''}`} style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', borderColor: isMaskingMode ? '#ec4899' : 'transparent', color: isMaskingMode ? '#ec4899' : 'var(--text-primary)' }} onClick={(e) => { e.stopPropagation(); if (activeMaskId) { toggleMaskingMode(activeMaskId); } else { addMask(); } setOpenSections(s => ({ ...s, masks: true })); setActiveTab('masks'); }}>
+                  {isMaskingMode ? 'Done' : 'Mask'}
+                </button>
+                <ChevronDown size={16} className={`pe-section-chevron ${isSectionOpen('masks') ? 'is-open' : ''}`} />
+              </div>
+            </div>
+            <div className={`pe-section-body ${isSectionOpen('masks') ? '' : 'is-collapsed'}`} style={{ maxHeight: isSectionOpen('masks') ? '800px' : '0' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', marginTop: '0.8rem' }}>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  {masks.map(m => (
+                    <button key={m.id} className={`pe-chip ${activeMaskId === m.id ? 'is-active' : ''}`} onClick={() => toggleMaskingMode(m.id)}>
+                      {m.id}
+                    </button>
+                  ))}
+                  <button className="pe-chip" onClick={addMask} style={{ borderStyle: 'dashed' }}>+ Add Mask</button>
+                </div>
+                
+                {activeMaskId && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', marginTop: '0.5rem', padding: '1rem', background: 'rgba(0,0,0,0.2)', borderRadius: '8px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{activeMaskId} Settings</span>
+                      <button onClick={(e) => deleteMask(activeMaskId, e)} className="pe-btn pe-btn-delete" style={{ padding: '0.3rem', height: 'auto' }}><Trash2 size={14} /></button>
+                    </div>
+                    
+                    <label className="pe-slider-row">
+                      <span>Brush Size</span>
+                      <input type="range" min="0.01" max="0.3" step="0.01" value={maskBrushSize} onChange={e => setMaskBrushSize(parseFloat(e.target.value))} />
+                    </label>
+                    <label className="pe-color-label" style={{ flexDirection: 'row', gap: '0.5rem', justifyContent: 'flex-start' }}>
+                      <input type="checkbox" checked={showMaskOverlay} onChange={e => setShowMaskOverlay(e.target.checked)} />
+                      Show Red Overlay
+                    </label>
+
+                    <div style={{ height: '1px', background: 'rgba(255,255,255,0.1)', margin: '0.5rem 0' }}></div>
+                    
+                    {['brightness', 'contrast', 'saturation', 'warmth', 'tint', 'shadows', 'highlights'].map(key => {
+                      const m = masks.find(x => x.id === activeMaskId);
+                      const val = m.adj[key];
+                      const { min, max, label } = SLIDERS.find(s => s.key === key) || { min: -100, max: 100, label: key };
+                      return (
+                        <label className="pe-slider-row" key={key}>
+                          <span>{label}</span>
+                          <input type="range" min={min} max={max} value={val} onPointerDown={(e) => { e.stopPropagation(); setIsDraggingMaskSlider(true); }} onPointerUp={(e) => { e.stopPropagation(); setIsDraggingMaskSlider(false); }} onPointerCancel={() => setIsDraggingMaskSlider(false)} onChange={(e) => setMaskAdj(key, parseInt(e.target.value))} />
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
           <div className="pe-group" style={{ background: isDrawingMode ? 'rgba(59, 130, 246, 0.1)' : 'transparent', padding: isDrawingMode ? '1rem' : '0', borderRadius: '12px', border: isDrawingMode ? '1px solid rgba(59, 130, 246, 0.3)' : 'none', transition: 'all 0.3s' }}>
             <div className="pe-section-header" onClick={() => setOpenSections(s => ({ ...s, draw: !s.draw }))}>
               <span className="pe-group-label" style={{ color: isDrawingMode ? '#3b82f6' : 'var(--text-secondary)' }}>Freehand Draw</span>
@@ -1617,6 +1819,7 @@ export default function Editor() {
               <button className={`pe-tab-btn ${activeTab === 'text' ? 'is-active' : ''}`} onClick={() => setActiveTab('text')}><Type size={20} /><span>Text</span></button>
               <button className={`pe-tab-btn ${activeTab === 'stickers' ? 'is-active' : ''}`} onClick={() => setActiveTab('stickers')}><Smile size={20} /><span>Stickers</span></button>
               <button className={`pe-tab-btn ${activeTab === 'draw' ? 'is-active' : ''}`} onClick={() => setActiveTab('draw')}><Brush size={20} /><span>Draw</span></button>
+              <button className={`pe-tab-btn ${activeTab === 'masks' ? 'is-active' : ''}`} onClick={() => setActiveTab('masks')}><PenTool size={20} /><span>Masks</span></button>
               <button className={`pe-tab-btn ${activeTab === 'export' ? 'is-active' : ''}`} onClick={() => setActiveTab('export')}><Settings size={20} /><span>Export</span></button>
             </div>
           )}
