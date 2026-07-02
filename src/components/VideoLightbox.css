@@ -89,8 +89,11 @@
   }
   
   .video-lightbox-close {
-    top: 1rem;
-    right: 1rem;
+    top: 4rem;
+    left: 1rem;
+    right: auto;
+    padding: 0.8rem 1.2rem 0.8rem 0.8rem;
+    font-size: 0.85rem;
   }
   
   .video-lightbox-info {
