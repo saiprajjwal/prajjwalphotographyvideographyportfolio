@@ -132,3 +132,21 @@
   transform: translateY(-2px);
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
 }
+
+.gear-category {
+  margin-bottom: 2rem;
+}
+
+.gear-category:last-child {
+  margin-bottom: 0;
+}
+
+.gear-category-title {
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  margin-bottom: 1rem;
+  font-weight: 600;
+}

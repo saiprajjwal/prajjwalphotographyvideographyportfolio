@@ -91,19 +91,41 @@ export default function About() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5 }}
               >
-                <h2>Gear & Skills</h2>
-                <ul className="gear-list">
-                  {gear.map((item, index) => (
-                    <motion.li 
-                      key={index}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.6 + (index * 0.1) }}
-                    >
-                      {item}
-                    </motion.li>
-                  ))}
-                </ul>
+                <h2>Creative Toolkit</h2>
+                {Array.isArray(gear) && gear.length > 0 && typeof gear[0] === 'string' ? (
+                  <ul className="gear-list">
+                    {gear.map((item, index) => (
+                      <motion.li 
+                        key={index}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.6 + (index * 0.1) }}
+                      >
+                        {item}
+                      </motion.li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="gear-categories">
+                    {gear.map((catObj, idx) => (
+                      <div key={idx} className="gear-category">
+                        <h3 className="gear-category-title">{catObj.category}</h3>
+                        <ul className="gear-list">
+                          {catObj.items?.map((item, index) => (
+                            <motion.li 
+                              key={index}
+                              initial={{ opacity: 0, x: -10 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: 0.6 + (idx * 0.1) + (index * 0.05) }}
+                            >
+                              {item}
+                            </motion.li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </motion.div>
 
             </div>

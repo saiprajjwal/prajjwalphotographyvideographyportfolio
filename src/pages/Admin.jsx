@@ -251,12 +251,19 @@ export default function Admin() {
         headshotUrl = uploadData.secure_url;
       }
 
+      let parsedGear = [];
+      try {
+        parsedGear = typeof aboutGear === 'string' ? JSON.parse(aboutGear) : aboutGear;
+      } catch (err) {
+        throw new Error('Gear must be valid JSON format');
+      }
+
       const aboutPayload = {
         name: aboutName,
         bio: aboutBio,
         tagline: aboutTagline,
         email: aboutEmail,
-        gear: aboutGear.split(',').map(s => s.trim()).filter(Boolean),
+        gear: parsedGear,
         headshot: headshotUrl
       };
 
@@ -434,8 +441,13 @@ export default function Admin() {
               <textarea value={aboutBio} onChange={e => setAboutBio(e.target.value)} rows="5" required />
             </label>
             <label>
-              Gear (comma separated)
-              <input type="text" value={aboutGear} onChange={e => setAboutGear(e.target.value)} />
+              Gear (JSON format)
+              <textarea 
+                value={typeof aboutGear === 'string' ? aboutGear : JSON.stringify(aboutGear, null, 2)} 
+                onChange={e => setAboutGear(e.target.value)} 
+                rows="15" 
+                style={{ fontFamily: 'monospace', fontSize: '0.85rem', background: 'rgba(0,0,0,0.3)' }}
+              />
             </label>
             <label>
               Email

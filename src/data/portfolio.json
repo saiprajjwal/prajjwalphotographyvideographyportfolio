@@ -24,15 +24,22 @@
     "tagline": "Capturing moments, telling stories.",
     "bio": "I'm a photographer and filmmaker specializing in cinematic storytelling. With a keen eye for detail and a passion for visual arts, I bring ideas to life through the lens.",
     "gear": [
-      "Sony a7 IV", "Sony a7S III", "DJI Osmo Pocket 3", "Sony 50mm f/1.2 GM", 
-      "Sony 24-70mm f/2.8 GM II", "Sony 70-200mm f/2.8 GM II", "Godox AD200 Pro II", 
-      "Godox AD600 Pro", "Flashpoint XPLORER 400 Pro", "ZHIYUN MOLUS G200", 
-      "ZHIYUN Molus X60", "ZHIYUN C100 Tube Light", "Amaran PT4C 2-Light Kit", 
-      "Hollyland Lark M2S Combo", "DJI RS 3 Gimbal", "SmallRig AD-01 Tripod", 
-      "SmallRig Tripod Dolly", "K&F Concept 90” Overhead", "Godox X3 Trigger", 
-      "Portkeys LH7P Monitor", "Ulanzi Fog Ace Pro", "PolarPro Chroma VND/PL", 
-      "Helix ND 2–5 Stop", "Sony Tough V60 SD Cards", "Sony Tough V90 SD Cards", 
-      "SanDisk Extreme Pro V90", "NOMATIC McKinnon 25L", "NOMATIC McKinnon Sling 8L"
+      {
+        "category": "Cameras",
+        "items": ["Sony a7 IV", "Sony a7S III", "DJI Osmo Pocket 3"]
+      },
+      {
+        "category": "Lenses",
+        "items": ["Sony FE 24–70mm f/2.8 GM II", "Sony FE 50mm f/1.2 GM", "Sony FE 70–200mm f/2.8 GM II"]
+      },
+      {
+        "category": "Lighting",
+        "items": ["Godox AD200 Pro II", "Godox AD600 Pro", "Flashpoint XPLORER 400 Pro", "ZHIYUN MOLUS G200", "ZHIYUN MOLUS X60", "ZHIYUN C100 Tube Light", "Amaran PT4C 2-Light Kit", "Godox X3 Trigger"]
+      },
+      {
+        "category": "Camera Accessories",
+        "items": ["Hollyland Lark M2S Combo", "DJI RS 3 Gimbal", "SmallRig AD-01 Tripod", "SmallRig Tripod Dolly", "K&F Concept 90\" Overhead Tripod", "Portkeys LH7P Monitor", "Ulanzi Fog Ace Pro", "PolarPro Chroma VND/PL", "PolarPro Helix ND 2–5 Stop", "Sony Tough V60 SD Cards", "Sony Tough V90 SD Cards", "SanDisk Extreme Pro V90 SD Cards", "NOMATIC McKinnon Camera Pack 25L", "NOMATIC McKinnon Sling 8L"]
+      }
     ],
     "email": "designer.prajjwal@gmail.com",
     "social": {
