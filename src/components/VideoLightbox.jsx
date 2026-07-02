@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X } from 'lucide-react';
+import { ChevronLeft } from 'lucide-react';
 import './VideoLightbox.css';
 
 export default function VideoLightbox({ video, onClose }) {
@@ -63,13 +63,14 @@ export default function VideoLightbox({ video, onClose }) {
         <motion.button 
           className="video-lightbox-close"
           onClick={onClose}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.6, duration: 0.5 }}
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.8, duration: 0.5 }}
           aria-label="Close video"
           style={{ zIndex: 9999 }}
         >
-          <X size={28} />
+          <ChevronLeft size={24} />
+          <span>Back to Films</span>
         </motion.button>
       </motion.div>
     </AnimatePresence>
