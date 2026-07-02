@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Play, Info, X } from 'lucide-react';
 import VideoCard from '../components/VideoCard';
 import VideoLightbox from '../components/VideoLightbox';
+import ParticleIntro from './ParticleIntro';
 import portfolioData from '../data/portfolio.json';
 import './Films.css';
 
@@ -24,32 +25,33 @@ export default function Films() {
   const t1Ref = useRef(null);
   const t2Ref = useRef(null);
 
-  // Handle intro timing
+  // Lock scroll during intro — pad right to prevent scrollbar layout shift
   useEffect(() => {
-    // Lock body scroll during intro
     if (!introDone) {
-      document.body.style.overflow = 'hidden';
-    } else if (!activeVideo) {
-      document.body.style.overflow = '';
+      const scrollbarW = window.innerWidth - document.documentElement.clientWidth;
+      document.body.style.overflow   = 'hidden';
+      document.body.style.paddingRight = `${scrollbarW}px`;
+    } else {
+      document.body.style.overflow    = '';
+      document.body.style.paddingRight = '';
     }
-
-    t1Ref.current = setTimeout(() => setDoorsOpen(true), 1200); // Hold for 1.2s to read name
-    t2Ref.current = setTimeout(() => setIntroDone(true), 1800); // Unmount after transitions
-    
     return () => {
-      clearTimeout(t1Ref.current);
-      clearTimeout(t2Ref.current);
-      document.body.style.overflow = '';
+      document.body.style.overflow    = '';
+      document.body.style.paddingRight = '';
     };
-  }, [introDone, activeVideo]);
+  }, [introDone]);
 
-  const handleSkipIntro = () => {
-    if (!introDone) {
-      clearTimeout(t1Ref.current);
-      clearTimeout(t2Ref.current);
-      setDoorsOpen(true);
-      setTimeout(() => setIntroDone(true), 400); // Rapid finish
-    }
+  const handleIntroDone = () => {
+    // Short pause so the page fade-in feels intentional
+    t1Ref.current = setTimeout(() => setDoorsOpen(true), 50);
+    t2Ref.current = setTimeout(() => setIntroDone(true), 650);
+  };
+
+  const handleIntroSkip = () => {
+    clearTimeout(t1Ref.current);
+    clearTimeout(t2Ref.current);
+    setDoorsOpen(true);
+    setTimeout(() => setIntroDone(true), 400);
   };
 
   // Handle Escape key for info modal
@@ -70,53 +72,13 @@ export default function Films() {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0, transition: { duration: 0.5 } }}
     >
-      {/* Cinematic A24-Style Blur Reveal */}
-      <AnimatePresence>
-        {!introDone && (
-          <motion.div
-            className="netflix-intro-overlay"
-            initial={{ opacity: 1 }}
-            animate={{ opacity: doorsOpen ? 0 : 1 }}
-            transition={{ duration: 0.5, ease: "easeInOut" }}
-            onClick={handleSkipIntro}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleSkipIntro(); }}
-          >
-            <div className="netflix-intro-text">
-              <motion.h1
-                initial={{ opacity: 0, scale: 0.95, filter: 'blur(10px)' }}
-                animate={
-                  doorsOpen 
-                    ? { opacity: 0, scale: 1.2, filter: 'blur(20px)' } 
-                    : { opacity: 1, scale: 1, filter: 'blur(0px)' }
-                }
-                transition={{ 
-                  duration: doorsOpen ? 0.4 : 0.8, 
-                  ease: "easeOut" 
-                }}
-              >
-                Prajjwal Pandey
-              </motion.h1>
-              <motion.p
-                initial={{ opacity: 0, y: 10, filter: 'blur(5px)' }}
-                animate={
-                  doorsOpen 
-                    ? { opacity: 0, y: -10, filter: 'blur(10px)' } 
-                    : { opacity: 1, y: 0, filter: 'blur(0px)' }
-                }
-                transition={{ 
-                  duration: doorsOpen ? 0.4 : 0.8,
-                  delay: doorsOpen ? 0 : 0.2, 
-                  ease: "easeOut" 
-                }}
-              >
-                CINEMATOGRAPHY
-              </motion.p>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Particle Dust Intro */}
+      {!introDone && (
+        <ParticleIntro
+          onDone={handleIntroDone}
+          onSkip={handleIntroSkip}
+        />
+      )}
 
       {/* 3D Background Canvas */}
       <div
@@ -149,7 +111,7 @@ export default function Films() {
               className="netflix-hero-title"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: doorsOpen ? 1 : 0, y: doorsOpen ? 0 : 20 }}
-              transition={{ duration: 0.8, delay: 0.3 }}
+              transition={{ duration: 0.7, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
             >
               {(hoveredVideo || heroVideo).title}
             </motion.h1>
@@ -157,7 +119,7 @@ export default function Films() {
               className="netflix-hero-description"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: doorsOpen ? 1 : 0, y: doorsOpen ? 0 : 20 }}
-              transition={{ duration: 0.8, delay: 0.4 }}
+              transition={{ duration: 0.7, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
             >
               A cinematic masterpiece exploring the boundaries of visual storytelling. Shot on Sony a7S III with breathtaking color science.
             </motion.p>
@@ -165,7 +127,7 @@ export default function Films() {
               className="netflix-hero-buttons"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: doorsOpen ? 1 : 0, y: doorsOpen ? 0 : 20 }}
-              transition={{ duration: 0.8, delay: 0.5 }}
+              transition={{ duration: 0.7, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
             >
               <button className="btn-play" onClick={() => setActiveVideo(hoveredVideo || heroVideo)}>
                 <Play size={24} fill="currentColor" />
@@ -182,9 +144,9 @@ export default function Films() {
         {/* Netflix Grid Rows */}
         <motion.div 
           className="netflix-row-section"
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: doorsOpen ? 1 : 0, y: doorsOpen ? 0 : 40 }}
-          transition={{ duration: 0.8, delay: 0.6 }}
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: doorsOpen ? 1 : 0, y: doorsOpen ? 0 : 30 }}
+          transition={{ duration: 0.7, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
         >
           <h2 className="netflix-row-title">Recent Masterpieces</h2>
           <div className="netflix-row-track">
