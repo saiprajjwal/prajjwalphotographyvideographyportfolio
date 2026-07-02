@@ -82,7 +82,37 @@ const SLIDERS = [
   { key: 'grain', label: 'Grain', min: 0, max: 100 },
 ];
 
-const FONTS = ['Inter', 'sans-serif', 'serif', 'monospace', 'Impact', 'Comic Sans MS'];
+const FONTS = [
+  'Inter',
+  'Montserrat',
+  'Playfair Display',
+  'Cinzel',
+  'Cormorant Garamond',
+  'Bodoni Moda',
+  'Didot',
+  'Optima',
+  'Baskerville',
+  'Arial',
+  'Helvetica',
+  'Verdana',
+  'Trebuchet MS',
+  'Tahoma',
+  'Times New Roman',
+  'Georgia',
+  'Garamond',
+  'Courier New',
+  'Brush Script MT',
+  'Comic Sans MS',
+  'Impact',
+  'Arial Black',
+  'Luminari',
+  'Marker Felt',
+  'sans-serif',
+  'serif',
+  'monospace',
+  'cursive',
+  'fantasy'
+];
 
 function getOutputSize(image, aspect) {
   if (aspect === 'original') {
