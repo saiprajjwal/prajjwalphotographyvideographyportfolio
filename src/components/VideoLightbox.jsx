@@ -63,11 +63,11 @@ export default function VideoLightbox({ video, onClose }) {
         <motion.button 
           className="video-lightbox-close"
           onClick={onClose}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.8, duration: 0.5 }}
           aria-label="Close video"
-          style={{ zIndex: 9999, x: '-50%' }}
+          style={{ zIndex: 9999 }}
         >
           <ChevronLeft size={28} />
           <span>Back to Films</span>
