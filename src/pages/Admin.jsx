@@ -29,7 +29,7 @@ export default function Admin() {
   const [aboutName, setAboutName] = useState(portfolioData.about.name);
   const [aboutBio, setAboutBio] = useState(portfolioData.about.bio);
   const [aboutTagline, setAboutTagline] = useState(portfolioData.about.tagline);
-  const [aboutGear, setAboutGear] = useState(portfolioData.about.gear.join(', '));
+  const [aboutGear, setAboutGear] = useState(() => JSON.stringify(portfolioData.about.gear, null, 2));
   const [aboutEmail, setAboutEmail] = useState(portfolioData.about.email);
   const [aboutHeadshot, setAboutHeadshot] = useState(null);
   const [savingAbout, setSavingAbout] = useState(false);
@@ -42,7 +42,7 @@ export default function Admin() {
           setAboutName(data.name || '');
           setAboutBio(data.bio || '');
           setAboutTagline(data.tagline || '');
-          setAboutGear((data.gear || []).join(', '));
+          setAboutGear(JSON.stringify(data.gear || [], null, 2));
           setAboutEmail(data.email || '');
         }
       })
@@ -251,12 +251,19 @@ export default function Admin() {
         headshotUrl = uploadData.secure_url;
       }
 
+      let parsedGear = [];
+      try {
+        parsedGear = JSON.parse(aboutGear);
+      } catch (err) {
+        throw new Error('Gear must be valid JSON format');
+      }
+
       const aboutPayload = {
         name: aboutName,
         bio: aboutBio,
         tagline: aboutTagline,
         email: aboutEmail,
-        gear: aboutGear.split(',').map(s => s.trim()).filter(Boolean),
+        gear: parsedGear,
         headshot: headshotUrl
       };
 
@@ -434,8 +441,13 @@ export default function Admin() {
               <textarea value={aboutBio} onChange={e => setAboutBio(e.target.value)} rows="5" required />
             </label>
             <label>
-              Gear (comma separated)
-              <input type="text" value={aboutGear} onChange={e => setAboutGear(e.target.value)} />
+              Gear (JSON format)
+              <textarea 
+                value={aboutGear} 
+                onChange={e => setAboutGear(e.target.value)} 
+                rows="10" 
+                style={{ fontFamily: 'monospace', fontSize: '0.9rem', background: 'rgba(0,0,0,0.3)' }}
+              />
             </label>
             <label>
               Email
