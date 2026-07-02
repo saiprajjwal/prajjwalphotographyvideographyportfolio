@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import portfolioData from '../data/portfolio.json';
 import './Admin.css';
 
@@ -16,6 +16,67 @@ export default function Admin() {
   const [files, setFiles] = useState([]);
   const [results, setResults] = useState([]);
   const [uploading, setUploading] = useState(false);
+
+  const [activeTab, setActiveTab] = useState('upload'); // 'upload' or 'library'
+  const [libraryPhotos, setLibraryPhotos] = useState([]);
+  const [loadingLibrary, setLoadingLibrary] = useState(false);
+
+  const fetchLibrary = async () => {
+    setLoadingLibrary(true);
+    try {
+      const res = await fetch('/api/photos');
+      const data = await res.json();
+      if (data.photos) setLibraryPhotos(data.photos);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingLibrary(false);
+    }
+  };
+
+  useEffect(() => {
+    if (token && activeTab === 'library') {
+      fetchLibrary();
+    }
+  }, [token, activeTab]);
+
+  const handleDeletePhoto = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this photo?')) return;
+    try {
+      const res = await fetch('/api/delete-photo', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ id })
+      });
+      if (!res.ok) throw new Error('Deletion failed');
+      setLibraryPhotos(prev => prev.filter(p => p.id !== id));
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const handleUpdatePhoto = async (id, category, currentSession) => {
+    const newSession = window.prompt(`Update Album name for this ${category} photo (leave blank for no album):`, currentSession || '');
+    if (newSession === null) return; // User cancelled
+    
+    try {
+      const res = await fetch('/api/update-photo', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ id, category, session: newSession })
+      });
+      if (!res.ok) throw new Error('Update failed');
+      setLibraryPhotos(prev => prev.map(p => p.id === id ? { ...p, session: newSession.trim() || null } : p));
+    } catch (err) {
+      alert(err.message);
+    }
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -114,13 +175,20 @@ export default function Admin() {
 
   return (
     <main className="admin-wrapper">
-      <div className="admin-panel glass-panel">
+      <div className="admin-panel glass-panel" style={{ maxWidth: activeTab === 'library' ? '1200px' : '600px' }}>
         <div className="admin-header">
-          <h1>Upload Photos</h1>
+          <h1>Admin Panel</h1>
           <button onClick={handleLogout} className="admin-logout-btn">Log Out</button>
         </div>
 
-        <form onSubmit={handleUpload} className="admin-upload-form">
+        <div className="admin-tabs">
+          <button className={`admin-tab ${activeTab === 'upload' ? 'active' : ''}`} onClick={() => setActiveTab('upload')}>Upload</button>
+          <button className={`admin-tab ${activeTab === 'library' ? 'active' : ''}`} onClick={() => setActiveTab('library')}>Photo Library</button>
+        </div>
+
+        {activeTab === 'upload' ? (
+          <>
+            <form onSubmit={handleUpload} className="admin-upload-form">
           <label>
             Category
             <select value={category} onChange={(e) => setCategory(e.target.value)}>
@@ -173,6 +241,29 @@ export default function Admin() {
               </li>
             ))}
           </ul>
+        )}
+          </>
+        ) : (
+          <div className="admin-library">
+            {loadingLibrary ? <p>Loading library...</p> : (
+              <div className="admin-library-grid">
+                {libraryPhotos.map(photo => (
+                  <div key={photo.id} className="admin-library-card">
+                    <img src={photo.src} alt={photo.alt} />
+                    <div className="admin-library-details">
+                      <span className="cat-badge">{photo.category}</span>
+                      <span className="session-badge">{photo.session || 'No Album'}</span>
+                    </div>
+                    <div className="admin-library-actions">
+                      <button onClick={() => handleUpdatePhoto(photo.id, photo.category, photo.session)}>Edit Album</button>
+                      <button className="delete-btn" onClick={() => handleDeletePhoto(photo.id)}>Delete</button>
+                    </div>
+                  </div>
+                ))}
+                {libraryPhotos.length === 0 && <p>No photos found.</p>}
+              </div>
+            )}
+          </div>
         )}
       </div>
     </main>
