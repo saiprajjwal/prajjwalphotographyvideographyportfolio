@@ -1,28 +1,69 @@
+/* The outer wrapper inherits from .video-card */
+.instagram-reel-card {
+  width: max-content; /* Ensure the card shrinks to fit the exact video dimensions */
+  margin: 0;
+}
+
 .instagram-reel-container {
-  width: 320px;
-  height: 570px;
+  width: 318px;
+  height: 395px; /* Exact height to crop 4:5 standard Instagram posts */
   flex-shrink: 0;
-  border-radius: 16px;
+  border-radius: 10px; /* Match inner thumbnail radius */
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  background: #000;
+  position: relative;
+  cursor: pointer;
+  /* Removed redundant border and box-shadow since .video-card handles it */
+}
+
+/* Blocks clicks from hitting the iframe and reveals the play button */
+.instagram-overlay-click-shield {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  z-index: 10;
+  background: rgba(0, 0, 0, 0.1);
   display: flex;
   justify-content: center;
   align-items: center;
-  position: relative;
+  transition: background 0.3s ease;
+}
+
+.instagram-reel-card:hover .instagram-overlay-click-shield {
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.instagram-overlay-click-shield .play-button {
+  width: 60px;
+  height: 60px;
+  background: rgba(255,255,255,0.2);
+  backdrop-filter: blur(10px);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.3);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: scale(0.9);
+  opacity: 0;
+}
+
+.instagram-overlay-click-shield .play-button svg {
+  margin-left: 4px;
+}
+
+.instagram-reel-card:hover .instagram-overlay-click-shield .play-button {
+  transform: scale(1);
+  opacity: 1;
 }
 
 .instagram-reel-glass-wrapper {
-  width: calc(100% + 4px); /* slightly larger to crop out IG borders */
-  height: calc(100% + 4px);
+  width: 322px; /* Slight overflow to hide left/right borders */
+  height: 800px; /* Extra tall so footer gets pushed way down */
   position: absolute;
-  top: -2px;
-  left: -2px;
-  border-radius: 16px;
+  top: -62px; /* Exact height of the Instagram top header */
+  left: -2px; /* Nudge left to hide border */
   overflow: hidden;
-  /* Darken the background slightly to hide loading flashes */
-  background: #000;
 }
 
 .instagram-reel-iframe {
@@ -30,12 +71,21 @@
   height: 100%;
   border: none;
   background-color: transparent !important;
+  /* Slight scale to remove white edges, keeping full video visible */
+  transform: scale(1.02);
+  transform-origin: center;
 }
 
 /* Make them scale nicely on very small screens */
 @media (max-width: 480px) {
   .instagram-reel-container {
     width: 280px;
-    height: 500px;
+    height: 350px; /* Scaled 4:5 ratio */
+  }
+  .instagram-reel-glass-wrapper {
+    width: 284px;
+    height: 700px;
+    top: -55px; /* Header is slightly smaller on mobile embeds */
+    left: -2px;
   }
 }

@@ -1,0 +1,70 @@
+.instagram-lightbox-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.9);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.instagram-lightbox-close {
+  position: absolute;
+  top: 4rem;
+  left: 4rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  border-radius: 30px;
+  padding: 0.75rem 1.5rem 0.75rem 1rem;
+  font-size: 1rem;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  z-index: 9999;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+.instagram-lightbox-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateX(-5px);
+}
+
+.instagram-lightbox-content {
+  width: 100%;
+  max-width: 450px;
+  height: 85vh; /* Very tall to fit Instagram embeds */
+  max-height: 850px;
+  background: #000;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 30px 100px rgba(0,0,0,0.8);
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.instagram-lightbox-iframe {
+  width: 100%;
+  height: 100%;
+  background-color: transparent !important;
+}
+
+@media (max-width: 768px) {
+  .instagram-lightbox-close {
+    top: 2rem;
+    left: 1rem;
+    padding: 0.6rem 1rem 0.6rem 0.5rem;
+    font-size: 0.9rem;
+  }
+  .instagram-lightbox-content {
+    max-width: 90%;
+    height: 80vh;
+  }
+}

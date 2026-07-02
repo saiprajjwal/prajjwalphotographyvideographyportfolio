@@ -1,9 +1,10 @@
 import { lazy, Suspense, useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Info, X } from 'lucide-react';
+import { Play, Info, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import VideoCard from '../components/VideoCard';
 import VideoLightbox from '../components/VideoLightbox';
 import InstagramReel from '../components/InstagramReel';
+import ReelViewer from '../components/ReelViewer';
 import ParticleIntro from './ParticleIntro';
 import portfolioData from '../data/portfolio.json';
 import './Films.css';
@@ -18,6 +19,71 @@ export default function Films() {
   const [doorsOpen, setDoorsOpen] = useState(() => sessionStorage.getItem('last_visited_page') === 'Films');
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [hoveredVideo, setHoveredVideo] = useState(null);
+  const [activeReelIndex, setActiveReelIndex] = useState(null);
+
+  const reelsTrackRef = useRef(null);
+
+  const scrollReels = (direction) => {
+    if (reelsTrackRef.current) {
+      const scrollAmount = 350; // Approximately the width of one reel + gap
+      reelsTrackRef.current.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth'
+      });
+    }
+  };
+
+  // Drag-to-scroll for the reels track (mouse only — touch scrolls natively)
+  const reelsDragRef = useRef({ down: false, startX: 0, scrollLeft: 0, dragged: false });
+
+  const onReelsPointerDown = (e) => {
+    if (e.pointerType !== 'mouse') return;
+    reelsDragRef.current = {
+      down: true,
+      startX: e.clientX,
+      scrollLeft: reelsTrackRef.current.scrollLeft,
+      dragged: false
+    };
+  };
+
+  const onReelsPointerMove = (e) => {
+    const drag = reelsDragRef.current;
+    if (!drag.down) return;
+    const track = reelsTrackRef.current;
+    const dx = e.clientX - drag.startX;
+    if (!drag.dragged) {
+      if (Math.abs(dx) < 6) return; // Below this it's a click, not a drag
+      drag.dragged = true;
+      track.setPointerCapture(e.pointerId);
+      // Smooth behavior and snap fight direct scrollLeft writes mid-drag
+      track.style.scrollBehavior = 'auto';
+      track.style.scrollSnapType = 'none';
+      track.style.cursor = 'grabbing';
+    }
+    track.scrollLeft = drag.scrollLeft - dx;
+  };
+
+  const endReelsDrag = (e) => {
+    const drag = reelsDragRef.current;
+    if (!drag.down) return;
+    drag.down = false;
+    const track = reelsTrackRef.current;
+    track.style.scrollBehavior = '';
+    track.style.scrollSnapType = '';
+    track.style.cursor = '';
+    if (drag.dragged && track.hasPointerCapture?.(e.pointerId)) {
+      track.releasePointerCapture(e.pointerId);
+    }
+  };
+
+  const onReelsClickCapture = (e) => {
+    // Swallow the click that lands right after a drag release
+    if (reelsDragRef.current.dragged) {
+      e.preventDefault();
+      e.stopPropagation();
+      reelsDragRef.current.dragged = false;
+    }
+  };
 
   useEffect(() => {
     sessionStorage.setItem('last_visited_page', 'Films');
@@ -172,15 +238,37 @@ export default function Films() {
         {reels.length > 0 && (
           <motion.div 
             className="netflix-row-section"
+            style={{ marginTop: '3rem' }} /* Override the negative margin used for the first row */
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: doorsOpen ? 1 : 0, y: doorsOpen ? 0 : 30 }}
             transition={{ duration: 0.7, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
           >
             <h2 className="netflix-row-title">Short Form & Reels</h2>
-            <div className="netflix-row-track" style={{ paddingBottom: '4rem', paddingRight: '2rem' }}>
-              {reels.map((shortcode) => (
-                <InstagramReel key={shortcode} shortcode={shortcode} />
-              ))}
+            <div className="netflix-scroll-container">
+              <button className="scroll-arrow scroll-left" onClick={() => scrollReels('left')} aria-label="Scroll left">
+                <ChevronLeft size={32} />
+              </button>
+              <div
+                className="netflix-scroll-track"
+                ref={reelsTrackRef}
+                onPointerDown={onReelsPointerDown}
+                onPointerMove={onReelsPointerMove}
+                onPointerUp={endReelsDrag}
+                onPointerCancel={endReelsDrag}
+                onPointerLeave={endReelsDrag}
+                onClickCapture={onReelsClickCapture}
+              >
+                {reels.map((shortcode, i) => (
+                  <InstagramReel
+                    key={shortcode}
+                    shortcode={shortcode}
+                    onOpen={() => setActiveReelIndex(i)}
+                  />
+                ))}
+              </div>
+              <button className="scroll-arrow scroll-right" onClick={() => scrollReels('right')} aria-label="Scroll right">
+                <ChevronRight size={32} />
+              </button>
             </div>
           </motion.div>
         )}
@@ -194,6 +282,14 @@ export default function Films() {
           onClose={() => setActiveVideo(null)}
         />
       )}
+
+      {/* Instagram-story-style reel viewer */}
+      <ReelViewer
+        reels={reels}
+        index={activeReelIndex}
+        onClose={() => setActiveReelIndex(null)}
+        onNavigate={setActiveReelIndex}
+      />
 
       {/* Netflix 'More Info' Modal */}
       <AnimatePresence>

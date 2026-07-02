@@ -209,6 +209,75 @@
   padding: 2rem 4vw 4rem 0;
 }
 
+/* Horizontal Scroll Container for Reels */
+.netflix-scroll-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding-bottom: 2rem;
+}
+
+.netflix-scroll-track {
+  display: flex;
+  gap: 2rem;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  scroll-snap-type: x mandatory;
+  padding: 1rem 0;
+  cursor: grab;
+  user-select: none;
+  /* Hide scrollbar */
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.netflix-scroll-track::-webkit-scrollbar {
+  display: none;
+}
+
+.netflix-scroll-track > * {
+  scroll-snap-align: start;
+  flex-shrink: 0;
+}
+
+/* Scroll Arrows */
+.scroll-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+  transition: all 0.3s ease;
+  opacity: 0; /* Hidden by default until hover */
+}
+
+.netflix-scroll-container:hover .scroll-arrow {
+  opacity: 1;
+}
+
+.scroll-arrow:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-50%) scale(1.1);
+}
+
+.scroll-left {
+  left: -25px; /* Pull it slightly out to the left */
+}
+
+.scroll-right {
+  right: -10px; /* Pull it slightly out to the right */
+}
+
 .netflix-thumbnail-wrapper {
   transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   cursor: pointer;

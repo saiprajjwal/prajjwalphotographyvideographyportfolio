@@ -1,0 +1,142 @@
+.reel-viewer-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  background: rgba(0, 0, 0, 0.92);
+  backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Progress segments across the top, Instagram-story style */
+.reel-viewer-progress {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 4px;
+  width: min(90vw, 460px);
+  z-index: 20;
+}
+
+.reel-progress-seg {
+  flex: 1;
+  height: 3px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.25);
+  overflow: hidden;
+}
+
+.reel-progress-seg span {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: #fff;
+  transition: width 0.35s ease;
+}
+
+.reel-progress-seg.is-filled span {
+  width: 100%;
+}
+
+.reel-viewer-close {
+  position: absolute;
+  top: 32px;
+  right: 24px;
+  z-index: 30;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.4);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+  transition: background 0.25s ease, transform 0.25s ease;
+}
+
+.reel-viewer-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.08);
+}
+
+/* Full-height tap zones on each side; sit behind the card so the reel's own
+   play button stays clickable in the center. */
+.reel-nav-zone {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 30vw;
+  z-index: 10;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.85);
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  transition: opacity 0.25s ease;
+}
+
+.reel-nav-left {
+  left: 0;
+  justify-content: flex-start;
+  padding-left: 2.5vw;
+}
+
+.reel-nav-right {
+  right: 0;
+  justify-content: flex-end;
+  padding-right: 2.5vw;
+}
+
+.reel-nav-zone:disabled {
+  cursor: default;
+}
+
+.reel-nav-zone svg {
+  opacity: 0;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.6));
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.reel-nav-zone:hover:not(:disabled) svg {
+  opacity: 1;
+}
+
+.reel-nav-left:hover:not(:disabled) svg {
+  transform: translateX(-4px);
+}
+
+.reel-nav-right:hover:not(:disabled) svg {
+  transform: translateX(4px);
+}
+
+/* Card stage stays above the nav zones so the embed is interactive */
+.reel-viewer-stage {
+  position: relative;
+  z-index: 15;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none; /* let side areas fall through to nav zones */
+}
+
+.reel-viewer-card {
+  transform-origin: center center;
+  pointer-events: auto; /* but the card itself is interactive */
+}
+
+@media (max-width: 768px) {
+  .reel-nav-zone {
+    width: 22vw;
+  }
+  .reel-viewer-close {
+    top: 20px;
+    right: 16px;
+  }
+}
