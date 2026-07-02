@@ -62,7 +62,7 @@ export default function About() {
                   THE ARCHIVE
                 </Link>
                 <Link to="/films" className="about-my-work-btn">
-                  THE REEL
+                  MOTION
                 </Link>
               </motion.div>
 
