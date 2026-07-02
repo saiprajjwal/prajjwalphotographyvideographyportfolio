@@ -69,7 +69,7 @@ export default function VideoLightbox({ video, onClose }) {
           aria-label="Close video"
           style={{ zIndex: 9999 }}
         >
-          <ChevronLeft size={24} />
+          <ChevronLeft size={28} />
           <span>Back to Films</span>
         </motion.button>
       </motion.div>
