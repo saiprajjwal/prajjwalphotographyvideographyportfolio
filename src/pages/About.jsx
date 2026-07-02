@@ -38,14 +38,26 @@ export default function About() {
       <main className="page-wrapper section-padding about-content-overlay">
         <div className="container">
           <div className="about-grid">
-            <motion.div 
-              className="about-image-container"
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.2, duration: 0.5 }}
-            >
-              <img src={headshot} alt={name} className="about-image" />
-            </motion.div>
+            <div className="about-left-column">
+              <motion.div 
+                className="about-image-container"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.2, duration: 0.5 }}
+              >
+                <img src={headshot} alt={name} className="about-image" />
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.7 }}
+              >
+                <Link to="/portfolio" className="btn-glass" style={{ width: '100%', textAlign: 'center' }}>
+                  See My Work
+                </Link>
+              </motion.div>
+            </div>
             
             <div className="about-content">
               <motion.h1
@@ -85,16 +97,6 @@ export default function About() {
                 </ul>
               </motion.div>
 
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.7 }}
-                style={{ marginTop: '2.5rem' }}
-              >
-                <Link to="/portfolio" className="btn-glass">
-                  See My Work
-                </Link>
-              </motion.div>
             </div>
           </div>
         </div>

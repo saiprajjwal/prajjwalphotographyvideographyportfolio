@@ -370,7 +370,7 @@ export default function Admin() {
           </ul>
         )}
           </>
-        ) : (
+        ) : activeTab === 'library' ? (
           <div className="admin-library">
             {loadingLibrary ? <p>Loading library...</p> : (
               <div className="admin-library-grid">
