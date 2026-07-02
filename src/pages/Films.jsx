@@ -139,7 +139,7 @@ export default function Films() {
 
   return (
     <motion.div
-      className="films-wrapper-full netflix-layout"
+      className="films-wrapper-full showcase-layout"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0, transition: { duration: 0.5 } }}
@@ -162,25 +162,25 @@ export default function Films() {
         </Suspense>
       </div>
 
-      <main className="netflix-main-container" style={{ pointerEvents: activeVideo ? 'none' : 'auto' }}>
+      <main className="showcase-main-container" style={{ pointerEvents: activeVideo ? 'none' : 'auto' }}>
         
-        {/* Massive Netflix Hero (Already loaded behind the black overlay) */}
-        <div className="netflix-hero">
-          <div className="netflix-hero-background">
+        {/* Massive Showcase Hero (Already loaded behind the black overlay) */}
+        <div className="showcase-hero">
+          <div className="showcase-hero-background">
             {/* Crossfade by rendering both images, fading between them */}
             <img
               key={(hoveredVideo || heroVideo).id}
               src={`https://img.youtube.com/vi/${(hoveredVideo || heroVideo).id}/maxresdefault.jpg`}
               alt={(hoveredVideo || heroVideo).title}
-              className="netflix-hero-img"
+              className="showcase-hero-img"
             />
-            <div className="netflix-hero-vignette-bottom"></div>
-            <div className="netflix-hero-vignette-left"></div>
+            <div className="showcase-hero-vignette-bottom"></div>
+            <div className="showcase-hero-vignette-left"></div>
           </div>
           
-          <div className="netflix-hero-content">
+          <div className="showcase-hero-content">
             <motion.h1 
-              className="netflix-hero-title"
+              className="showcase-hero-title"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: doorsOpen ? 1 : 0, y: doorsOpen ? 0 : 20 }}
               transition={{ duration: 0.7, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
@@ -188,7 +188,7 @@ export default function Films() {
               {(hoveredVideo || heroVideo).title}
             </motion.h1>
             <motion.p 
-              className="netflix-hero-description"
+              className="showcase-hero-description"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: doorsOpen ? 1 : 0, y: doorsOpen ? 0 : 20 }}
               transition={{ duration: 0.7, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
@@ -196,7 +196,7 @@ export default function Films() {
               A cinematic masterpiece exploring the boundaries of visual storytelling. Shot on Sony a7S III with breathtaking color science.
             </motion.p>
             <motion.div 
-              className="netflix-hero-buttons"
+              className="showcase-hero-buttons"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: doorsOpen ? 1 : 0, y: doorsOpen ? 0 : 20 }}
               transition={{ duration: 0.7, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
@@ -213,19 +213,19 @@ export default function Films() {
           </div>
         </div>
 
-        {/* Netflix Grid Rows */}
+        {/* Showcase Grid Rows */}
         <motion.div 
-          className="netflix-row-section"
+          className="showcase-row-section"
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: doorsOpen ? 1 : 0, y: doorsOpen ? 0 : 30 }}
           transition={{ duration: 0.7, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
         >
-          <h2 className="netflix-row-title">Recent Masterpieces</h2>
-          <div className="netflix-row-track">
+          <h2 className="showcase-row-title">Recent Masterpieces</h2>
+          <div className="showcase-row-track">
             {rowVideos.map((video) => (
               <div
                 key={video.id}
-                className="netflix-thumbnail-wrapper"
+                className="showcase-thumbnail-wrapper"
                 onMouseEnter={() => setHoveredVideo(video)}
                 onMouseLeave={() => setHoveredVideo(null)}
               >
@@ -237,19 +237,19 @@ export default function Films() {
 
         {reels.length > 0 && (
           <motion.div 
-            className="netflix-row-section"
+            className="showcase-row-section"
             style={{ marginTop: '3rem' }} /* Override the negative margin used for the first row */
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: doorsOpen ? 1 : 0, y: doorsOpen ? 0 : 30 }}
             transition={{ duration: 0.7, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
           >
-            <h2 className="netflix-row-title">Short Form & Reels</h2>
-            <div className="netflix-scroll-container">
+            <h2 className="showcase-row-title">Short Form & Reels</h2>
+            <div className="showcase-scroll-container">
               <button className="scroll-arrow scroll-left" onClick={() => scrollReels('left')} aria-label="Scroll left">
                 <ChevronLeft size={32} />
               </button>
               <div
-                className="netflix-scroll-track"
+                className="showcase-scroll-track"
                 ref={reelsTrackRef}
                 onPointerDown={onReelsPointerDown}
                 onPointerMove={onReelsPointerMove}
@@ -291,7 +291,7 @@ export default function Films() {
         onNavigate={setActiveReelIndex}
       />
 
-      {/* Netflix 'More Info' Modal */}
+      {/* Showcase 'More Info' Modal */}
       <AnimatePresence>
         {showInfoModal && (
           <motion.div
@@ -324,7 +324,7 @@ export default function Films() {
 
               <div className="info-modal-body">
                 <div className="info-meta">
-                  <span className="match-score">98% Match</span>
+                  <span className="match-score">Featured</span>
                   <span>2026</span>
                   <span className="rating">4K Ultra HD</span>
                 </div>
