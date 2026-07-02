@@ -12,6 +12,7 @@ const Films = lazy(() => import('./pages/Films'));
 const About = lazy(() => import('./pages/About'));
 const Contact = lazy(() => import('./pages/Contact'));
 const Admin = lazy(() => import('./pages/Admin'));
+const Editor = lazy(() => import('./pages/Editor'));
 
 function App() {
   const location = useLocation();
@@ -84,6 +85,7 @@ function App() {
             <Route path="/about" element={<About />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/admin" element={<Admin />} />
+            <Route path="/editor" element={<Editor />} />
           </Routes>
         </Suspense>
       </AnimatePresence>

@@ -48,6 +48,7 @@ export default function Navigation() {
     { path: '/', label: 'Home' },
     { path: '/portfolio', label: 'Portfolio' },
     { path: '/films', label: 'Films' },
+    { path: '/editor', label: 'Editor' },
     { path: '/about', label: 'About' },
     { path: '/contact', label: 'Contact' },
   ];

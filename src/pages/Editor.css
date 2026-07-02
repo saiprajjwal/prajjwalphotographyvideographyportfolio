@@ -1,0 +1,224 @@
+.pe-page {
+  min-height: 100vh;
+  width: 100%;
+  padding: 7rem 5vw 4rem;
+  background: var(--bg-color);
+  background-image: var(--bg-gradient);
+  color: var(--text-primary);
+}
+
+.pe-header {
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+
+.pe-title {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.pe-sub {
+  font-family: var(--font-sans);
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+/* Upload drop zone */
+.pe-drop {
+  max-width: 620px;
+  margin: 0 auto;
+  min-height: 320px;
+  border: 1.5px dashed rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  background: var(--glass-bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: border-color 0.25s ease, background 0.25s ease;
+}
+
+.pe-drop:hover,
+.pe-drop.is-over {
+  border-color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.pe-drop-title {
+  font-family: var(--font-sans);
+  font-size: 1.05rem;
+  color: var(--text-primary);
+}
+
+.pe-drop-hint {
+  font-size: 0.8rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* Workspace: preview + controls */
+.pe-workspace {
+  display: flex;
+  gap: 2.5rem;
+  align-items: flex-start;
+  justify-content: center;
+  max-width: 1100px;
+  margin: 0 auto;
+  flex-wrap: wrap;
+}
+
+.pe-stage {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.pe-canvas {
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+  touch-action: none;
+  cursor: grab;
+  background: #000;
+  max-width: 100%;
+}
+
+.pe-canvas:active {
+  cursor: grabbing;
+}
+
+.pe-stage-hint {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+/* Controls panel */
+.pe-controls {
+  flex: 1 1 300px;
+  max-width: 380px;
+  min-width: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.pe-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.pe-group-label {
+  font-family: var(--font-sans);
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.pe-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.pe-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.5rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+}
+
+.pe-chip:hover {
+  border-color: rgba(255, 255, 255, 0.35);
+  transform: translateY(-1px);
+}
+
+.pe-chip.is-active {
+  background: var(--brand-color);
+  color: #050507;
+  border-color: var(--brand-color);
+  font-weight: 600;
+}
+
+.pe-slider-row {
+  display: grid;
+  grid-template-columns: 90px 1fr;
+  align-items: center;
+  gap: 0.75rem;
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  color: var(--text-primary);
+}
+
+.pe-slider-row input[type='range'] {
+  width: 100%;
+  accent-color: var(--brand-color);
+  cursor: pointer;
+}
+
+.pe-actions {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+}
+
+.pe-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.7rem 1.2rem;
+  border-radius: 10px;
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--glass-border);
+  transition: transform 0.15s ease, background 0.2s ease;
+}
+
+.pe-btn:hover {
+  transform: translateY(-1px);
+}
+
+.pe-btn-ghost {
+  background: var(--glass-bg);
+  color: var(--text-primary);
+}
+
+.pe-btn-primary {
+  background: #fff;
+  color: #050507;
+  border-color: #fff;
+  flex: 1;
+  justify-content: center;
+}
+
+@media (max-width: 760px) {
+  .pe-page {
+    padding: 6rem 5vw 3rem;
+  }
+  .pe-workspace {
+    gap: 1.5rem;
+  }
+  .pe-controls {
+    max-width: 520px;
+    width: 100%;
+  }
+}
