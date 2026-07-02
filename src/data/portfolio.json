@@ -23,44 +23,7 @@
     "headshot": "https://res.cloudinary.com/xetzasmy/image/upload/f_auto,q_auto,w_1200,c_limit,dpr_auto/v1782917762/portfolio/w48w8gzll9azctfnykn6.jpg",
     "tagline": "Capturing moments, telling stories.",
     "bio": "I'm a photographer and filmmaker specializing in cinematic storytelling. With a keen eye for detail and a passion for visual arts, I bring ideas to life through the lens.",
-    "gear": [
-      {
-        "id": "sony-a7s3",
-        "name": "Sony A7S III",
-        "category": "Cameras",
-        "usedFor": "Main Cinematic Video Rig",
-        "description": "My absolute workhorse for capturing 4k 10-bit color in any lighting condition.",
-        "image": "https://images.unsplash.com/photo-1516961642265-531546e84af2?auto=format&fit=crop&q=80&w=600",
-        "link": "https://electronics.sony.com"
-      },
-      {
-        "id": "canon-c70",
-        "name": "Canon C70",
-        "category": "Cameras",
-        "usedFor": "Documentary & Commercial",
-        "description": "Incredible dynamic range and built-in NDs make this perfect for run-and-gun shoots.",
-        "image": "https://images.unsplash.com/photo-1502920917128-1aa500764cbd?auto=format&fit=crop&q=80&w=600",
-        "link": "https://usa.canon.com"
-      },
-      {
-        "id": "sigma-24-70",
-        "name": "Sigma Art 24-70mm",
-        "category": "Lenses",
-        "usedFor": "Versatile Coverage",
-        "description": "The perfect all-around lens that rarely leaves my camera.",
-        "image": "https://images.unsplash.com/photo-1617005082833-1eb585698b67?auto=format&fit=crop&q=80&w=600",
-        "link": "https://www.sigmaphoto.com"
-      },
-      {
-        "id": "dji-rs2",
-        "name": "DJI Ronin S2",
-        "category": "Stabilization",
-        "usedFor": "Smooth Tracking Shots",
-        "description": "Essential for those buttery smooth cinematic movements.",
-        "image": "https://images.unsplash.com/photo-1587393855524-087f83d95bc9?auto=format&fit=crop&q=80&w=600",
-        "link": "https://www.dji.com"
-      }
-    ],
+    "gear": ["Sony A7S III", "Canon C70", "Sigma Art 24-70mm", "DJI Ronin S2", "Aputure Lighting"],
     "email": "designer.prajjwal@gmail.com",
     "social": {
       "instagram": "https://www.instagram.com/saiprajjwal",
