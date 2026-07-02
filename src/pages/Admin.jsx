@@ -25,6 +25,30 @@ export default function Admin() {
   const [editCategory, setEditCategory] = useState('');
   const [editSession, setEditSession] = useState('');
 
+  // About Page State
+  const [aboutName, setAboutName] = useState(portfolioData.about.name);
+  const [aboutBio, setAboutBio] = useState(portfolioData.about.bio);
+  const [aboutTagline, setAboutTagline] = useState(portfolioData.about.tagline);
+  const [aboutGear, setAboutGear] = useState(portfolioData.about.gear.join(', '));
+  const [aboutEmail, setAboutEmail] = useState(portfolioData.about.email);
+  const [aboutHeadshot, setAboutHeadshot] = useState(null);
+  const [savingAbout, setSavingAbout] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/about')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data && data.name) {
+          setAboutName(data.name || '');
+          setAboutBio(data.bio || '');
+          setAboutTagline(data.tagline || '');
+          setAboutGear((data.gear || []).join(', '));
+          setAboutEmail(data.email || '');
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   const fetchLibrary = async () => {
     setLoadingLibrary(true);
     try {
@@ -188,6 +212,72 @@ export default function Admin() {
     setUploading(false);
   };
 
+  const handleAboutSave = async (e) => {
+    e.preventDefault();
+    setSavingAbout(true);
+    let headshotUrl = portfolioData.about.headshot;
+
+    try {
+      const currentRes = await fetch('/api/about');
+      if (currentRes.ok) {
+        const currentData = await currentRes.json();
+        headshotUrl = currentData.headshot || headshotUrl;
+      }
+
+      if (aboutHeadshot) {
+        const sigRes = await fetch('/api/get-upload-signature', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ category: 'About', session: 'Headshot', altText: aboutName }),
+        });
+        const sigData = await sigRes.json();
+        if (!sigRes.ok) throw new Error(sigData.error || 'Failed to get upload signature');
+
+        const formData = new FormData();
+        formData.append('file', aboutHeadshot);
+        formData.append('api_key', sigData.apiKey);
+        formData.append('timestamp', sigData.timestamp);
+        formData.append('signature', sigData.signature);
+        formData.append('folder', sigData.folder);
+        formData.append('tags', sigData.tags);
+        formData.append('context', sigData.context);
+
+        const uploadRes = await fetch(
+          `https://api.cloudinary.com/v1_1/${sigData.cloudName}/image/upload`,
+          { method: 'POST', body: formData }
+        );
+        const uploadData = await uploadRes.json();
+        if (!uploadRes.ok) throw new Error(uploadData.error?.message || 'Upload failed');
+        headshotUrl = uploadData.secure_url;
+      }
+
+      const aboutPayload = {
+        name: aboutName,
+        bio: aboutBio,
+        tagline: aboutTagline,
+        email: aboutEmail,
+        gear: aboutGear.split(',').map(s => s.trim()).filter(Boolean),
+        headshot: headshotUrl
+      };
+
+      const res = await fetch('/api/update-about', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(aboutPayload)
+      });
+      
+      if (!res.ok) throw new Error('Failed to save about page');
+      alert('About page updated successfully!');
+      setAboutHeadshot(null);
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setSavingAbout(false);
+    }
+  };
+
+
+
   if (!token) {
     return (
       <main className="admin-wrapper">
@@ -220,6 +310,7 @@ export default function Admin() {
         <div className="admin-tabs">
           <button className={`admin-tab ${activeTab === 'upload' ? 'active' : ''}`} onClick={() => setActiveTab('upload')}>Upload</button>
           <button className={`admin-tab ${activeTab === 'library' ? 'active' : ''}`} onClick={() => setActiveTab('library')}>Photo Library</button>
+          <button className={`admin-tab ${activeTab === 'about' ? 'active' : ''}`} onClick={() => setActiveTab('about')}>About Page</button>
         </div>
 
         {activeTab === 'upload' ? (
@@ -328,6 +419,36 @@ export default function Admin() {
               </div>
             )}
           </div>
+        ) : (
+          <form onSubmit={handleAboutSave} className="admin-upload-form">
+            <label>
+              Name
+              <input type="text" value={aboutName} onChange={e => setAboutName(e.target.value)} required />
+            </label>
+            <label>
+              Tagline
+              <input type="text" value={aboutTagline} onChange={e => setAboutTagline(e.target.value)} />
+            </label>
+            <label>
+              Bio
+              <textarea value={aboutBio} onChange={e => setAboutBio(e.target.value)} rows="5" required />
+            </label>
+            <label>
+              Gear (comma separated)
+              <input type="text" value={aboutGear} onChange={e => setAboutGear(e.target.value)} />
+            </label>
+            <label>
+              Email
+              <input type="email" value={aboutEmail} onChange={e => setAboutEmail(e.target.value)} />
+            </label>
+            <label>
+              New Headshot Image (leave blank to keep current)
+              <input type="file" accept="image/*" onChange={e => setAboutHeadshot(e.target.files[0])} />
+            </label>
+            <button type="submit" className="btn-glass" disabled={savingAbout}>
+              {savingAbout ? 'Saving...' : 'Save About Page'}
+            </button>
+          </form>
         )}
       </div>
     </main>

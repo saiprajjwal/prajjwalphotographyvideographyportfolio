@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import AmbientGlassBackground from '../components/AmbientGlassBackground';
@@ -5,7 +6,25 @@ import portfolioData from '../data/portfolio.json';
 import './About.css';
 
 export default function About() {
-  const { name, headshot, bio, gear } = portfolioData.about;
+  const [aboutData, setAboutData] = useState(portfolioData.about);
+
+  useEffect(() => {
+    fetch('/api/about')
+      .then(res => {
+        if (!res.ok) throw new Error('Not found');
+        return res.json();
+      })
+      .then(data => {
+        if (data && data.name) {
+          setAboutData(data);
+        }
+      })
+      .catch(() => {
+        // Fallback to local json is already the default state
+      });
+  }, []);
+
+  const { name, headshot, bio, gear } = aboutData;
 
   return (
     <motion.div 
