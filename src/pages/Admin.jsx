@@ -27,11 +27,16 @@ export default function Admin() {
 
   // About Page State
   const [aboutName, setAboutName] = useState(portfolioData.about.name);
-  const [aboutBio, setAboutBio] = useState(portfolioData.about.bio);
-  const [aboutTagline, setAboutTagline] = useState(portfolioData.about.tagline);
-  const [aboutGear, setAboutGear] = useState(portfolioData.about.gear || []);
-  const [aboutEmail, setAboutEmail] = useState(portfolioData.about.email);
+  const [aboutTagline, setAboutTagline] = useState('');
+  const [aboutBio, setAboutBio] = useState('');
+  const [aboutGear, setAboutGear] = useState([]);
+  const [aboutEmail, setAboutEmail] = useState('');
   const [aboutHeadshot, setAboutHeadshot] = useState(null);
+  
+  // Reels State
+  const [reels, setReels] = useState([]);
+  const [savingReels, setSavingReels] = useState(false);
+  const [newReelUrl, setNewReelUrl] = useState('');
   const [savingAbout, setSavingAbout] = useState(false);
 
   useEffect(() => {
@@ -40,13 +45,16 @@ export default function Admin() {
       .then(data => {
         if (data && data.name) {
           setAboutName(data.name || '');
-          setAboutBio(data.bio || '');
-          setAboutTagline(data.tagline || '');
-          setAboutGear(data.gear || []);
-          setAboutEmail(data.email || '');
+          setAboutTagline(data.about?.tagline || '');
+          setAboutBio(data.about?.bio || '');
+          setAboutGear(data.about?.gear || []);
+          setAboutEmail(data.about?.email || '');
+          setReels(data.reels || []);
         }
       })
-      .catch(() => {});
+      .catch((error) => {
+        console.error("Failed to load portfolio metadata:", error);
+      });
   }, []);
 
   const fetchLibrary = async () => {
@@ -302,7 +310,54 @@ export default function Admin() {
     }
   };
 
+  const handleAddReel = () => {
+    // Extract shortcode from URL or just use the input if it's already a shortcode
+    let shortcode = newReelUrl.trim();
+    if (!shortcode) return;
+    
+    // Check if it's a full instagram URL
+    if (shortcode.includes('instagram.com')) {
+      const match = shortcode.match(/(?:reel|p)\/([a-zA-Z0-9_-]+)/);
+      if (match && match[1]) {
+        shortcode = match[1];
+      } else {
+        alert("Could not extract shortcode from URL. Make sure it's a valid Instagram Reel link.");
+        return;
+      }
+    }
+    
+    if (!reels.includes(shortcode)) {
+      setReels([...reels, shortcode]);
+    }
+    setNewReelUrl('');
+  };
 
+  const handleRemoveReel = (idx) => {
+    const updated = [...reels];
+    updated.splice(idx, 1);
+    setReels(updated);
+  };
+
+  const handleSaveReels = async () => {
+    setSavingReels(true);
+    try {
+      const response = await fetch('/api/update-reels', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reels }),
+      });
+      if (response.ok) {
+        alert('Reels updated successfully!');
+      } else {
+        alert('Failed to update reels.');
+      }
+    } catch (error) {
+      console.error(error);
+      alert('Error updating reels.');
+    } finally {
+      setSavingReels(false);
+    }
+  };
 
   if (!token) {
     return (
@@ -337,6 +392,7 @@ export default function Admin() {
           <button className={`admin-tab ${activeTab === 'upload' ? 'active' : ''}`} onClick={() => setActiveTab('upload')}>Upload</button>
           <button className={`admin-tab ${activeTab === 'library' ? 'active' : ''}`} onClick={() => setActiveTab('library')}>Photo Library</button>
           <button className={`admin-tab ${activeTab === 'about' ? 'active' : ''}`} onClick={() => setActiveTab('about')}>About Page</button>
+          <button className={`admin-tab ${activeTab === 'reels' ? 'active' : ''}`} onClick={() => setActiveTab('reels')}>Reels</button>
         </div>
 
         {activeTab === 'upload' ? (
@@ -445,7 +501,7 @@ export default function Admin() {
               </div>
             )}
           </div>
-        ) : (
+        ) : activeTab === 'about' ? (
           <form onSubmit={handleAboutSave} className="admin-upload-form">
             <label>
               Name
@@ -498,6 +554,38 @@ export default function Admin() {
               {savingAbout ? 'Saving...' : 'Save About Page'}
             </button>
           </form>
+        ) : (
+          <div className="admin-upload-form">
+            <h2>Manage Instagram Reels</h2>
+            <p style={{ marginBottom: '1rem', color: '#aaa', fontSize: '0.9rem' }}>
+              Paste the link to your Instagram Reel. The portfolio will automatically extract the shortcode and embed it seamlessly.
+            </p>
+            <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem' }}>
+              <input 
+                type="text" 
+                value={newReelUrl} 
+                onChange={(e) => setNewReelUrl(e.target.value)} 
+                placeholder="e.g. https://www.instagram.com/reel/C6A_7P7tV6s/" 
+                style={{ flex: 1, margin: 0 }}
+              />
+              <button type="button" onClick={handleAddReel} className="btn-glass" style={{ margin: 0 }}>Add Reel</button>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '2rem' }}>
+              {reels.map((shortcode, idx) => (
+                <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.05)', padding: '1rem', borderRadius: '8px' }}>
+                  <span style={{ fontFamily: 'monospace', color: '#00f0ff' }}>{shortcode}</span>
+                  <a href={`https://www.instagram.com/reel/${shortcode}`} target="_blank" rel="noreferrer" style={{ color: '#fff', fontSize: '0.9rem', textDecoration: 'underline' }}>View</a>
+                  <button type="button" onClick={() => handleRemoveReel(idx)} style={{ background: '#d32f2f', color: '#fff', border: 'none', padding: '0.5rem 1rem', borderRadius: '4px', cursor: 'pointer' }}>Remove</button>
+                </div>
+              ))}
+              {reels.length === 0 && <p style={{ color: '#aaa' }}>No reels added yet.</p>}
+            </div>
+
+            <button type="button" onClick={handleSaveReels} className="btn-glass" disabled={savingReels} style={{ width: '100%' }}>
+              {savingReels ? 'Saving Reels...' : 'Save Changes to Website'}
+            </button>
+          </div>
         )}
       </div>
     </main>

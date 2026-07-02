@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Play, Info, X } from 'lucide-react';
 import VideoCard from '../components/VideoCard';
 import VideoLightbox from '../components/VideoLightbox';
+import InstagramReel from '../components/InstagramReel';
 import ParticleIntro from './ParticleIntro';
 import portfolioData from '../data/portfolio.json';
 import './Films.css';
@@ -24,7 +25,8 @@ export default function Films() {
   
   const videos = portfolioData.videos;
   const heroVideo = videos[0];
-  const rowVideos = videos; // Don't slice, show all of them!
+  const rowVideos = videos;
+  const reels = portfolioData.reels || [];
 
   const t1Ref = useRef(null);
   const t2Ref = useRef(null);
@@ -166,6 +168,22 @@ export default function Films() {
             ))}
           </div>
         </motion.div>
+
+        {reels.length > 0 && (
+          <motion.div 
+            className="netflix-row-section"
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: doorsOpen ? 1 : 0, y: doorsOpen ? 0 : 30 }}
+            transition={{ duration: 0.7, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <h2 className="netflix-row-title">Short Form & Reels</h2>
+            <div className="netflix-row-track" style={{ paddingBottom: '4rem', paddingRight: '2rem' }}>
+              {reels.map((shortcode) => (
+                <InstagramReel key={shortcode} shortcode={shortcode} />
+              ))}
+            </div>
+          </motion.div>
+        )}
         
       </main>
 
