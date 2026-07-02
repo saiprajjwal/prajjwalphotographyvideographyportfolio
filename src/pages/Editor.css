@@ -488,6 +488,18 @@
     padding-bottom: 0.75rem;
     margin-bottom: 0;
   }
+  .pe-canvas-wrapper {
+    max-height: 45vh;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+  }
+  .pe-canvas {
+    max-height: 45vh;
+    width: auto;
+    max-width: 100%;
+    object-fit: contain;
+  }
   .pe-controls {
     max-width: 520px;
     width: 100%;
