@@ -223,8 +223,8 @@ export default function Editor() {
   const [exportFormat, setExportFormat] = useState('jpeg');
   const [exportQuality, setExportQuality] = useState(92);
 
-    const [openSections, setOpenSections] = useState({ presets: false, text: false, stickers: false, crop: true, wb: true, adjust: true, effects: false, splitTone: false, frames: false, export: false, draw: false, masks: false });
-  const [activeTab, setActiveTab] = useState('crop');
+  const [openSections, setOpenSections] = useState({ presets: false, text: false, stickers: false, crop: true, wb: true, adjust: true, effects: false, splitTone: false, frames: false, export: false, draw: false, masks: true });
+  const [activeTab, setActiveTab] = useState('masks');
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 760);
 
   useEffect(() => {
@@ -1362,6 +1362,67 @@ export default function Editor() {
         <div className="pe-controls" style={{ opacity: !image ? 0.5 : 1, pointerEvents: !image ? 'none' : 'auto' }}>
           <div className="pe-panels" style={{ flex: 1, overflowY: 'auto' }}>
           
+          <div className="pe-group" style={{ background: isMaskingMode ? 'rgba(236, 72, 153, 0.1)' : 'transparent', padding: isMaskingMode ? '1rem' : '0', borderRadius: '12px', border: isMaskingMode ? '1px solid rgba(236, 72, 153, 0.3)' : 'none', transition: 'all 0.3s', display: (!isMobile || activeTab === 'masks') ? 'block' : 'none' }}>
+            <div className="pe-section-header" onClick={() => setOpenSections(s => ({ ...s, masks: !s.masks }))}>
+              <span className="pe-group-label" style={{ color: isMaskingMode ? '#ec4899' : 'var(--text-secondary)' }}>Brush Masks</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <button className={`pe-btn pe-btn-ghost ${isMaskingMode ? 'is-active' : ''}`} style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', borderColor: isMaskingMode ? '#ec4899' : 'transparent', color: isMaskingMode ? '#ec4899' : 'var(--text-primary)' }} onClick={(e) => { e.stopPropagation(); if (activeMaskId) { toggleMaskingMode(activeMaskId); } else { addMask(); } setOpenSections(s => ({ ...s, masks: true })); setActiveTab('masks'); }}>
+                  {isMaskingMode ? 'Done' : 'Mask'}
+                </button>
+                <ChevronDown size={16} className={`pe-section-chevron ${isSectionOpen('masks') ? 'is-open' : ''}`} />
+              </div>
+            </div>
+            <div className={`pe-section-body ${isSectionOpen('masks') ? '' : 'is-collapsed'}`} style={{ maxHeight: isSectionOpen('masks') ? '800px' : '0' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', marginTop: '0.8rem' }}>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  {masks.map(m => (
+                    <button key={m.id} className={`pe-chip ${activeMaskId === m.id ? 'is-active' : ''}`} onClick={() => toggleMaskingMode(m.id)}>
+                      {m.id}
+                    </button>
+                  ))}
+                  <button className="pe-chip" onClick={addMask} style={{ borderStyle: 'dashed' }}>+ Brush Mask</button>
+                  <button className="pe-chip" onClick={() => generateAIMask('subject')} disabled={isProcessingAI} style={{ borderStyle: 'solid', color: '#e879f9', borderColor: '#e879f9', background: 'rgba(232, 121, 249, 0.1)', opacity: isProcessingAI ? 0.5 : 1 }}>
+                    <Wand2 size={12} style={{ display: 'inline', marginRight: '4px' }} /> Select Subject
+                  </button>
+                  <button className="pe-chip" onClick={() => generateAIMask('background')} disabled={isProcessingAI} style={{ borderStyle: 'solid', color: '#60a5fa', borderColor: '#60a5fa', background: 'rgba(96, 165, 250, 0.1)', opacity: isProcessingAI ? 0.5 : 1 }}>
+                    <Wand2 size={12} style={{ display: 'inline', marginRight: '4px' }} /> Select Background
+                  </button>
+                </div>
+                
+                {activeMaskId && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', marginTop: '0.5rem', padding: '1rem', background: 'rgba(0,0,0,0.2)', borderRadius: '8px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{activeMaskId} Settings</span>
+                      <button onClick={(e) => deleteMask(activeMaskId, e)} className="pe-btn pe-btn-delete" style={{ padding: '0.3rem', height: 'auto' }}><Trash2 size={14} /></button>
+                    </div>
+                    
+                    <label className="pe-slider-row">
+                      <span>Brush Size</span>
+                      <input type="range" min="0.01" max="0.3" step="0.01" value={maskBrushSize} onChange={e => setMaskBrushSize(parseFloat(e.target.value))} />
+                    </label>
+                    <label className="pe-color-label" style={{ flexDirection: 'row', gap: '0.5rem', justifyContent: 'flex-start' }}>
+                      <input type="checkbox" checked={showMaskOverlay} onChange={e => setShowMaskOverlay(e.target.checked)} />
+                      Show Red Overlay
+                    </label>
+
+                    <div style={{ height: '1px', background: 'rgba(255,255,255,0.1)', margin: '0.5rem 0' }}></div>
+                    
+                    {['brightness', 'contrast', 'saturation', 'warmth', 'tint', 'shadows', 'highlights'].map(key => {
+                      const m = masks.find(x => x.id === activeMaskId);
+                      const val = m.adj[key];
+                      const { min, max, label } = SLIDERS.find(s => s.key === key) || { min: -100, max: 100, label: key };
+                      return (
+                        <label className="pe-slider-row" key={key}>
+                          <span>{label}</span>
+                          <input type="range" min={min} max={max} value={val} onPointerDown={(e) => { e.stopPropagation(); setIsDraggingMaskSlider(true); }} onPointerUp={(e) => { e.stopPropagation(); setIsDraggingMaskSlider(false); }} onPointerCancel={() => setIsDraggingMaskSlider(false)} onChange={(e) => setMaskAdj(key, parseInt(e.target.value))} />
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
           <div className="pe-group">
             <div className="pe-section-header" onClick={() => setOpenSections(s => ({ ...s, presets: !s.presets }))}>
               <span className="pe-group-label">Presets</span>
@@ -1727,67 +1788,7 @@ export default function Editor() {
             </div>
           </div>
 
-          <div className="pe-group" style={{ background: isMaskingMode ? 'rgba(236, 72, 153, 0.1)' : 'transparent', padding: isMaskingMode ? '1rem' : '0', borderRadius: '12px', border: isMaskingMode ? '1px solid rgba(236, 72, 153, 0.3)' : 'none', transition: 'all 0.3s', display: (!isMobile || activeTab === 'masks') ? 'block' : 'none' }}>
-            <div className="pe-section-header" onClick={() => setOpenSections(s => ({ ...s, masks: !s.masks }))}>
-              <span className="pe-group-label" style={{ color: isMaskingMode ? '#ec4899' : 'var(--text-secondary)' }}>Brush Masks</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <button className={`pe-btn pe-btn-ghost ${isMaskingMode ? 'is-active' : ''}`} style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', borderColor: isMaskingMode ? '#ec4899' : 'transparent', color: isMaskingMode ? '#ec4899' : 'var(--text-primary)' }} onClick={(e) => { e.stopPropagation(); if (activeMaskId) { toggleMaskingMode(activeMaskId); } else { addMask(); } setOpenSections(s => ({ ...s, masks: true })); setActiveTab('masks'); }}>
-                  {isMaskingMode ? 'Done' : 'Mask'}
-                </button>
-                <ChevronDown size={16} className={`pe-section-chevron ${isSectionOpen('masks') ? 'is-open' : ''}`} />
-              </div>
-            </div>
-            <div className={`pe-section-body ${isSectionOpen('masks') ? '' : 'is-collapsed'}`} style={{ maxHeight: isSectionOpen('masks') ? '800px' : '0' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', marginTop: '0.8rem' }}>
-                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                  {masks.map(m => (
-                    <button key={m.id} className={`pe-chip ${activeMaskId === m.id ? 'is-active' : ''}`} onClick={() => toggleMaskingMode(m.id)}>
-                      {m.id}
-                    </button>
-                  ))}
-                  <button className="pe-chip" onClick={addMask} style={{ borderStyle: 'dashed' }}>+ Brush Mask</button>
-                  <button className="pe-chip" onClick={() => generateAIMask('subject')} disabled={isProcessingAI} style={{ borderStyle: 'solid', color: '#e879f9', borderColor: '#e879f9', background: 'rgba(232, 121, 249, 0.1)', opacity: isProcessingAI ? 0.5 : 1 }}>
-                    <Wand2 size={12} style={{ display: 'inline', marginRight: '4px' }} /> Select Subject
-                  </button>
-                  <button className="pe-chip" onClick={() => generateAIMask('background')} disabled={isProcessingAI} style={{ borderStyle: 'solid', color: '#60a5fa', borderColor: '#60a5fa', background: 'rgba(96, 165, 250, 0.1)', opacity: isProcessingAI ? 0.5 : 1 }}>
-                    <Wand2 size={12} style={{ display: 'inline', marginRight: '4px' }} /> Select Background
-                  </button>
-                </div>
-                
-                {activeMaskId && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', marginTop: '0.5rem', padding: '1rem', background: 'rgba(0,0,0,0.2)', borderRadius: '8px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{activeMaskId} Settings</span>
-                      <button onClick={(e) => deleteMask(activeMaskId, e)} className="pe-btn pe-btn-delete" style={{ padding: '0.3rem', height: 'auto' }}><Trash2 size={14} /></button>
-                    </div>
-                    
-                    <label className="pe-slider-row">
-                      <span>Brush Size</span>
-                      <input type="range" min="0.01" max="0.3" step="0.01" value={maskBrushSize} onChange={e => setMaskBrushSize(parseFloat(e.target.value))} />
-                    </label>
-                    <label className="pe-color-label" style={{ flexDirection: 'row', gap: '0.5rem', justifyContent: 'flex-start' }}>
-                      <input type="checkbox" checked={showMaskOverlay} onChange={e => setShowMaskOverlay(e.target.checked)} />
-                      Show Red Overlay
-                    </label>
 
-                    <div style={{ height: '1px', background: 'rgba(255,255,255,0.1)', margin: '0.5rem 0' }}></div>
-                    
-                    {['brightness', 'contrast', 'saturation', 'warmth', 'tint', 'shadows', 'highlights'].map(key => {
-                      const m = masks.find(x => x.id === activeMaskId);
-                      const val = m.adj[key];
-                      const { min, max, label } = SLIDERS.find(s => s.key === key) || { min: -100, max: 100, label: key };
-                      return (
-                        <label className="pe-slider-row" key={key}>
-                          <span>{label}</span>
-                          <input type="range" min={min} max={max} value={val} onPointerDown={(e) => { e.stopPropagation(); setIsDraggingMaskSlider(true); }} onPointerUp={(e) => { e.stopPropagation(); setIsDraggingMaskSlider(false); }} onPointerCancel={() => setIsDraggingMaskSlider(false)} onChange={(e) => setMaskAdj(key, parseInt(e.target.value))} />
-                        </label>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
           <div className="pe-group" style={{ background: isDrawingMode ? 'rgba(59, 130, 246, 0.1)' : 'transparent', padding: isDrawingMode ? '1rem' : '0', borderRadius: '12px', border: isDrawingMode ? '1px solid rgba(59, 130, 246, 0.3)' : 'none', transition: 'all 0.3s' }}>
             <div className="pe-section-header" onClick={() => setOpenSections(s => ({ ...s, draw: !s.draw }))}>
               <span className="pe-group-label" style={{ color: isDrawingMode ? '#3b82f6' : 'var(--text-secondary)' }}>Freehand Draw</span>
