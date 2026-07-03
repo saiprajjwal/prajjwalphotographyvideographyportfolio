@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { Upload, Download, RotateCw, RefreshCw, Undo, Redo, Save, Eye, Type, Crosshair, ChevronDown, SlidersHorizontal, Crop, LayoutTemplate, Palette, Sparkles, Droplet, Frame, Brush, Settings, Smile, PenTool, Trash2 } from 'lucide-react';
+import { Upload, Download, RotateCw, RefreshCw, Undo, Redo, Save, Eye, Type, Crosshair, ChevronDown, SlidersHorizontal, Crop, LayoutTemplate, Palette, Sparkles, Droplet, Frame, Brush, Settings, Smile, PenTool, Trash2, Wand2, Loader2 } from 'lucide-react';
+import { removeBackground } from '@imgly/background-removal';
 import './Editor.css';
 
 // Fully client-side basic photo editor for social posts. Nothing is uploaded to
@@ -218,6 +219,7 @@ export default function Editor() {
   const [maskBrushSize, setMaskBrushSize] = useState(0.05);
   const [showMaskOverlay, setShowMaskOverlay] = useState(true);
   const [isDraggingMaskSlider, setIsDraggingMaskSlider] = useState(false);
+  const [isProcessingAI, setIsProcessingAI] = useState(false);
   const [exportFormat, setExportFormat] = useState('jpeg');
   const [exportQuality, setExportQuality] = useState(92);
 
@@ -249,6 +251,26 @@ export default function Editor() {
     setActiveMaskId(id);
     setIsMaskingMode(true);
     scheduleHistorySave();
+  };
+
+  const generateAIMask = async (type) => {
+    if (!image) return;
+    setIsProcessingAI(true);
+    try {
+      const blob = await removeBackground(image.src);
+      const bitmap = await createImageBitmap(blob);
+      
+      const id = 'Mask ' + (masks.length + 1) + (type === 'subject' ? ' (Subject)' : ' (Background)');
+      setMasks([...masks, { id, aiType: type, aiMask: bitmap, adj: { ...DEFAULT_ADJ }, paths: [] }]);
+      setActiveMaskId(id);
+      setIsMaskingMode(true);
+      scheduleHistorySave();
+    } catch (err) {
+      console.error("AI Masking failed:", err);
+      alert("AI Masking failed. Please check the console.");
+    } finally {
+      setIsProcessingAI(false);
+    }
   };
 
   const deleteMask = (id, e) => {
@@ -659,12 +681,32 @@ export default function Editor() {
       if (mc.width !== W || mc.height !== H) { mc.width = W; mc.height = H; }
       
       masks.forEach(m => {
-        if (!m.paths || m.paths.length === 0) return;
+        if ((!m.paths || m.paths.length === 0) && !m.aiMask) return;
         
-        // 1. Draw the brush mask to mc
+        // 1. Draw the mask to mc
         const mCtx = mc.getContext('2d');
         mCtx.globalCompositeOperation = 'source-over';
         mCtx.clearRect(0, 0, W, H);
+        
+        // Draw AI Mask if it exists
+        if (m.aiMask) {
+          mCtx.save();
+          mCtx.translate(W / 2 + px, H / 2 + py);
+          mCtx.rotate((rot * Math.PI) / 180 + fine);
+          mCtx.scale(flipH ? -1 : 1, 1);
+          
+          if (m.aiType === 'background') {
+            mCtx.fillStyle = 'white';
+            mCtx.fillRect(-dw / 2, -dh / 2, dw, dh);
+            mCtx.globalCompositeOperation = 'destination-out';
+            mCtx.drawImage(m.aiMask, -dw / 2, -dh / 2, dw, dh);
+          } else {
+            mCtx.drawImage(m.aiMask, -dw / 2, -dh / 2, dw, dh);
+          }
+          mCtx.restore();
+          mCtx.globalCompositeOperation = 'source-over';
+        }
+
         mCtx.lineCap = 'round';
         mCtx.lineJoin = 'round';
         m.paths.forEach(stroke => {
@@ -1249,7 +1291,14 @@ export default function Editor() {
             </div>
           ) : (
             <>
-              <div className="pe-canvas-wrapper">
+              <div className="pe-canvas-wrapper" style={{ position: 'relative' }}>
+                {isProcessingAI && (
+                  <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'white', zIndex: 10, borderRadius: '8px', backdropFilter: 'blur(4px)' }}>
+                    <Loader2 className="pe-spin" size={36} style={{ marginBottom: '1rem', color: '#a855f7' }} />
+                    <span style={{ fontSize: '1rem', fontWeight: 600 }}>Running AI Model...</span>
+                    <span style={{ fontSize: '0.8rem', opacity: 0.7, marginTop: '0.4rem', textAlign: 'center', maxWidth: '80%' }}>This runs locally in your browser. It may take a moment on the first run as it downloads the ML model.</span>
+                  </div>
+                )}
                 <canvas
                   ref={previewRef}
                   className="pe-canvas"
@@ -1696,7 +1745,13 @@ export default function Editor() {
                       {m.id}
                     </button>
                   ))}
-                  <button className="pe-chip" onClick={addMask} style={{ borderStyle: 'dashed' }}>+ Add Mask</button>
+                  <button className="pe-chip" onClick={addMask} style={{ borderStyle: 'dashed' }}>+ Brush Mask</button>
+                  <button className="pe-chip" onClick={() => generateAIMask('subject')} disabled={isProcessingAI} style={{ borderStyle: 'solid', color: '#e879f9', borderColor: '#e879f9', background: 'rgba(232, 121, 249, 0.1)', opacity: isProcessingAI ? 0.5 : 1 }}>
+                    <Wand2 size={12} style={{ display: 'inline', marginRight: '4px' }} /> Select Subject
+                  </button>
+                  <button className="pe-chip" onClick={() => generateAIMask('background')} disabled={isProcessingAI} style={{ borderStyle: 'solid', color: '#60a5fa', borderColor: '#60a5fa', background: 'rgba(96, 165, 250, 0.1)', opacity: isProcessingAI ? 0.5 : 1 }}>
+                    <Wand2 size={12} style={{ display: 'inline', marginRight: '4px' }} /> Select Background
+                  </button>
                 </div>
                 
                 {activeMaskId && (
