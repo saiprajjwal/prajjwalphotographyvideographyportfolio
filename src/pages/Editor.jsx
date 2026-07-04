@@ -1052,6 +1052,10 @@ export default function Editor() {
       setSelectedStickerId(null);
       setDrawings([]);
       setIsDrawingMode(false);
+      // Masks belong to the previous photo — never carry them across loads
+      setMasks([]);
+      setActiveMaskId(null);
+      setIsMaskingMode(false);
       // Initialize history
       const initial = { adj: { ...DEFAULT_ADJ }, aspect: 'original', rotation: 0, straighten: 0, flipH: false, zoom: 1, pan: { x: 0, y: 0 }, texts: [], stickers: [], drawings: [], masks: [] };
       setHistory([initial]);
