@@ -1,10 +1,11 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
-import { AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import Lenis from 'lenis';
 import Navigation from './components/Navigation';
 import Footer from './components/Footer';
 import Preloader from './components/Preloader';
+import FilmGrain from './components/FilmGrain';
 import './App.css';
 
 // Lazy load route pages to enable code splitting
@@ -16,6 +17,21 @@ const Contact = lazy(() => import('./pages/Contact'));
 const Admin = lazy(() => import('./pages/Admin'));
 const Editor = lazy(() => import('./pages/Editor'));
 const NotFound = lazy(() => import('./pages/NotFound'));
+
+// Lens Shutter Transition Wrapper
+function PageTransition({ children }) {
+  return (
+    <motion.div
+      initial={{ clipPath: 'circle(0% at 50% 50%)', opacity: 0 }}
+      animate={{ clipPath: 'circle(150% at 50% 50%)', opacity: 1 }}
+      exit={{ clipPath: 'circle(0% at 50% 50%)', opacity: 0 }}
+      transition={{ duration: 0.7, ease: [0.64, 0, 0.13, 1] }} // Cinematic ease-in-out
+      style={{ width: '100%', minHeight: '100vh', position: 'relative' }}
+    >
+      {children}
+    </motion.div>
+  );
+}
 
 function App() {
   const location = useLocation();
@@ -118,14 +134,14 @@ function App() {
           </div>
         }>
           <Routes location={location} key={location.pathname}>
-            <Route path="/" element={<Home />} />
-            <Route path="/portfolio" element={<Portfolio />} />
-            <Route path="/films" element={<Films />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/contact" element={<Contact />} />
-            <Route path="/admin" element={<Admin />} />
-            <Route path="/editor" element={<Editor />} />
-            <Route path="*" element={<NotFound />} />
+            <Route path="/" element={<PageTransition><Home /></PageTransition>} />
+            <Route path="/portfolio" element={<PageTransition><Portfolio /></PageTransition>} />
+            <Route path="/films" element={<PageTransition><Films /></PageTransition>} />
+            <Route path="/about" element={<PageTransition><About /></PageTransition>} />
+            <Route path="/contact" element={<PageTransition><Contact /></PageTransition>} />
+            <Route path="/admin" element={<PageTransition><Admin /></PageTransition>} />
+            <Route path="/editor" element={<PageTransition><Editor /></PageTransition>} />
+            <Route path="*" element={<PageTransition><NotFound /></PageTransition>} />
           </Routes>
         </Suspense>
       </AnimatePresence>
@@ -139,6 +155,9 @@ function App() {
           style={{ left: ripple.x, top: ripple.y }}
         />
       ))}
+
+      {/* Tier 2: Cinematic overlays */}
+      <FilmGrain />
     </div>
   );
 }

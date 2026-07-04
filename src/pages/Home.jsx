@@ -1,9 +1,13 @@
 import { useRef, Suspense, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { motion, useScroll, useTransform } from 'framer-motion';
+import { motion, useScroll, useTransform, useVelocity } from 'framer-motion';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Environment, MeshTransmissionMaterial, Sparkles, Image, Float } from '@react-three/drei';
 import * as THREE from 'three';
+import { InstagramIcon, YoutubeIcon, TiktokIcon, PinterestIcon } from '../components/Icons';
+import Magnetic from '../components/Magnetic';
+import { useCinematicAudio } from '../hooks/useCinematicAudio';
+import '../components/Footer.css';
 import './Home.css';
 
 // Helper component that mounts only AFTER all Suspense resources inside the Canvas have loaded
@@ -57,10 +61,12 @@ function GlassMonolith({ scrollYProgress }) {
 
     // Fade out the monolith directly from scroll progress (not the lerped/lagging
     // z-position) so the reveal tracks the scrollbar 1:1 regardless of scroll speed.
+    // Fade out the monolith directly from scroll progress
     if (meshRef.current.material) {
       const opacity = 1 - THREE.MathUtils.clamp((offset - 0.4) / (0.9 - 0.4), 0, 1);
       meshRef.current.material.transparent = true;
       meshRef.current.material.opacity = opacity;
+      meshRef.current.visible = opacity > 0;
     }
   });
 
@@ -130,9 +136,25 @@ function BackgroundGallery({ scrollYProgress }) {
 
 export default function Home() {
   const [canvasReady, setCanvasReady] = useState(false);
+  const { modulateHum } = useCinematicAudio();
+
+  const socialLinks = [
+    { name: 'Instagram', url: 'https://www.instagram.com/saiprajjwal', icon: <InstagramIcon /> },
+    { name: 'YouTube', url: 'https://www.youtube.com/@Prajjwalpandey9', icon: <YoutubeIcon /> },
+    { name: 'TikTok', url: 'https://www.tiktok.com/@prajjwalp', icon: <TiktokIcon /> },
+    { name: 'Pinterest', url: 'https://au.pinterest.com/saiprajjwal/', icon: <PinterestIcon /> }
+  ];
 
   // Native window scroll tracker
   const { scrollYProgress } = useScroll();
+  const scrollVelocity = useVelocity(scrollYProgress);
+
+  useEffect(() => {
+    const unsubscribe = scrollVelocity.on("change", (latest) => {
+      modulateHum(latest);
+    });
+    return () => unsubscribe();
+  }, [scrollVelocity, modulateHum]);
 
   // Fly-through effect on the hero text as you scroll. Multi-point ranges pin
   // the values flat outside the active band so the hero can't re-appear later
@@ -232,6 +254,22 @@ export default function Home() {
             <Link to="/portfolio" className="btn-monolith mt-8">
               Enter Gallery
             </Link>
+            
+            <div className="social-icons-glass" style={{ marginTop: '3rem' }}>
+              {socialLinks.map((link) => (
+                <Magnetic key={link.name} tolerance={30}>
+                  <a 
+                    href={link.url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="social-glass-btn"
+                    aria-label={link.name}
+                  >
+                    {link.icon}
+                  </a>
+                </Magnetic>
+              ))}
+            </div>
           </div>
         </motion.div>
 

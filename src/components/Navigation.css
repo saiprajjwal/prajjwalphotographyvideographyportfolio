@@ -21,6 +21,7 @@
   border-radius: 100px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
   position: relative; /* For mobile menu positioning */
+  overflow: hidden;
 }
 
 .nav-logo {
@@ -37,6 +38,9 @@
 .nav-links {
   display: flex;
   gap: 1.5rem;
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .magnetic-wrapper {
