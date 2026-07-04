@@ -224,13 +224,23 @@ export default function Editor() {
   const [exportQuality, setExportQuality] = useState(92);
 
   const [openSections, setOpenSections] = useState({ presets: false, text: false, stickers: false, crop: true, wb: true, adjust: true, effects: false, splitTone: false, frames: false, export: false, draw: false, masks: true });
-  const [activeTab, setActiveTab] = useState('masks');
+  // Land on Presets: it's the friendliest entry point on mobile — one tap
+  // shows a result. (Masks as the default left mobile users staring at a
+  // panel with no editing controls.)
+  const [activeTab, setActiveTab] = useState('presets');
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 760);
+  const [vpTick, setVpTick] = useState(0);
 
   useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth <= 760);
+    let resizeT;
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 760);
+      // Debounced tick so the preview canvas re-fits to the new viewport
+      clearTimeout(resizeT);
+      resizeT = setTimeout(() => setVpTick((t) => t + 1), 150);
+    };
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    return () => { clearTimeout(resizeT); window.removeEventListener('resize', handleResize); };
   }, []);
 
   const isSectionOpen = (key) => isMobile ? activeTab === key : openSections[key];
@@ -498,48 +508,41 @@ export default function Editor() {
 
     if (isComparing) return;
 
-    // Highlights & Shadows approximation via composite operations
-    if (adj.shadows !== 0) {
-      ctx.save();
-      ctx.globalCompositeOperation = adj.shadows > 0 ? 'screen' : 'multiply';
-      ctx.globalAlpha = Math.abs(adj.shadows) / 200; // max 50% opacity screen/multiply
-      ctx.drawImage(ctx.canvas, 0, 0); // Self-blend
-      ctx.restore();
-    }
-    
-    if (adj.highlights !== 0) {
-      ctx.save();
-      ctx.globalCompositeOperation = adj.highlights > 0 ? 'color-dodge' : 'color-burn';
-      ctx.globalAlpha = Math.abs(adj.highlights) / 200;
-      ctx.drawImage(ctx.canvas, 0, 0); // Self-blend
-      ctx.restore();
-    }
-
-    // Temperature (Warmth) and Tint
-    if (adj.warmth !== 0 || adj.tint !== 0) {
-      ctx.save();
-      ctx.globalCompositeOperation = 'soft-light';
-      if (adj.warmth !== 0) {
-        ctx.globalAlpha = Math.min(Math.abs(adj.warmth) / 100, 1) * 0.6;
-        ctx.fillStyle = adj.warmth > 0 ? '#ff8a1e' : '#1e7bff';
-        ctx.fillRect(0, 0, W, H);
+    // ---- Premium tone pipeline --------------------------------------------
+    // One per-pixel pass: true white balance (channel gains), luminance-masked
+    // highlights/shadows, and film-style black-point fade. Targeted math like
+    // a real raw editor, instead of whole-image composite washes — and no
+    // self-blending, so no ghost images on high-DPI screens.
+    if (adj.highlights !== 0 || adj.shadows !== 0 || adj.fade > 0 || adj.warmth !== 0 || adj.tint !== 0) {
+      const toneImg = ctx.getImageData(0, 0, W, H);
+      const d = toneImg.data;
+      const sh = (adj.shadows / 100) * 0.75;
+      const hi = (adj.highlights / 100) * 0.75;
+      const doWB = adj.warmth !== 0 || adj.tint !== 0;
+      const gainR = 1 + (adj.warmth / 100) * 0.22;
+      const gainB = 1 - (adj.warmth / 100) * 0.22;
+      const gainG = 1 - (adj.tint / 100) * 0.13;
+      const f = adj.fade / 100;
+      const fadeLift = f * 36;      // raised black point
+      const fadeFlat = 1 - f * 0.18; // gentle contrast flattening
+      // Luminance weight curves: shadows act on darks, highlights on brights
+      const wS = new Float32Array(256), wHi = new Float32Array(256);
+      for (let l = 0; l < 256; l++) {
+        const t = l / 255;
+        wS[l] = (1 - t) * (1 - t);
+        wHi[l] = t * t;
       }
-      if (adj.tint !== 0) {
-        ctx.globalAlpha = Math.min(Math.abs(adj.tint) / 100, 1) * 0.6;
-        ctx.fillStyle = adj.tint > 0 ? '#ff00ff' : '#00ff00';
-        ctx.fillRect(0, 0, W, H);
+      for (let i = 0; i < d.length; i += 4) {
+        let r = d[i], g = d[i + 1], b = d[i + 2];
+        if (doWB) { r *= gainR; g *= gainG; b *= gainB; }
+        let l = (r * 77 + g * 150 + b * 29) >> 8;
+        if (l > 255) l = 255; else if (l < 0) l = 0;
+        if (sh !== 0) { const k = 1 + sh * wS[l]; r *= k; g *= k; b *= k; }
+        if (hi !== 0) { const k = 1 + hi * wHi[l]; r *= k; g *= k; b *= k; }
+        if (f > 0) { r = r * fadeFlat + fadeLift; g = g * fadeFlat + fadeLift; b = b * fadeFlat + fadeLift; }
+        d[i] = r; d[i + 1] = g; d[i + 2] = b; // Uint8Clamped clamps for us
       }
-      ctx.restore();
-    }
-    
-    // Fade / Matte
-    if (adj.fade > 0) {
-      ctx.save();
-      ctx.globalCompositeOperation = 'lighten';
-      ctx.globalAlpha = (adj.fade / 100) * 0.8;
-      ctx.fillStyle = '#404040';
-      ctx.fillRect(0, 0, W, H);
-      ctx.restore();
+      ctx.putImageData(toneImg, 0, 0);
     }
 
     // Split Toning / Duotone Approximation
@@ -947,24 +950,35 @@ export default function Editor() {
 
   }, [image, adj, rotation, straighten, flipH, zoom, pan, isComparing, texts, selectedTextId, stickers, selectedStickerId, drawings, masks, isMaskingMode, activeMaskId, showMaskOverlay, isDraggingMaskSlider]);
 
-  // Redraw the preview whenever anything changes.
+  // Redraw the preview whenever anything changes. The canvas bitmap is sized
+  // at device resolution and draw() runs in bitmap space (identity transform),
+  // so pixel operations (tone pass, sharpen, tilt-shift, self-composites) are
+  // always aligned — no ghosting on high-DPI screens.
   useEffect(() => {
     if (!image || !previewRef.current) return;
     const { w, h } = getOutputSize(image, aspect);
-    const maxW = 520, maxH = 560;
-    const ar = w / h;
-    let pw = maxW, ph = maxW / ar;
-    if (ph > maxH) { ph = maxH; pw = maxH * ar; }
-    pw = Math.round(pw); ph = Math.round(ph);
     const canvas = previewRef.current;
+    // Fit the preview to the viewport, never distort. On phones the wrapper
+    // spans the screen so we can measure it; on desktop the wrapper wraps the
+    // canvas (measuring it would feed back), so use the fixed stage width.
+    const smallScreen = window.innerWidth <= 760;
+    const availW = smallScreen
+      ? (canvas.parentElement?.clientWidth || window.innerWidth - 16)
+      : 520;
+    const maxH = Math.round(window.innerHeight * (smallScreen ? 0.42 : 0.69));
+    const ar = w / h;
+    let cssW = availW, cssH = availW / ar;
+    if (cssH > maxH) { cssH = maxH; cssW = maxH * ar; }
+    cssW = Math.round(cssW); cssH = Math.round(cssH);
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    canvas.width = pw * dpr;
-    canvas.height = ph * dpr;
-    canvas.style.width = pw + 'px';
-    canvas.style.height = ph + 'px';
-    previewSize.current = { w: pw, h: ph };
+    const pw = cssW * dpr, ph = cssH * dpr; // bitmap dimensions
+    canvas.width = pw;
+    canvas.height = ph;
+    canvas.style.width = cssW + 'px';
+    canvas.style.height = cssH + 'px';
+    previewSize.current = { w: cssW, h: cssH };
     const ctx = canvas.getContext('2d');
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
 
     if (loupe) {
       // 1:1 loupe: one image pixel = one device pixel, with its own pan so
@@ -974,8 +988,7 @@ export default function Editor() {
       const fW = swap ? ph : pw;
       const fH = swap ? pw : ph;
       const baseCover = Math.max(fW / image.naturalWidth, fH / image.naturalHeight);
-      const zoom100 = 1 / (baseCover * dpr);
-      draw(ctx, pw, ph, false, { zoom: Math.max(zoom100, 1e-6), pan: loupePan });
+      draw(ctx, pw, ph, false, { zoom: Math.max(1 / baseCover, 1e-6), pan: loupePan });
     } else {
       draw(ctx, pw, ph);
     }
@@ -1010,7 +1023,7 @@ export default function Editor() {
         setClipping({ lo: lo / total > 0.005, hi: hi / total > 0.005 });
       } catch { /* canvas unreadable — skip histogram this frame */ }
     }, 120);
-  }, [image, aspect, draw, loupe, loupePan, rotation]);
+  }, [image, aspect, draw, loupe, loupePan, rotation, vpTick]);
 
   const loadFile = useCallback((file, saveToDb = true) => {
     if (!file || !file.type.startsWith('image/')) return;

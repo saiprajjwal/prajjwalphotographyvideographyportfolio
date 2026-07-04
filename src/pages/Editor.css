@@ -540,18 +540,24 @@
     box-shadow: 0 10px 30px rgba(0,0,0,0.5);
   }
 
+  /* The preview JS sizes the canvas to the container and viewport — no CSS
+     size overrides here, they distort the canvas box (black bars). */
   .pe-canvas-wrapper {
-    max-height: 45vh;
     width: 100%;
     display: flex;
     justify-content: center;
   }
-  
-  .pe-canvas {
-    max-height: 45vh;
-    width: auto;
-    max-width: 100%;
-    object-fit: contain;
+
+  /* Compact histogram on phones */
+  .pe-histogram {
+    width: 150px;
+    height: 30px;
+  }
+  .pe-histogram-wrap {
+    margin-top: 0.2rem;
+  }
+  .pe-stage-hint {
+    display: none; /* save vertical space for controls */
   }
 
   /* Controls scroll naturally beneath the sticky stage */
