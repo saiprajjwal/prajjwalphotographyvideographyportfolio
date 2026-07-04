@@ -134,14 +134,18 @@ export default function Home() {
   // Native window scroll tracker
   const { scrollYProgress } = useScroll();
 
-  // Fly-through effect on the hero text as you scroll
-  const heroTextOpacity = useTransform(scrollYProgress, [0, 0.15], [1, 0]);
-  const heroTextScale = useTransform(scrollYProgress, [0, 0.15], [1, 6]);
-  const heroTextBlur = useTransform(scrollYProgress, [0, 0.15], ['blur(0px)', 'blur(20px)']);
+  // Fly-through effect on the hero text as you scroll. Multi-point ranges pin
+  // the values flat outside the active band so the hero can't re-appear later
+  // (useTransform was extrapolating and bringing it back at full scroll).
+  const heroTextOpacity = useTransform(scrollYProgress, [0, 0.12, 0.16, 1], [1, 0, 0, 0]);
+  const heroTextScale = useTransform(scrollYProgress, [0, 0.16, 1], [1, 6, 6]);
+  const heroTextBlur = useTransform(scrollYProgress, [0, 0.16], ['blur(0px)', 'blur(20px)']);
+  const heroPointer = useTransform(scrollYProgress, (v) => (v < 0.16 ? 'auto' : 'none'));
 
-  // Bring in the "Enter" text at the end of the scroll
-  const enterOpacity = useTransform(scrollYProgress, [0.7, 1], [0, 1]);
-  const enterScale = useTransform(scrollYProgress, [0.7, 1], [0.8, 1]);
+  // Bring in the "Enter" text only at the end of the scroll; held at 0 before.
+  const enterOpacity = useTransform(scrollYProgress, [0, 0.72, 1], [0, 0, 1]);
+  const enterScale = useTransform(scrollYProgress, [0.72, 1], [0.8, 1]);
+  const enterPointer = useTransform(scrollYProgress, (v) => (v > 0.72 ? 'auto' : 'none'));
 
   return (
     <motion.div
@@ -187,7 +191,7 @@ export default function Home() {
             <ambientLight intensity={0.2} />
             <spotLight position={[10, 10, 10]} intensity={4} color="#ffffff" penumbra={1} angle={0.5} />
             <spotLight position={[-10, -10, -10]} intensity={2} color="#3b82f6" penumbra={1} angle={0.5} />
-            <Environment preset="studio" />
+            <Environment files="/hdri/studio_small_03_256.hdr" />
             <Sparkles count={800} scale={20} size={1.5} speed={0.4} opacity={0.3} color="#ffffff" />
             <BackgroundGallery scrollYProgress={scrollYProgress} />
             <GlassMonolith scrollYProgress={scrollYProgress} />
@@ -201,12 +205,13 @@ export default function Home() {
       <div className="home-scroll-content" style={{ height: '300vh' }}>
 
         {/* Initial Hero Text - Flies forward and blurs on scroll */}
-        <motion.div 
-          className="monolith-content-overlay" 
-          style={{ 
-            opacity: heroTextOpacity, 
+        <motion.div
+          className="monolith-content-overlay"
+          style={{
+            opacity: heroTextOpacity,
             scale: heroTextScale,
-            filter: heroTextBlur
+            filter: heroTextBlur,
+            pointerEvents: heroPointer
           }}
         >
           <div className="monolith-text-container">
@@ -221,7 +226,7 @@ export default function Home() {
         </motion.div>
 
         {/* Final Text at bottom of scroll */}
-        <motion.div className="monolith-content-overlay" style={{ opacity: enterOpacity, scale: enterScale }}>
+        <motion.div className="monolith-content-overlay" style={{ opacity: enterOpacity, scale: enterScale, pointerEvents: enterPointer }}>
           <div className="monolith-text-container">
             <h2 className="section-heading">The Vision is Clear.</h2>
             <Link to="/portfolio" className="btn-monolith mt-8">

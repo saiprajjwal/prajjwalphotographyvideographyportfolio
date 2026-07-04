@@ -78,7 +78,7 @@
 }
 
 .monolith-content-overlay {
-  position: absolute;
+  position: fixed; /* stays centred in the viewport; scroll drives opacity/scale */
   top: 0;
   left: 0;
   width: 100%;
@@ -88,11 +88,12 @@
   align-items: center;
   justify-content: center;
   pointer-events: none;
+  z-index: 3;
 }
 
 .monolith-text-container {
   text-align: center;
-  pointer-events: auto;
+  pointer-events: inherit; /* follows the overlay's scroll-gated pointer-events */
 }
 
 .container {

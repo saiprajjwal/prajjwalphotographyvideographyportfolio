@@ -1,8 +1,10 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
+import Lenis from 'lenis';
 import Navigation from './components/Navigation';
 import Footer from './components/Footer';
+import Preloader from './components/Preloader';
 import './App.css';
 
 // Lazy load route pages to enable code splitting
@@ -18,6 +20,12 @@ const NotFound = lazy(() => import('./pages/NotFound'));
 function App() {
   const location = useLocation();
   const [ripples, setRipples] = useState([]);
+  // Shows once per session; append ?intro to any URL to replay it on demand.
+  const [showIntro, setShowIntro] = useState(() =>
+    !sessionStorage.getItem('site-intro-done') || new URLSearchParams(window.location.search).has('intro')
+  );
+
+  const isEditorRoute = location.pathname === '/editor';
 
   // Reset scroll on refresh/load and disable browser auto-scroll memory
   useEffect(() => {
@@ -31,6 +39,24 @@ function App() {
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [location.pathname]);
+
+  // Lenis inertia scrolling for the whole site. Skipped for reduced-motion
+  // users and on the editor (a tool that wants native, immediate scrolling).
+  // Framer's useScroll keeps working because Lenis drives the real window scroll.
+  useEffect(() => {
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduce || isEditorRoute) return;
+    const lenis = new Lenis({
+      duration: 1.15,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      smoothWheel: true,
+      touchMultiplier: 1.6,
+    });
+    let raf;
+    const loop = (time) => { lenis.raf(time); raf = requestAnimationFrame(loop); };
+    raf = requestAnimationFrame(loop);
+    return () => { cancelAnimationFrame(raf); lenis.destroy(); };
+  }, [isEditorRoute]);
 
   // Block right-click ("Save image as", "Open image in new tab", "Copy image")
   // on photos/videos specifically, without disabling right-click elsewhere on the site
@@ -59,11 +85,21 @@ function App() {
     }, 650);
   };
 
-  const isEditor = location.pathname === '/editor';
+  // The landing is a self-contained immersive scroll ending in its own CTA;
+  // the global footer would collide with that reveal.
+  const isLanding = location.pathname === '/';
 
   return (
     <div onClick={handleGlobalClick} style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {!isEditor && <Navigation />}
+      <AnimatePresence>
+        {showIntro && (
+          <Preloader
+            key="preloader"
+            onDone={() => { sessionStorage.setItem('site-intro-done', '1'); setShowIntro(false); }}
+          />
+        )}
+      </AnimatePresence>
+      {!isEditorRoute && <Navigation />}
       <AnimatePresence mode="wait" initial={false}>
         <Suspense fallback={
           <div style={{
@@ -93,7 +129,7 @@ function App() {
           </Routes>
         </Suspense>
       </AnimatePresence>
-      {!isEditor && <Footer />}
+      {!isEditorRoute && !isLanding && <Footer />}
 
       {/* Dynamic expanding glass ripples */}
       {ripples.map((ripple) => (

@@ -2,7 +2,6 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Upload, Download, RotateCw, RefreshCw, Undo, Redo, Save, Eye, Type, Crosshair, ChevronDown, SlidersHorizontal, Crop, LayoutTemplate, Palette, Sparkles, Droplet, Frame, Brush, Settings, Smile, PenTool, Trash2, Wand2, Loader2 } from 'lucide-react';
-import { removeBackground } from '@imgly/background-removal';
 import './Editor.css';
 
 // Fully client-side basic photo editor for social posts. Nothing is uploaded to
@@ -356,6 +355,9 @@ export default function Editor() {
     if (!image) return;
     setIsProcessingAI(true);
     try {
+      // Loaded on demand — keeps the ~0.8MB AI runtime out of the editor's
+      // initial bundle; it's only fetched when the user runs Select Subject.
+      const { removeBackground } = await import('@imgly/background-removal');
       const blob = await removeBackground(image.src);
       const bitmap = await createImageBitmap(blob);
       
