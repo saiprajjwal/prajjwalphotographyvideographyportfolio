@@ -52,6 +52,95 @@ async function idbClear(key) {
   });
 }
 
+// iOS Safari silently ignores CanvasRenderingContext2D.filter — feature-detect
+// so blur effects can fall back, and never rely on it for tone adjustments.
+const CTX_FILTER_SUPPORTED = (() => {
+  try {
+    const t = document.createElement('canvas').getContext('2d');
+    t.filter = 'blur(2px)';
+    return t.filter === 'blur(2px)';
+  } catch { return false; }
+})();
+
+// Cross-device blur fallback: downscale + smooth upscale approximates a
+// gaussian well enough for feathering and tilt-shift when ctx.filter is
+// unavailable. Mutates the given canvas in place.
+function fallbackBlur(srcCanvas, radius) {
+  const k = Math.max(2, Math.min(16, Math.round(radius / 1.5)));
+  const w = Math.max(1, Math.round(srcCanvas.width / k));
+  const h = Math.max(1, Math.round(srcCanvas.height / k));
+  const small = document.createElement('canvas');
+  small.width = w; small.height = h;
+  const sctx = small.getContext('2d');
+  sctx.imageSmoothingEnabled = true;
+  sctx.drawImage(srcCanvas, 0, 0, w, h);
+  const dctx = srcCanvas.getContext('2d');
+  dctx.save();
+  dctx.imageSmoothingEnabled = true;
+  dctx.clearRect(0, 0, srcCanvas.width, srcCanvas.height);
+  dctx.drawImage(small, 0, 0, srcCanvas.width, srcCanvas.height);
+  dctx.restore();
+}
+
+// ---- Per-pixel tone engine --------------------------------------------------
+// One code path for every device (no ctx.filter): brightness → contrast →
+// saturation (CSS-filter-equivalent math), then true white balance, then
+// luminance-masked shadows/highlights, then black-point fade.
+const TONE_W_SHADOW = new Float32Array(256);
+const TONE_W_HIGH = new Float32Array(256);
+for (let l = 0; l < 256; l++) {
+  const t = l / 255;
+  TONE_W_SHADOW[l] = (1 - t) * (1 - t);
+  TONE_W_HIGH[l] = t * t;
+}
+
+function toneIsNeutral(a) {
+  return a.brightness === 100 && a.contrast === 100 && a.saturation === 100 &&
+    a.highlights === 0 && a.shadows === 0 && (a.fade || 0) === 0 &&
+    a.warmth === 0 && a.tint === 0;
+}
+
+function applyTonePass(ctx, W, H, a) {
+  if (toneIsNeutral(a)) return;
+  const img = ctx.getImageData(0, 0, W, H);
+  const d = img.data;
+  const br = a.brightness / 100;
+  const ct = a.contrast / 100;
+  const sat = a.saturation / 100;
+  const doBCS = br !== 1 || ct !== 1 || sat !== 1;
+  const sh = (a.shadows / 100) * 0.75;
+  const hi = (a.highlights / 100) * 0.75;
+  const doWB = a.warmth !== 0 || a.tint !== 0;
+  const gainR = 1 + (a.warmth / 100) * 0.22;
+  const gainB = 1 - (a.warmth / 100) * 0.22;
+  const gainG = 1 - (a.tint / 100) * 0.13;
+  const f = (a.fade || 0) / 100;
+  const fadeLift = f * 36;      // raised black point
+  const fadeFlat = 1 - f * 0.18; // gentle contrast flattening
+  for (let i = 0; i < d.length; i += 4) {
+    let r = d[i], g = d[i + 1], b = d[i + 2];
+    if (doBCS) {
+      r = (r * br - 127.5) * ct + 127.5;
+      g = (g * br - 127.5) * ct + 127.5;
+      b = (b * br - 127.5) * ct + 127.5;
+      if (sat !== 1) {
+        const lum = r * 0.2126 + g * 0.7152 + b * 0.0722;
+        r = lum + (r - lum) * sat;
+        g = lum + (g - lum) * sat;
+        b = lum + (b - lum) * sat;
+      }
+    }
+    if (doWB) { r *= gainR; g *= gainG; b *= gainB; }
+    let l = (r * 77 + g * 150 + b * 29) >> 8;
+    if (l > 255) l = 255; else if (l < 0) l = 0;
+    if (sh !== 0) { const k = 1 + sh * TONE_W_SHADOW[l]; r *= k; g *= k; b *= k; }
+    if (hi !== 0) { const k = 1 + hi * TONE_W_HIGH[l]; r *= k; g *= k; b *= k; }
+    if (f > 0) { r = r * fadeFlat + fadeLift; g = g * fadeFlat + fadeLift; b = b * fadeFlat + fadeLift; }
+    d[i] = r; d[i + 1] = g; d[i + 2] = b; // Uint8Clamped clamps for us
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
 const ASPECTS = [
   { id: 'original', label: 'Original' },
   { id: '1:1', label: 'Square', ar: 1 },
@@ -469,10 +558,10 @@ export default function Editor() {
     ctx.clearRect(0, 0, W, H);
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, W, H);
-    
-    if (!isComparing) {
-      ctx.filter = `brightness(${adj.brightness}%) contrast(${adj.contrast}%) saturate(${adj.saturation}%)`;
-    }
+
+    // Brightness/contrast/saturation are applied in the per-pixel tone pass
+    // below — NOT via ctx.filter, which iOS Safari silently ignores. One code
+    // path means pixel-identical results on every device.
 
     const rot = ((rotation % 360) + 360) % 360;
     const swap = rot === 90 || rot === 270;
@@ -509,41 +598,10 @@ export default function Editor() {
     if (isComparing) return;
 
     // ---- Premium tone pipeline --------------------------------------------
-    // One per-pixel pass: true white balance (channel gains), luminance-masked
-    // highlights/shadows, and film-style black-point fade. Targeted math like
-    // a real raw editor, instead of whole-image composite washes — and no
-    // self-blending, so no ghost images on high-DPI screens.
-    if (adj.highlights !== 0 || adj.shadows !== 0 || adj.fade > 0 || adj.warmth !== 0 || adj.tint !== 0) {
-      const toneImg = ctx.getImageData(0, 0, W, H);
-      const d = toneImg.data;
-      const sh = (adj.shadows / 100) * 0.75;
-      const hi = (adj.highlights / 100) * 0.75;
-      const doWB = adj.warmth !== 0 || adj.tint !== 0;
-      const gainR = 1 + (adj.warmth / 100) * 0.22;
-      const gainB = 1 - (adj.warmth / 100) * 0.22;
-      const gainG = 1 - (adj.tint / 100) * 0.13;
-      const f = adj.fade / 100;
-      const fadeLift = f * 36;      // raised black point
-      const fadeFlat = 1 - f * 0.18; // gentle contrast flattening
-      // Luminance weight curves: shadows act on darks, highlights on brights
-      const wS = new Float32Array(256), wHi = new Float32Array(256);
-      for (let l = 0; l < 256; l++) {
-        const t = l / 255;
-        wS[l] = (1 - t) * (1 - t);
-        wHi[l] = t * t;
-      }
-      for (let i = 0; i < d.length; i += 4) {
-        let r = d[i], g = d[i + 1], b = d[i + 2];
-        if (doWB) { r *= gainR; g *= gainG; b *= gainB; }
-        let l = (r * 77 + g * 150 + b * 29) >> 8;
-        if (l > 255) l = 255; else if (l < 0) l = 0;
-        if (sh !== 0) { const k = 1 + sh * wS[l]; r *= k; g *= k; b *= k; }
-        if (hi !== 0) { const k = 1 + hi * wHi[l]; r *= k; g *= k; b *= k; }
-        if (f > 0) { r = r * fadeFlat + fadeLift; g = g * fadeFlat + fadeLift; b = b * fadeFlat + fadeLift; }
-        d[i] = r; d[i + 1] = g; d[i + 2] = b; // Uint8Clamped clamps for us
-      }
-      ctx.putImageData(toneImg, 0, 0);
-    }
+    // Shared per-pixel engine (applyTonePass): brightness/contrast/saturation,
+    // true white balance, luminance-masked highlights/shadows, and black-point
+    // fade — identical results on every device, no ctx.filter dependence.
+    applyTonePass(ctx, W, H, adj);
 
     // Split Toning / Duotone Approximation
     if (adj.duotone > 0) {
@@ -712,6 +770,7 @@ export default function Editor() {
 
         mCtx.lineCap = 'round';
         mCtx.lineJoin = 'round';
+        let maxFeather = 0;
         m.paths.forEach(stroke => {
           if (stroke.points.length === 0) return;
           mCtx.strokeStyle = 'white';
@@ -721,51 +780,33 @@ export default function Editor() {
           for (let i = 1; i < stroke.points.length; i++) {
             mCtx.lineTo(stroke.points[i].nx * W, stroke.points[i].ny * H);
           }
-          // Add feathering to the brush based on its size
-          mCtx.filter = `blur(${Math.max(2, stroke.size * H * 0.25)}px)`;
-          mCtx.stroke();
-          mCtx.filter = 'none';
+          // Feather the brush edge relative to its size
+          const feather = Math.max(2, stroke.size * H * 0.25);
+          if (CTX_FILTER_SUPPORTED) {
+            mCtx.filter = `blur(${feather}px)`;
+            mCtx.stroke();
+            mCtx.filter = 'none';
+          } else {
+            mCtx.stroke();
+            maxFeather = Math.max(maxFeather, feather);
+          }
         });
+        // iOS Safari: no ctx.filter — feather the whole mask once instead
+        if (maxFeather > 0) fallbackBlur(mc, maxFeather);
 
-        // 2. Draw the image with m.adj applied to ac
+        // 2. Draw the image to ac and run the same per-pixel tone engine as
+        // the global pass — local adjustments render identically on every
+        // device (ctx.filter and composite washes are gone).
         const aCtx = ac.getContext('2d');
+        aCtx.globalCompositeOperation = 'source-over';
+        aCtx.globalAlpha = 1;
         aCtx.clearRect(0, 0, W, H);
-        aCtx.filter = `brightness(${m.adj.brightness}%) contrast(${m.adj.contrast}%) saturate(${m.adj.saturation}%)`;
-        
         aCtx.translate(W / 2 + px, H / 2 + py);
         aCtx.rotate((rot * Math.PI) / 180 + fine);
         aCtx.scale(flipH ? -1 : 1, 1);
         aCtx.drawImage(image, -dw / 2, -dh / 2, dw, dh);
         aCtx.resetTransform();
-        aCtx.filter = 'none';
-
-        // Localized Highlights & Shadows
-        if (m.adj.shadows !== 0) {
-          aCtx.globalCompositeOperation = m.adj.shadows > 0 ? 'screen' : 'multiply';
-          aCtx.globalAlpha = Math.abs(m.adj.shadows) / 200;
-          aCtx.drawImage(aCtx.canvas, 0, 0);
-        }
-        if (m.adj.highlights !== 0) {
-          aCtx.globalCompositeOperation = m.adj.highlights > 0 ? 'color-dodge' : 'color-burn';
-          aCtx.globalAlpha = Math.abs(m.adj.highlights) / 200;
-          aCtx.drawImage(aCtx.canvas, 0, 0);
-        }
-
-        // Localized Warmth & Tint
-        aCtx.globalAlpha = 1;
-        if (m.adj.warmth !== 0 || m.adj.tint !== 0) {
-          aCtx.globalCompositeOperation = 'soft-light';
-          if (m.adj.warmth !== 0) {
-            aCtx.globalAlpha = Math.min(Math.abs(m.adj.warmth) / 100, 1) * 0.6;
-            aCtx.fillStyle = m.adj.warmth > 0 ? '#ff8a1e' : '#1e7bff';
-            aCtx.fillRect(0, 0, W, H);
-          }
-          if (m.adj.tint !== 0) {
-            aCtx.globalAlpha = Math.min(Math.abs(m.adj.tint) / 100, 1) * 0.6;
-            aCtx.fillStyle = m.adj.tint > 0 ? '#ff00ff' : '#00ff00';
-            aCtx.fillRect(0, 0, W, H);
-          }
-        }
+        applyTonePass(aCtx, W, H, m.adj);
 
         // 3. Clip the adjusted layer to the mask
         aCtx.globalAlpha = 1;
@@ -793,10 +834,21 @@ export default function Editor() {
       const octx = off.getContext('2d');
       octx.drawImage(ctx.canvas, 0, 0);
 
+      const blurRadius = Math.max(2, adj.tiltShift / 5);
       ctx.save();
-      ctx.filter = `blur(${Math.max(2, adj.tiltShift / 5)}px)`;
-      ctx.drawImage(off, 0, 0);
-      ctx.filter = 'none';
+      if (CTX_FILTER_SUPPORTED) {
+        ctx.filter = `blur(${blurRadius}px)`;
+        ctx.drawImage(off, 0, 0);
+        ctx.filter = 'none';
+      } else {
+        // iOS Safari: blur a copy via downscale/upscale, keep `off` sharp for
+        // the destination-over pass below
+        const blurred = document.createElement('canvas');
+        blurred.width = W; blurred.height = H;
+        blurred.getContext('2d').drawImage(off, 0, 0);
+        fallbackBlur(blurred, blurRadius);
+        ctx.drawImage(blurred, 0, 0);
+      }
 
       ctx.globalCompositeOperation = 'destination-in';
       const g = ctx.createLinearGradient(0, 0, 0, H);
