@@ -2,10 +2,12 @@
   position: fixed;
   top: 1.5rem;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translateX(-50%) translateZ(0);
+  -webkit-transform: translateX(-50%) translateZ(0);
   width: 90%;
   max-width: 900px;
   z-index: 100;
+  will-change: transform;
 }
 
 .nav-container {
@@ -21,6 +23,8 @@
   border-radius: 100px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
   position: relative; /* For mobile menu positioning */
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
 }
 
 .nav-logo {
