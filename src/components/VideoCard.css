@@ -122,3 +122,21 @@
   font-weight: 500;
   color: var(--text-primary);
 }
+
+/* Mobile Netflix-style Play Button */
+@media (max-width: 900px) {
+  .play-button-overlay {
+    align-items: flex-end;
+    justify-content: flex-end;
+    padding: 0.5rem;
+  }
+  .play-button {
+    width: 32px;
+    height: 32px;
+  }
+  .play-button svg {
+    width: 16px;
+    height: 16px;
+    margin-left: 2px;
+  }
+}
