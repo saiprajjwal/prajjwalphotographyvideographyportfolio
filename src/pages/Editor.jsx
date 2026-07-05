@@ -157,7 +157,8 @@ const DEFAULT_ADJ = {
   vignette: 0, grain: 0, fade: 0, sharpen: 0, 
   duotone: 0, duotoneC1: '#000080', duotoneC2: '#ffcc00',
   frame: 'none',
-  tiltShift: 0, graduated: 0, radial: 0, glitch: 0, halftone: 0
+  tiltShift: 0, graduated: 0, radial: 0, glitch: 0, halftone: 0,
+  texture: 0, clarity: 0
 };
 
 // Curated looks, grouped the way a photographer thinks: quick essentials,
@@ -207,6 +208,8 @@ const SLIDERS = [
   { key: 'highlights', label: 'Highlights', min: -100, max: 100 },
   { key: 'shadows', label: 'Shadows', min: -100, max: 100 },
   { key: 'fade', label: 'Fade', min: 0, max: 100 },
+  { key: 'texture', label: 'Texture', min: -100, max: 100 },
+  { key: 'clarity', label: 'Clarity', min: -100, max: 100 },
   { key: 'vignette', label: 'Vignette', min: 0, max: 100 },
   { key: 'grain', label: 'Grain', min: 0, max: 100 },
   { key: 'sharpen', label: 'Sharpen', min: 0, max: 100 },
@@ -311,7 +314,12 @@ export default function Editor() {
   const [exportFormat, setExportFormat] = useState('jpeg');
   const [exportQuality, setExportQuality] = useState(92);
 
-  const [openSections, setOpenSections] = useState({ presets: false, text: false, stickers: false, crop: true, wb: true, adjust: true, effects: false, splitTone: false, frames: false, export: false, draw: false, masks: true });
+  const [patches, setPatches] = useState([]);
+  const [isPatchMode, setIsPatchMode] = useState(false);
+  const [patchSource, setPatchSource] = useState(null); // {x, y}
+  const [patchBrushSize, setPatchBrushSize] = useState(0.05);
+
+  const [openSections, setOpenSections] = useState({ presets: false, text: false, stickers: false, crop: true, wb: true, adjust: true, effects: false, splitTone: false, frames: false, export: false, draw: false, masks: false, patch: false });
   // Land on Presets: it's the friendliest entry point on mobile — one tap
   // shows a result. (Masks as the default left mobile users staring at a
   // panel with no editing controls.)
@@ -413,12 +421,17 @@ export default function Editor() {
   const adjCanvasRef = useRef(null); // Offscreen canvas for mask adjustments
   const maskCanvasRef = useRef(null); // Offscreen canvas for mask shape
   const textBounds = useRef([]); // Stores bounding boxes for text & stickers hit-testing
+  
+  // Advanced tools offscreen canvases
+  const clarityCanvasRef = useRef(null);
+  const patchSourceCanvasRef = useRef(null);
+  const patchStrokeCanvasRef = useRef(null);
 
   // Debounced history saving
   const saveStateTimeout = useRef(null);
   const getCurrentState = useCallback(() => ({ 
-    adj, aspect, rotation, straighten, flipH, zoom, pan, texts, stickers, drawings, masks 
-  }), [adj, aspect, rotation, straighten, flipH, zoom, pan, texts, stickers, drawings, masks]);
+    adj, aspect, rotation, straighten, flipH, zoom, pan, texts, stickers, drawings, masks, patches 
+  }), [adj, aspect, rotation, straighten, flipH, zoom, pan, texts, stickers, drawings, masks, patches]);
 
   const scheduleHistorySave = useCallback(() => {
     clearTimeout(saveStateTimeout.current);
@@ -447,6 +460,7 @@ export default function Editor() {
     if (state.stickers) setStickers(state.stickers);
     if (state.drawings) setDrawings(state.drawings);
     if (state.masks) setMasks(state.masks);
+    if (state.patches) setPatches(state.patches);
   };
 
   useEffect(() => {
@@ -599,11 +613,106 @@ export default function Editor() {
 
     if (isComparing) return;
 
+    // -- PATCH TOOL (Healing / Clone Stamp) --
+    if (patches && patches.length > 0) {
+      if (!patchSourceCanvasRef.current) patchSourceCanvasRef.current = document.createElement('canvas');
+      const psc = patchSourceCanvasRef.current;
+      if (psc.width !== W || psc.height !== H) { psc.width = W; psc.height = H; }
+      const pscCtx = psc.getContext('2d');
+      pscCtx.clearRect(0, 0, W, H);
+      pscCtx.drawImage(ctx.canvas, 0, 0);
+      
+      if (!patchStrokeCanvasRef.current) patchStrokeCanvasRef.current = document.createElement('canvas');
+      const sc = patchStrokeCanvasRef.current;
+      if (sc.width !== W || sc.height !== H) { sc.width = W; sc.height = H; }
+      const scCtx = sc.getContext('2d');
+
+      ctx.save();
+      patches.forEach(p => {
+        if (!p.path || p.path.length === 0 || !p.source) return;
+        const dx = p.source.x - p.path[0].x;
+        const dy = p.source.y - p.path[0].y;
+        const r = p.size * Math.max(W, H);
+
+        scCtx.clearRect(0, 0, W, H);
+        scCtx.lineCap = 'round';
+        scCtx.lineJoin = 'round';
+        scCtx.lineWidth = r * 2;
+        scCtx.shadowBlur = r * 0.8;
+        scCtx.shadowColor = 'black';
+        scCtx.strokeStyle = 'black';
+        scCtx.beginPath();
+        scCtx.moveTo(p.path[0].x * W, p.path[0].y * H);
+        p.path.forEach(pt => scCtx.lineTo(pt.x * W, pt.y * H));
+        scCtx.stroke();
+        
+        scCtx.globalCompositeOperation = 'source-in';
+        scCtx.drawImage(psc, -dx * W, -dy * H);
+        scCtx.globalCompositeOperation = 'source-over';
+        
+        ctx.drawImage(sc, 0, 0);
+      });
+      ctx.restore();
+    }
+
     // ---- Premium tone pipeline --------------------------------------------
     // Shared per-pixel engine (applyTonePass): brightness/contrast/saturation,
     // true white balance, luminance-masked highlights/shadows, and black-point
     // fade — identical results on every device, no ctx.filter dependence.
     applyTonePass(ctx, W, H, adj);
+
+    // -- CLARITY (Large-radius local contrast) --
+    if (adj.clarity !== 0) {
+      if (!clarityCanvasRef.current) clarityCanvasRef.current = document.createElement('canvas');
+      const cc = clarityCanvasRef.current;
+      if (cc.width !== W || cc.height !== H) { cc.width = W; cc.height = H; }
+      const cCtx = cc.getContext('2d');
+      cCtx.drawImage(ctx.canvas, 0, 0);
+      fallbackBlur(cc, 25);
+      
+      const imgData = ctx.getImageData(0, 0, W, H);
+      const blurData = cCtx.getImageData(0, 0, W, H);
+      const d = imgData.data;
+      const bd = blurData.data;
+      const amount = adj.clarity / 100;
+      
+      for (let i = 0; i < d.length; i += 4) {
+        if (amount > 0) {
+           d[i] = Math.min(255, Math.max(0, d[i] + (d[i] - bd[i]) * amount));
+           d[i+1] = Math.min(255, Math.max(0, d[i+1] + (d[i+1] - bd[i+1]) * amount));
+           d[i+2] = Math.min(255, Math.max(0, d[i+2] + (d[i+2] - bd[i+2]) * amount));
+        } else {
+           const blend = -amount;
+           d[i] = d[i] * (1 - blend) + bd[i] * blend;
+           d[i+1] = d[i+1] * (1 - blend) + bd[i+1] * blend;
+           d[i+2] = d[i+2] * (1 - blend) + bd[i+2] * blend;
+        }
+      }
+      ctx.putImageData(imgData, 0, 0);
+    }
+
+    // -- TEXTURE (High-frequency detail) --
+    if (adj.texture !== 0) {
+      const imgData = ctx.getImageData(0, 0, W, H);
+      const data = imgData.data;
+      const tempData = new Uint8ClampedArray(data);
+      const amount = adj.texture / 100;
+      const w = W;
+      for (let y = 1; y < H - 1; y++) {
+        for (let x = 1; x < W - 1; x++) {
+          const i = (y * w + x) * 4;
+          const up = ((y - 1) * w + x) * 4;
+          const down = ((y + 1) * w + x) * 4;
+          const left = (y * w + (x - 1)) * 4;
+          const right = (y * w + (x + 1)) * 4;
+          for (let c = 0; c < 3; c++) {
+            const edge = 4 * tempData[i+c] - tempData[up+c] - tempData[down+c] - tempData[left+c] - tempData[right+c];
+            data[i+c] = tempData[i+c] + edge * amount;
+          }
+        }
+      }
+      ctx.putImageData(imgData, 0, 0);
+    }
 
     // Split Toning / Duotone Approximation
     if (adj.duotone > 0) {
@@ -1147,6 +1256,18 @@ export default function Editor() {
       return;
     }
 
+    if (isPatchMode) {
+      if (!patchSource) {
+        setPatchSource({ x: nx, y: ny });
+        return;
+      }
+      dragRef.current = { type: 'patch', currentStroke: { source: patchSource, size: patchBrushSize, path: [{x: nx, y: ny}] } };
+      setPatches(p => [...p, dragRef.current.currentStroke]);
+      e.currentTarget.setPointerCapture(e.pointerId);
+      setIsDragging(true);
+      return;
+    }
+
     if (isDrawingMode) {
       dragRef.current = { type: 'draw', currentStroke: { color: brushColor, size: brushSize, points: [{nx, ny}] } };
       setDrawings(d => [...d, dragRef.current.currentStroke]);
@@ -1200,7 +1321,10 @@ export default function Editor() {
     const nx = (e.clientX - rect.left) / rect.width;
     const ny = (e.clientY - rect.top) / rect.height;
 
-    if (d.type === 'draw') {
+    if (d.type === 'patch') {
+      d.currentStroke.path.push({x: nx, y: ny});
+      setPatches(arr => [...arr]);
+    } else if (d.type === 'draw') {
       d.currentStroke.points.push({nx, ny});
       // Force re-render to show drawing live
       setDrawings(arr => [...arr]);
@@ -1233,12 +1357,25 @@ export default function Editor() {
     if (!wasLoupe) scheduleHistorySave(); // loupe panning is view-only, not an edit
   };
 
+  const currentAdj = (isMaskingMode && activeMaskId) 
+    ? (masks.find(m => m.id === activeMaskId)?.adj || adj) 
+    : adj;
+
   const applyPreset = (p) => { setPreset(p.id); setAdj({ ...p.adj }); scheduleHistorySave(); };
-  const setAdjKey = (key, value) => { setAdj((a) => ({ ...a, [key]: value })); setPreset('custom'); scheduleHistorySave(); };
+  
+  const setAdjKey = (key, value) => { 
+    if (isMaskingMode && activeMaskId) {
+      setMaskAdj(key, value);
+    } else {
+      setAdj((a) => ({ ...a, [key]: value })); 
+      setPreset('custom'); 
+      scheduleHistorySave(); 
+    }
+  };
 
   // Lightroom-style readout: sliders whose neutral is 100 read as ± offsets
   const fmtAdj = (key) => {
-    const v = adj[key];
+    const v = currentAdj[key];
     const shown = DEFAULT_ADJ[key] === 100 ? v - 100 : v;
     return shown > 0 ? `+${shown}` : String(shown);
   };
@@ -1328,6 +1465,22 @@ export default function Editor() {
     }, mimeType, quality);
   };
 
+  const getCursor = () => {
+    if (isPickingWB) return `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="white" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m2 22 1-1h3l9-9"/><path d="M3 21v-3l9-9"/><path d="m15 6 3.4-3.4a2.1 2.1 0 1 1 3 3L18 9l.4.4a2.1 2.1 0 1 1-3 3l-3.8-3.8a2.1 2.1 0 1 1 3-3l.4.4Z"/></svg>') 2 22, crosshair`;
+    
+    if (isMaskingMode || isPatchMode) {
+      const bSize = isPatchMode ? patchBrushSize : maskBrushSize;
+      const bColor = isPatchMode ? "rgba(255,255,255,0.1)" : "rgba(255,0,0,0.2)";
+      const d = Math.max(10, Math.round(bSize * (previewSize.current?.h || 500)));
+      const r = d / 2;
+      const dash = (isPatchMode && !patchSource) ? '4 2' : 'none';
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${d}" height="${d}" viewBox="0 0 ${d} ${d}"><circle cx="${r}" cy="${r}" r="${r - 1}" fill="${bColor}" stroke="white" stroke-width="1.5" stroke-dasharray="${dash}" /></svg>`;
+      return `url('data:image/svg+xml;utf8,${encodeURIComponent(svg)}') ${r} ${r}, crosshair`;
+    }
+    if (isDrawingMode) return 'crosshair';
+    return isDragging ? 'grabbing' : 'grab';
+  };
+
   return (
     <motion.div
       className="pe-page"
@@ -1373,7 +1526,7 @@ export default function Editor() {
                 <canvas
                   ref={previewRef}
                   className="pe-canvas"
-                  style={{ cursor: isPickingWB ? `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="white" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m2 22 1-1h3l9-9"/><path d="M3 21v-3l9-9"/><path d="m15 6 3.4-3.4a2.1 2.1 0 1 1 3 3L18 9l.4.4a2.1 2.1 0 1 1-3 3l-3.8-3.8a2.1 2.1 0 1 1 3-3l.4.4Z"/></svg>') 2 22, crosshair` : (isMaskingMode ? `url('data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${Math.max(10, Math.round(maskBrushSize * (previewSize.current.h || 500)))}" height="${Math.max(10, Math.round(maskBrushSize * (previewSize.current.h || 500)))}" viewBox="0 0 ${Math.max(10, Math.round(maskBrushSize * (previewSize.current.h || 500)))} ${Math.max(10, Math.round(maskBrushSize * (previewSize.current.h || 500)))}"><circle cx="${Math.max(10, Math.round(maskBrushSize * (previewSize.current.h || 500)))/2}" cy="${Math.max(10, Math.round(maskBrushSize * (previewSize.current.h || 500)))/2}" r="${Math.max(10, Math.round(maskBrushSize * (previewSize.current.h || 500)))/2 - 1}" fill="rgba(255,0,0,0.2)" stroke="white" stroke-width="1.5" /></svg>`)}') ${Math.max(10, Math.round(maskBrushSize * (previewSize.current.h || 500)))/2} ${Math.max(10, Math.round(maskBrushSize * (previewSize.current.h || 500)))/2}, crosshair` : (isDrawingMode ? 'crosshair' : 'grab')) }}
+                  style={{ cursor: getCursor() }}
                   onPointerDown={onPointerDown}
                   onPointerMove={onPointerMove}
                   onPointerUp={onPointerUp}
@@ -1433,6 +1586,41 @@ export default function Editor() {
         <div className="pe-controls" style={{ opacity: !image ? 0.5 : 1, pointerEvents: !image ? 'none' : 'auto' }}>
           <div className="pe-panels" style={{ flex: 1, overflowY: 'auto' }}>
           
+          <div className="pe-group" style={{ display: (!isMobile || activeTab === 'patch') ? 'block' : 'none', background: isPatchMode ? 'rgba(59, 130, 246, 0.1)' : 'transparent', padding: isPatchMode ? '1rem' : '0', borderRadius: '12px', border: isPatchMode ? '1px solid rgba(59, 130, 246, 0.3)' : 'none', transition: 'all 0.3s' }}>
+            <div className="pe-section-header" onClick={() => setOpenSections(s => ({ ...s, patch: !s.patch }))}>
+              <span className="pe-group-label" style={{ color: isPatchMode ? '#3b82f6' : 'var(--text-secondary)' }}>Retouch / Patch</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <button className={`pe-btn pe-btn-ghost ${isPatchMode ? 'is-active' : ''}`} style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', borderColor: isPatchMode ? '#3b82f6' : 'transparent', color: isPatchMode ? '#3b82f6' : 'var(--text-primary)' }} onClick={(e) => { e.stopPropagation(); setIsPatchMode(!isPatchMode); setOpenSections(s => ({ ...s, patch: true })); setActiveTab('patch'); }}>
+                  {isPatchMode ? 'Done' : 'Patch'}
+                </button>
+                <ChevronDown size={16} className={`pe-section-chevron ${isSectionOpen('patch') ? 'is-open' : ''}`} />
+              </div>
+            </div>
+            <div className={`pe-section-body ${isSectionOpen('patch') ? '' : 'is-collapsed'}`} style={{ maxHeight: isSectionOpen('patch') ? '400px' : '0' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', marginTop: '0.8rem' }}>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                  1. Set Source (Tap image or button below)<br/>
+                  2. Paint over blemish
+                </p>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button className={`pe-chip ${!patchSource ? 'is-active' : ''}`} onClick={() => setPatchSource(null)}>
+                    <Crosshair size={14}/> Set Source
+                  </button>
+                  <button className={`pe-chip ${patchSource ? 'is-active' : ''}`} disabled={!patchSource}>
+                    <Brush size={14}/> Paint
+                  </button>
+                  <button className="pe-chip" onClick={() => { setPatches([]); setPatchSource(null); scheduleHistorySave(); }}>
+                    Clear
+                  </button>
+                </div>
+                <label className="pe-slider-row">
+                  <span>Size</span>
+                  <input type="range" min="0.01" max="0.2" step="0.01" value={patchBrushSize} onChange={(e) => setPatchBrushSize(parseFloat(e.target.value))} />
+                </label>
+              </div>
+            </div>
+          </div>
+
           <div className="pe-group" style={{ background: isMaskingMode ? 'rgba(236, 72, 153, 0.1)' : 'transparent', padding: isMaskingMode ? '1rem' : '0', borderRadius: '12px', border: isMaskingMode ? '1px solid rgba(236, 72, 153, 0.3)' : 'none', transition: 'all 0.3s', display: (!isMobile || activeTab === 'masks') ? 'block' : 'none' }}>
             <div className="pe-section-header" onClick={() => setOpenSections(s => ({ ...s, masks: !s.masks }))}>
               <span className="pe-group-label" style={{ color: isMaskingMode ? '#ec4899' : 'var(--text-secondary)' }}>Brush Masks</span>
@@ -1475,20 +1663,6 @@ export default function Editor() {
                       <input type="checkbox" checked={showMaskOverlay} onChange={e => setShowMaskOverlay(e.target.checked)} />
                       Show Red Overlay
                     </label>
-
-                    <div style={{ height: '1px', background: 'rgba(255,255,255,0.1)', margin: '0.5rem 0' }}></div>
-                    
-                    {['brightness', 'contrast', 'saturation', 'warmth', 'tint', 'shadows', 'highlights'].map(key => {
-                      const m = masks.find(x => x.id === activeMaskId);
-                      const val = m.adj[key];
-                      const { min, max, label } = SLIDERS.find(s => s.key === key) || { min: -100, max: 100, label: key };
-                      return (
-                        <label className="pe-slider-row" key={key}>
-                          <span>{label}</span>
-                          <input type="range" min={min} max={max} value={val} onPointerDown={(e) => { e.stopPropagation(); setIsDraggingMaskSlider(true); }} onPointerUp={(e) => { e.stopPropagation(); setIsDraggingMaskSlider(false); }} onPointerCancel={() => setIsDraggingMaskSlider(false)} onChange={(e) => setMaskAdj(key, parseInt(e.target.value))} />
-                        </label>
-                      );
-                    })}
                   </div>
                 )}
               </div>
@@ -1606,7 +1780,7 @@ export default function Editor() {
               
               <select 
                 style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', fontSize: '0.8rem', outline: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
-                value={adj.warmth === 0 && adj.tint === 0 ? 'as-shot' : 'custom'}
+                value={currentAdj.warmth === 0 && currentAdj.tint === 0 ? 'as-shot' : 'custom'}
                 onChange={(e) => { if (e.target.value === 'as-shot') { setAdjKey('warmth', 0); setAdjKey('tint', 0); } }}
               >
                 <option value="as-shot" style={{ color: '#000' }}>As Shot</option>
@@ -1619,7 +1793,7 @@ export default function Editor() {
                 <span style={{ color: 'var(--text-secondary)' }}>Temp</span>
                 <input
                   type="range" min="-100" max="100"
-                  value={adj.warmth}
+                  value={currentAdj.warmth}
                   onChange={(e) => setAdjKey('warmth', parseInt(e.target.value, 10))}
                   onDoubleClick={() => setAdjKey('warmth', DEFAULT_ADJ.warmth)}
                   className="pe-wb-slider pe-wb-temp"
@@ -1631,7 +1805,7 @@ export default function Editor() {
                 <span style={{ color: 'var(--text-secondary)' }}>Tint</span>
                 <input
                   type="range" min="-100" max="100"
-                  value={adj.tint}
+                  value={currentAdj.tint}
                   onChange={(e) => setAdjKey('tint', parseInt(e.target.value, 10))}
                   onDoubleClick={() => setAdjKey('tint', DEFAULT_ADJ.tint)}
                   className="pe-wb-slider pe-wb-tint"
@@ -1654,7 +1828,7 @@ export default function Editor() {
                   type="range"
                   min={s.min}
                   max={s.max}
-                  value={adj[s.key]}
+                  value={currentAdj[s.key]}
                   onChange={(e) => setAdjKey(s.key, parseInt(e.target.value, 10))}
                   onDoubleClick={() => setAdjKey(s.key, DEFAULT_ADJ[s.key])}
                 />
@@ -1677,7 +1851,7 @@ export default function Editor() {
                   type="range"
                   min={s.min}
                   max={s.max}
-                  value={adj[s.key]}
+                  value={currentAdj[s.key]}
                   onChange={(e) => setAdjKey(s.key, parseInt(e.target.value, 10))}
                   onDoubleClick={() => setAdjKey(s.key, DEFAULT_ADJ[s.key])}
                 />
@@ -1695,19 +1869,19 @@ export default function Editor() {
             <div className={`pe-section-body ${isSectionOpen('splitTone') ? '' : 'is-collapsed'}`} style={{ maxHeight: isSectionOpen('splitTone') ? '400px' : '0' }}>
             <label className="pe-slider-row">
               <span>Intensity</span>
-              <input type="range" min="0" max="100" value={adj.duotone} onChange={(e) => setAdjKey('duotone', parseInt(e.target.value, 10))} onDoubleClick={() => setAdjKey('duotone', DEFAULT_ADJ.duotone)} />
+              <input type="range" min="0" max="100" value={currentAdj.duotone} onChange={(e) => setAdjKey('duotone', parseInt(e.target.value, 10))} onDoubleClick={() => setAdjKey('duotone', DEFAULT_ADJ.duotone)} />
             </label>
             {adj.duotone > 0 && (
               <div className="pe-color-row" style={{ marginTop: '0.5rem', justifyContent: 'center', gap: '2rem' }}>
                 <label className="pe-color-label" title="Shadow Color">
                   <div className="pe-color-swatch-wrapper">
-                    <input type="color" value={adj.duotoneC1} onChange={(e) => setAdjKey('duotoneC1', e.target.value)} />
+                    <input type="color" value={currentAdj.duotoneC1} onChange={(e) => setAdjKey('duotoneC1', e.target.value)} />
                   </div>
                   Shadows
                 </label>
                 <label className="pe-color-label" title="Highlight Color">
                   <div className="pe-color-swatch-wrapper">
-                    <input type="color" value={adj.duotoneC2} onChange={(e) => setAdjKey('duotoneC2', e.target.value)} />
+                    <input type="color" value={currentAdj.duotoneC2} onChange={(e) => setAdjKey('duotoneC2', e.target.value)} />
                   </div>
                   Highlights
                 </label>
@@ -1941,6 +2115,7 @@ export default function Editor() {
               <button className={`pe-tab-btn ${activeTab === 'wb' ? 'is-active' : ''}`} onClick={() => setActiveTab('wb')}><Crosshair size={20} /><span>WB</span></button>
               <button className={`pe-tab-btn ${activeTab === 'adjust' ? 'is-active' : ''}`} onClick={() => setActiveTab('adjust')}><SlidersHorizontal size={20} /><span>Adjust</span></button>
               <button className={`pe-tab-btn ${activeTab === 'effects' ? 'is-active' : ''}`} onClick={() => setActiveTab('effects')}><Sparkles size={20} /><span>Effects</span></button>
+              <button className={`pe-tab-btn ${activeTab === 'patch' ? 'is-active' : ''}`} onClick={() => setActiveTab('patch')}><Wand2 size={20} /><span>Patch</span></button>
               <button className={`pe-tab-btn ${activeTab === 'splitTone' ? 'is-active' : ''}`} onClick={() => setActiveTab('splitTone')}><Droplet size={20} /><span>Color</span></button>
               <button className={`pe-tab-btn ${activeTab === 'frames' ? 'is-active' : ''}`} onClick={() => setActiveTab('frames')}><Frame size={20} /><span>Frames</span></button>
               <button className={`pe-tab-btn ${activeTab === 'text' ? 'is-active' : ''}`} onClick={() => setActiveTab('text')}><Type size={20} /><span>Text</span></button>

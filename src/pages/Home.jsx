@@ -6,7 +6,6 @@ import { Environment, MeshTransmissionMaterial, Sparkles, Image, Float } from '@
 import * as THREE from 'three';
 import { InstagramIcon, YoutubeIcon, TiktokIcon, PinterestIcon } from '../components/Icons';
 import Magnetic from '../components/Magnetic';
-import { useCinematicAudio } from '../hooks/useCinematicAudio';
 import '../components/Footer.css';
 import './Home.css';
 
@@ -136,7 +135,6 @@ function BackgroundGallery({ scrollYProgress }) {
 
 export default function Home() {
   const [canvasReady, setCanvasReady] = useState(false);
-  const { modulateHum } = useCinematicAudio();
 
   const socialLinks = [
     { name: 'Instagram', url: 'https://www.instagram.com/saiprajjwal', icon: <InstagramIcon /> },
@@ -147,14 +145,6 @@ export default function Home() {
 
   // Native window scroll tracker
   const { scrollYProgress } = useScroll();
-  const scrollVelocity = useVelocity(scrollYProgress);
-
-  useEffect(() => {
-    const unsubscribe = scrollVelocity.on("change", (latest) => {
-      modulateHum(latest);
-    });
-    return () => unsubscribe();
-  }, [scrollVelocity, modulateHum]);
 
   // Fly-through effect on the hero text as you scroll. Multi-point ranges pin
   // the values flat outside the active band so the hero can't re-appear later
