@@ -436,4 +436,12 @@
   .info-modal-title {
     font-size: 1.2rem;
   }
+  .showcase-row-track {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+    padding-right: 4vw; /* ensure equal padding on both sides */
+  }
+  .showcase-thumbnail-wrapper .video-title {
+    font-size: 0.8rem;
+  }
 }
