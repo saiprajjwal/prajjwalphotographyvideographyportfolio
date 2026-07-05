@@ -1,8 +1,39 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import portfolioData from '../data/portfolio.json';
 import './Admin.css';
 
 const CATEGORIES = portfolioData.categories.filter((c) => c !== 'All');
+
+// Resize + re-encode large photos in the browser before upload. Cloudinary's
+// free plan rejects images over 10MB, and the site only ever displays them at
+// ~1200px wide, so a huge original is wasted bytes and a slow upload. Capping
+// the long edge at 2560px keeps plenty of quality headroom.
+async function compressImage(file, maxSide = 2560, quality = 0.85) {
+  if (!file.type.startsWith('image/')) return file;
+  let bitmap;
+  try {
+    bitmap = await createImageBitmap(file);
+  } catch {
+    return file; // decode failed — let the server deal with the original
+  }
+  const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
+  // Small enough already and a normal size? Skip re-encoding to preserve it.
+  if (scale === 1 && file.size <= 8 * 1024 * 1024) { bitmap.close?.(); return file; }
+  const w = Math.round(bitmap.width * scale);
+  const h = Math.round(bitmap.height * scale);
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(bitmap, 0, 0, w, h);
+  bitmap.close?.();
+  const blob = await new Promise((res) => canvas.toBlob(res, 'image/jpeg', quality));
+  if (!blob) return file;
+  const name = file.name.replace(/\.[^.]+$/, '') + '.jpg';
+  return new File([blob], name, { type: 'image/jpeg' });
+}
 
 export default function Admin() {
   const [token, setToken] = useState(() => localStorage.getItem('admin_token') || '');
@@ -13,9 +44,12 @@ export default function Admin() {
   const [category, setCategory] = useState(CATEGORIES[0]);
   const [session, setSession] = useState('');
   const [altText, setAltText] = useState('');
-  const [files, setFiles] = useState([]);
-  const [results, setResults] = useState([]);
+  // Each queued photo carries its own status: pending → optimizing → uploading
+  // → done | error, so the UI can show exactly what's happening per file.
+  const [queue, setQueue] = useState([]);
   const [uploading, setUploading] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const fileInputRef = useRef(null);
 
   const [activeTab, setActiveTab] = useState('upload'); // 'upload' or 'library'
   const [libraryPhotos, setLibraryPhotos] = useState([]);
@@ -33,10 +67,6 @@ export default function Admin() {
   const [aboutEmail, setAboutEmail] = useState('');
   const [aboutHeadshot, setAboutHeadshot] = useState(null);
   
-  // Reels State
-  const [reels, setReels] = useState([]);
-  const [savingReels, setSavingReels] = useState(false);
-  const [newReelUrl, setNewReelUrl] = useState('');
   const [savingAbout, setSavingAbout] = useState(false);
 
   useEffect(() => {
@@ -49,7 +79,6 @@ export default function Admin() {
           setAboutBio(data.about?.bio || '');
           setAboutGear(data.about?.gear || []);
           setAboutEmail(data.about?.email || '');
-          setReels(data.reels || []);
         }
       })
       .catch((error) => {
@@ -193,28 +222,63 @@ export default function Admin() {
     setToken('');
   };
 
+  // --- Upload queue management ---
+  const addFiles = (fileList) => {
+    const incoming = Array.from(fileList).filter((f) => f.type.startsWith('image/'));
+    if (incoming.length === 0) return;
+    const items = incoming.map((file) => ({
+      id: `${file.name}-${file.size}-${file.lastModified}-${Math.random().toString(36).slice(2, 7)}`,
+      file,
+      url: URL.createObjectURL(file),
+      status: 'pending',
+      message: '',
+    }));
+    setQueue((q) => [...q, ...items]);
+  };
+
+  const removeItem = (id) => {
+    setQueue((q) => {
+      const item = q.find((it) => it.id === id);
+      if (item) URL.revokeObjectURL(item.url);
+      return q.filter((it) => it.id !== id);
+    });
+  };
+
+  const clearQueue = () => {
+    setQueue((q) => { q.forEach((it) => URL.revokeObjectURL(it.url)); return []; });
+  };
+
+  const setItem = (id, patch) =>
+    setQueue((q) => q.map((it) => (it.id === id ? { ...it, ...patch } : it)));
+
+  const onDrop = (e) => {
+    e.preventDefault();
+    setDragging(false);
+    if (e.dataTransfer?.files?.length) addFiles(e.dataTransfer.files);
+  };
+
   const handleUpload = async (e) => {
     e.preventDefault();
-    if (files.length === 0) return;
+    const pending = queue.filter((it) => it.status === 'pending' || it.status === 'error');
+    if (pending.length === 0) return;
 
     setUploading(true);
-    const newResults = [];
-
-    for (const file of files) {
+    for (const item of pending) {
       try {
+        setItem(item.id, { status: 'optimizing', message: '' });
+        const optimized = await compressImage(item.file);
+
+        setItem(item.id, { status: 'uploading' });
         const sigRes = await fetch('/api/get-upload-signature', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({ category, session, altText }),
         });
         const sigData = await sigRes.json();
         if (!sigRes.ok) throw new Error(sigData.error || 'Could not get an upload signature');
 
         const formData = new FormData();
-        formData.append('file', file);
+        formData.append('file', optimized);
         formData.append('api_key', sigData.apiKey);
         formData.append('timestamp', sigData.timestamp);
         formData.append('signature', sigData.signature);
@@ -229,14 +293,11 @@ export default function Admin() {
         const uploadData = await uploadRes.json();
         if (!uploadRes.ok) throw new Error(uploadData.error?.message || 'Upload failed');
 
-        newResults.push({ file: file.name, status: 'success' });
+        setItem(item.id, { status: 'done' });
       } catch (err) {
-        newResults.push({ file: file.name, status: 'error', message: err.message });
+        setItem(item.id, { status: 'error', message: err.message });
       }
     }
-
-    setResults(newResults);
-    setFiles([]);
     setUploading(false);
   };
 
@@ -310,55 +371,6 @@ export default function Admin() {
     }
   };
 
-  const handleAddReel = () => {
-    // Extract shortcode from URL or just use the input if it's already a shortcode
-    let shortcode = newReelUrl.trim();
-    if (!shortcode) return;
-    
-    // Check if it's a full instagram URL
-    if (shortcode.includes('instagram.com')) {
-      const match = shortcode.match(/(?:reel|p)\/([a-zA-Z0-9_-]+)/);
-      if (match && match[1]) {
-        shortcode = match[1];
-      } else {
-        alert("Could not extract shortcode from URL. Make sure it's a valid Instagram Reel link.");
-        return;
-      }
-    }
-    
-    if (!reels.includes(shortcode)) {
-      setReels([...reels, shortcode]);
-    }
-    setNewReelUrl('');
-  };
-
-  const handleRemoveReel = (idx) => {
-    const updated = [...reels];
-    updated.splice(idx, 1);
-    setReels(updated);
-  };
-
-  const handleSaveReels = async () => {
-    setSavingReels(true);
-    try {
-      const response = await fetch('/api/update-reels', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ reels }),
-      });
-      if (response.ok) {
-        alert('Reels updated successfully!');
-      } else {
-        alert('Failed to update reels.');
-      }
-    } catch (error) {
-      console.error(error);
-      alert('Error updating reels.');
-    } finally {
-      setSavingReels(false);
-    }
-  };
-
   if (!token) {
     return (
       <main className="admin-wrapper">
@@ -392,7 +404,6 @@ export default function Admin() {
           <button className={`admin-tab ${activeTab === 'upload' ? 'active' : ''}`} onClick={() => setActiveTab('upload')}>Upload</button>
           <button className={`admin-tab ${activeTab === 'library' ? 'active' : ''}`} onClick={() => setActiveTab('library')}>Photo Library</button>
           <button className={`admin-tab ${activeTab === 'about' ? 'active' : ''}`} onClick={() => setActiveTab('about')}>About Page</button>
-          <button className={`admin-tab ${activeTab === 'reels' ? 'active' : ''}`} onClick={() => setActiveTab('reels')}>Reels</button>
         </div>
 
         {activeTab === 'upload' ? (
@@ -427,30 +438,83 @@ export default function Admin() {
             />
           </label>
 
-          <label>
-            Photos
+          <div
+            className={`up-dropzone ${dragging ? 'is-dragging' : ''}`}
+            onClick={() => !uploading && fileInputRef.current?.click()}
+            onDragOver={(e) => { e.preventDefault(); if (!uploading) setDragging(true); }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={onDrop}
+            role="button"
+            tabIndex={0}
+          >
             <input
+              ref={fileInputRef}
               type="file"
               accept="image/jpeg,image/png,image/webp"
               multiple
-              onChange={(e) => setFiles(Array.from(e.target.files))}
+              hidden
+              onChange={(e) => { addFiles(e.target.files); e.target.value = ''; }}
             />
-          </label>
+            <svg className="up-icon" viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <p className="up-drop-title">Drop photos here or click to browse</p>
+            <p className="up-drop-hint">JPG, PNG or WebP · big photos are auto-optimized</p>
+          </div>
 
-          <button type="submit" className="btn-glass" disabled={uploading || files.length === 0}>
-            {uploading ? 'Uploading...' : `Upload ${files.length || ''}`.trim()}
+          {queue.length > 0 && (() => {
+            const done = queue.filter((it) => it.status === 'done').length;
+            const errored = queue.filter((it) => it.status === 'error').length;
+            const pct = Math.round((queue.filter((it) => it.status === 'done' || it.status === 'error').length / queue.length) * 100);
+            const busy = (s) => s === 'optimizing' || s === 'uploading';
+            return (
+              <>
+                <div className="up-queue-bar">
+                  <div className="up-queue-info">
+                    <strong>{queue.length}</strong> photo{queue.length > 1 ? 's' : ''}
+                    {uploading ? ` · ${done + errored}/${queue.length} processed` : done > 0 ? ` · ${done} uploaded` : ''}
+                    {errored > 0 && <span className="up-err-count"> · {errored} failed</span>}
+                  </div>
+                  {!uploading && <button type="button" className="up-clear" onClick={clearQueue}>Clear all</button>}
+                </div>
+
+                {uploading && (
+                  <div className="up-progress"><div className="up-progress-fill" style={{ width: `${pct}%` }} /></div>
+                )}
+
+                <div className="up-grid">
+                  {queue.map((it) => (
+                    <div key={it.id} className={`up-card is-${it.status}`}>
+                      <img src={it.url} alt={it.file.name} loading="lazy" />
+                      <div className="up-card-overlay">
+                        {busy(it.status) && <span className="up-spinner" />}
+                        {it.status === 'done' && <span className="up-badge up-ok">✓</span>}
+                        {it.status === 'error' && <span className="up-badge up-bad" title={it.message}>!</span>}
+                        {it.status === 'pending' && !uploading && (
+                          <button type="button" className="up-remove" onClick={(e) => { e.stopPropagation(); removeItem(it.id); }} aria-label="Remove">×</button>
+                        )}
+                      </div>
+                      <span className="up-card-name">
+                        {it.status === 'optimizing' ? 'Optimizing…' : it.status === 'uploading' ? 'Uploading…' : it.status === 'error' ? 'Failed' : it.file.name}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            );
+          })()}
+
+          <button
+            type="submit"
+            className="btn-glass"
+            disabled={uploading || queue.filter((it) => it.status === 'pending' || it.status === 'error').length === 0}
+          >
+            {uploading
+              ? 'Uploading…'
+              : (() => {
+                  const n = queue.filter((it) => it.status === 'pending' || it.status === 'error').length;
+                  return n ? `Upload ${n} photo${n > 1 ? 's' : ''}` : 'Upload';
+                })()}
           </button>
         </form>
-
-        {results.length > 0 && (
-          <ul className="admin-results">
-            {results.map((r, i) => (
-              <li key={i} className={r.status}>
-                {r.status === 'success' ? `✓ ${r.file}` : `✗ ${r.file} — ${r.message}`}
-              </li>
-            ))}
-          </ul>
-        )}
           </>
         ) : activeTab === 'library' ? (
           <div className="admin-library">
@@ -554,39 +618,7 @@ export default function Admin() {
               {savingAbout ? 'Saving...' : 'Save About Page'}
             </button>
           </form>
-        ) : (
-          <div className="admin-upload-form">
-            <h2>Manage Instagram Reels</h2>
-            <p style={{ marginBottom: '1rem', color: '#aaa', fontSize: '0.9rem' }}>
-              Paste the link to your Instagram Reel. The portfolio will automatically extract the shortcode and embed it seamlessly.
-            </p>
-            <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem' }}>
-              <input 
-                type="text" 
-                value={newReelUrl} 
-                onChange={(e) => setNewReelUrl(e.target.value)} 
-                placeholder="e.g. https://www.instagram.com/reel/C6A_7P7tV6s/" 
-                style={{ flex: 1, margin: 0 }}
-              />
-              <button type="button" onClick={handleAddReel} className="btn-glass" style={{ margin: 0 }}>Add Reel</button>
-            </div>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '2rem' }}>
-              {reels.map((shortcode, idx) => (
-                <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.05)', padding: '1rem', borderRadius: '8px' }}>
-                  <span style={{ fontFamily: 'monospace', color: '#00f0ff' }}>{shortcode}</span>
-                  <a href={`https://www.instagram.com/reel/${shortcode}`} target="_blank" rel="noreferrer" style={{ color: '#fff', fontSize: '0.9rem', textDecoration: 'underline' }}>View</a>
-                  <button type="button" onClick={() => handleRemoveReel(idx)} style={{ background: '#d32f2f', color: '#fff', border: 'none', padding: '0.5rem 1rem', borderRadius: '4px', cursor: 'pointer' }}>Remove</button>
-                </div>
-              ))}
-              {reels.length === 0 && <p style={{ color: '#aaa' }}>No reels added yet.</p>}
-            </div>
-
-            <button type="button" onClick={handleSaveReels} className="btn-glass" disabled={savingReels} style={{ width: '100%' }}>
-              {savingReels ? 'Saving Reels...' : 'Save Changes to Website'}
-            </button>
-          </div>
-        )}
+        ) : null}
       </div>
     </main>
   );

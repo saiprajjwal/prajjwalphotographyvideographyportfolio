@@ -294,3 +294,152 @@
 .admin-library-edit-actions .cancel-btn:hover {
   background: rgba(255, 255, 255, 0.2);
 }
+
+/* Upload feedback */
+.admin-file-hint {
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.6);
+  margin: 0.25rem 0 0.5rem;
+}
+
+.admin-upload-status {
+  font-size: 0.9rem;
+  color: #9fdcff;
+  margin-top: 1rem;
+  text-align: center;
+}
+
+/* ---------- Modern photo uploader ---------- */
+.up-dropzone {
+  border: 1.5px dashed rgba(255, 255, 255, 0.25);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 2rem 1.5rem;
+  text-align: center;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.7);
+  transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+.up-dropzone:hover { border-color: rgba(255, 255, 255, 0.5); background: rgba(255, 255, 255, 0.05); }
+.up-dropzone.is-dragging {
+  border-color: #6fd0ff;
+  background: rgba(111, 208, 255, 0.08);
+  transform: scale(1.01);
+}
+.up-icon { color: rgba(255, 255, 255, 0.55); margin-bottom: 0.25rem; }
+.up-drop-title { font-size: 1rem; color: #fff; margin: 0; }
+.up-drop-hint { font-size: 0.78rem; color: rgba(255, 255, 255, 0.45); margin: 0; }
+
+.up-queue-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 1.25rem;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.75);
+}
+.up-err-count { color: #ff8a8a; }
+.up-clear {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.7);
+  padding: 0.3rem 0.7rem;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+.up-clear:hover { border-color: rgba(255, 255, 255, 0.5); color: #fff; }
+
+.up-progress {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 0.6rem;
+}
+.up-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #6fd0ff, #a0f0c0);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.up-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 0.6rem;
+  margin-top: 0.9rem;
+}
+.up-card {
+  position: relative;
+  border-radius: 10px;
+  overflow: hidden;
+  aspect-ratio: 1 / 1;
+  background: #111;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.up-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.up-card.is-uploading img,
+.up-card.is-optimizing img { opacity: 0.5; }
+.up-card.is-done { border-color: rgba(120, 230, 160, 0.5); }
+.up-card.is-error { border-color: rgba(255, 120, 120, 0.6); }
+.up-card.is-error img { opacity: 0.4; }
+
+.up-card-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.up-card-name {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  font-size: 0.62rem;
+  color: #fff;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+  padding: 0.5rem 0.35rem 0.25rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+}
+
+.up-remove {
+  position: absolute;
+  top: 4px; right: 4px;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.up-remove:hover { background: #d32f2f; }
+
+.up-badge {
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 0.9rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+.up-ok { background: #4caf78; color: #fff; }
+.up-bad { background: #e05555; color: #fff; cursor: help; }
+
+.up-spinner {
+  width: 24px; height: 24px;
+  border: 3px solid rgba(255, 255, 255, 0.25);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: up-spin 0.7s linear infinite;
+}
+@keyframes up-spin { to { transform: rotate(360deg); } }
