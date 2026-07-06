@@ -6,6 +6,14 @@ import './Portfolio.css';
 // Loaded on demand: keeps three.js/@react-three/drei out of this route's critical chunk.
 const PortfolioScene = lazy(() => import('./PortfolioScene'));
 
+// Admin-set sequence numbers (1, 2, 3…) lead in ascending order; anything still
+// unset (0) sorts to the end and keeps its original API position. Array.sort is
+// stable, so equal keys preserve the incoming created_at-desc order — meaning a
+// portfolio with no manual ordering yet looks exactly as it did before.
+const rank = (v) => (v > 0 ? v : Infinity);
+const byPhotoOrder = (a, b) => rank(a.photoOrder) - rank(b.photoOrder);
+const byAlbumOrder = (a, b) => rank(a.albumOrder) - rank(b.albumOrder);
+
 export default function Portfolio() {
   const categories = portfolioData.categories;
   const [filter, setFilter] = useState(categories[0] || 'Portraits');
@@ -80,16 +88,16 @@ export default function Portfolio() {
         id: `session-${sessionName}`, // Use unique id to avoid collisions
         sessionName
       };
-    });
-    const noSessionPhotos = categoryPhotos.filter(p => !p.session);
+    }).sort(byAlbumOrder);
+    const noSessionPhotos = categoryPhotos.filter(p => !p.session).sort(byPhotoOrder);
     displayItems = [...sessionCovers, ...noSessionPhotos];
   } else {
-    displayItems = categoryPhotos;
+    displayItems = [...categoryPhotos].sort(byPhotoOrder);
   }
 
   // Active session photos for the overlay modal
   const activeSessionPhotos = activeSession
-    ? categoryPhotos.filter(p => p.session === activeSession)
+    ? categoryPhotos.filter(p => p.session === activeSession).sort(byPhotoOrder)
     : [];
 
   // Lock body scroll when overlay is active

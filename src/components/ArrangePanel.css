@@ -1,0 +1,195 @@
+.arrange-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.arr-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.arr-cat {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.arr-cat select {
+  margin: 0;
+}
+
+.arr-back {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #fff;
+  padding: 0.4rem 0.9rem;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.arr-back:hover {
+  border-color: #00f0ff;
+  color: #00f0ff;
+}
+
+.arr-breadcrumb {
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.arr-hint {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.55);
+  margin: 0;
+}
+
+.arr-savebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.65rem 1rem;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.8);
+  position: sticky;
+  top: 0.5rem;
+  z-index: 5;
+  backdrop-filter: blur(8px);
+}
+
+.arr-savebar.is-dirty {
+  border-color: rgba(0, 240, 255, 0.5);
+  background: rgba(0, 240, 255, 0.08);
+}
+
+.arr-save {
+  background: #00f0ff;
+  color: #001014;
+  border: none;
+  font-weight: 600;
+  padding: 0.45rem 1.1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.arr-save:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.arr-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0.9rem;
+}
+
+.arr-card {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  touch-action: none; /* let dnd-kit own touch gestures */
+  user-select: none;
+  cursor: grab;
+}
+
+.arr-card.is-dragging {
+  cursor: grabbing;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55);
+  border-color: #00f0ff;
+}
+
+.arr-card img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+.arr-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 3;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #001014;
+  background: #00f0ff;
+  border-radius: 999px;
+}
+
+.arr-handle {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 3;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  font-size: 1.05rem;
+  line-height: 1;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  cursor: grab;
+}
+
+.arr-handle:active {
+  cursor: grabbing;
+}
+
+.arr-card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.55rem 0.65rem 0.7rem;
+}
+
+.arr-card-meta strong {
+  font-size: 0.85rem;
+  color: #fff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.arr-card-meta span {
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.arr-open {
+  margin-top: 0.35rem;
+  background: rgba(0, 240, 255, 0.1);
+  color: #00f0ff;
+  border: 1px solid rgba(0, 240, 255, 0.4);
+  padding: 0.35rem 0.5rem;
+  border-radius: 7px;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.arr-open:hover {
+  background: rgba(0, 240, 255, 0.18);
+}

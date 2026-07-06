@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import portfolioData from '../data/portfolio.json';
+import ArrangePanel from '../components/ArrangePanel';
 import './Admin.css';
 
 const CATEGORIES = portfolioData.categories.filter((c) => c !== 'All');
@@ -394,7 +395,7 @@ export default function Admin() {
 
   return (
     <main className="admin-wrapper">
-      <div className="admin-panel glass-panel" style={{ maxWidth: activeTab === 'library' ? '1200px' : '600px' }}>
+      <div className="admin-panel glass-panel" style={{ maxWidth: activeTab === 'library' || activeTab === 'arrange' ? '1200px' : '600px' }}>
         <div className="admin-header">
           <h1>Admin Panel</h1>
           <button onClick={handleLogout} className="admin-logout-btn">Log Out</button>
@@ -403,6 +404,7 @@ export default function Admin() {
         <div className="admin-tabs">
           <button className={`admin-tab ${activeTab === 'upload' ? 'active' : ''}`} onClick={() => setActiveTab('upload')}>Upload</button>
           <button className={`admin-tab ${activeTab === 'library' ? 'active' : ''}`} onClick={() => setActiveTab('library')}>Photo Library</button>
+          <button className={`admin-tab ${activeTab === 'arrange' ? 'active' : ''}`} onClick={() => setActiveTab('arrange')}>Arrange</button>
           <button className={`admin-tab ${activeTab === 'about' ? 'active' : ''}`} onClick={() => setActiveTab('about')}>About Page</button>
         </div>
 
@@ -565,6 +567,8 @@ export default function Admin() {
               </div>
             )}
           </div>
+        ) : activeTab === 'arrange' ? (
+          <ArrangePanel token={token} categories={CATEGORIES} />
         ) : activeTab === 'about' ? (
           <form onSubmit={handleAboutSave} className="admin-upload-form">
             <label>
