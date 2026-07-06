@@ -99,6 +99,21 @@
   }
 }
 
+/* Large screens: the 300px min track only leaves room for 2 columns inside the
+   container at many laptop widths. Force at least 3 per row, and 4 when there's
+   genuinely room for it. */
+@media (min-width: 900px) {
+  .masonry-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 1400px) {
+  .masonry-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
 .masonry-item {
   position: relative;
   cursor: default;
