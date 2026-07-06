@@ -1,4 +1,5 @@
 import { lazy, Suspense, useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import portfolioData from '../data/portfolio.json';
 import { lenisInstance } from '../utils/lenisInstance';
@@ -17,7 +18,20 @@ const byAlbumOrder = (a, b) => rank(a.albumOrder) - rank(b.albumOrder);
 
 export default function Portfolio() {
   const categories = portfolioData.categories;
-  const [filter, setFilter] = useState(categories[0] || 'Portraits');
+  // Category lives in the URL (?category=Travel) so a refresh — and shared
+  // links — keep the selected category instead of snapping back to the first.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlCategory = searchParams.get('category');
+  const filter = categories.includes(urlCategory) ? urlCategory : (categories[0] || 'Portraits');
+  const setFilter = (cat) =>
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.set('category', cat);
+        return next;
+      },
+      { replace: true }
+    );
   const [activeSession, setActiveSession] = useState(null);
   const [canvasReady, setCanvasReady] = useState(false);
   const [photos, setPhotos] = useState([]);
