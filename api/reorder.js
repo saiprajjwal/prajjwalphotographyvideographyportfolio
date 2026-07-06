@@ -40,8 +40,11 @@ export default async function handler(req, res) {
       // updates: [{ session: 'Studio 1', order: 1 }, ...]
       for (const item of updates) {
         if (!item.session) continue;
+        // Quote the tag: album names contain spaces ("Studio 1"), and an
+        // unquoted `tags=session_Studio 1` is parsed as `session_Studio` AND
+        // `1`, matching the wrong photos across albums.
         const searchResult = await cloudinary.search
-          .expression(`tags=session_${item.session.trim()}`)
+          .expression(`tags="session_${item.session.trim()}"`)
           .max_results(500)
           .execute();
           

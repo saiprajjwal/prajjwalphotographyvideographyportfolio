@@ -8,15 +8,24 @@ cloudinary.config({
 
 export default async function handler(req, res) {
   try {
-    const result = await cloudinary.search
-      .expression('folder:portfolio')
-      .with_field('context')
-      .with_field('tags')
-      .sort_by('created_at', 'desc')
-      .max_results(200)
-      .execute();
+    // Read via the Admin API, not the Search API. The Search API's context
+    // index is only *eventually consistent* — after the admin reorders albums
+    // or photos (which writes photo_order/album_order into context), the search
+    // index can lag for minutes, so the live site kept showing stale/no order.
+    // The Admin API reflects context writes immediately. (Cap: 500 resources.)
+    const result = await cloudinary.api.resources({
+      type: 'upload',
+      prefix: 'portfolio/',
+      context: true,
+      tags: true,
+      max_results: 500,
+    });
 
-    const photos = result.resources.map((resource) => {
+    const resources = (result.resources || []).sort(
+      (a, b) => new Date(b.created_at) - new Date(a.created_at)
+    );
+
+    const photos = resources.map((resource) => {
       const tags = resource.tags || [];
       const category = tags.find(t => !t.startsWith('session_') && !t.startsWith('cover_')) || 'Uncategorized';
       const sessionTag = tags.find(t => t.startsWith('session_'));
@@ -43,10 +52,11 @@ export default async function handler(req, res) {
       };
     });
 
-    // No caching: for a personal portfolio's traffic level, Cloudinary's
-    // Search API quota isn't a real concern, but a stale photo list after
-    // uploading directly undermines the point of a live admin panel.
-    res.setHeader('Cache-Control', 'no-store');
+    // Short edge cache: the Admin API is rate-limited (500/hr on the free
+    // plan), so serving every visitor from origin is risky under traffic.
+    // 30s at the edge caps origin hits while keeping admin edits near-live;
+    // stale-while-revalidate serves instantly and refreshes in the background.
+    res.setHeader('Cache-Control', 'public, s-maxage=30, stale-while-revalidate=300');
     res.status(200).json({ photos });
   } catch (error) {
     res.status(500).json({ error: error.message });

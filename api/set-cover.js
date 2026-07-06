@@ -28,9 +28,11 @@ export default async function handler(req, res) {
   try {
     const coverTag = `cover_${session.trim()}`;
 
-    // 1. Find any existing covers for this session
+    // 1. Find any existing covers for this session. Quote the tag — session
+    // names contain spaces, and an unquoted expression would match the wrong
+    // photos (parsing "cover_Studio 1" as "cover_Studio" AND "1").
     const searchResult = await cloudinary.search
-      .expression(`tags=${coverTag}`)
+      .expression(`tags="${coverTag}"`)
       .max_results(50)
       .execute();
 
