@@ -42,6 +42,8 @@ function App() {
   );
 
   const isEditorRoute = location.pathname === '/editor';
+  // Full-screen routes hide the marketing nav/footer for an app-like canvas.
+  const isChromelessRoute = isEditorRoute || location.pathname === '/admin';
 
   // Reset scroll on refresh/load and disable browser auto-scroll memory
   useEffect(() => {
@@ -115,7 +117,7 @@ function App() {
           />
         )}
       </AnimatePresence>
-      {!isEditorRoute && <Navigation />}
+      {!isChromelessRoute && <Navigation />}
       <AnimatePresence mode="wait" initial={false}>
         <Suspense fallback={
           <div style={{
@@ -145,7 +147,7 @@ function App() {
           </Routes>
         </Suspense>
       </AnimatePresence>
-      {!isEditorRoute && !isLanding && <Footer />}
+      {!isChromelessRoute && !isLanding && <Footer />}
 
       {/* Dynamic expanding glass ripples */}
       {ripples.map((ripple) => (

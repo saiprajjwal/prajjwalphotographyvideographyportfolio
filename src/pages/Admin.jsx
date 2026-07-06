@@ -1,7 +1,27 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
+import {
+  LayoutDashboard,
+  Upload as UploadIcon,
+  Images,
+  LayoutGrid,
+  UserRound,
+  LogOut,
+  Search,
+  FolderOpen,
+  Tag,
+  ImageOff,
+} from 'lucide-react';
 import portfolioData from '../data/portfolio.json';
 import ArrangePanel from '../components/ArrangePanel';
 import './Admin.css';
+
+const NAV = [
+  { id: 'overview', label: 'Overview', Icon: LayoutDashboard, subtitle: 'At a glance' },
+  { id: 'upload', label: 'Upload', Icon: UploadIcon, subtitle: 'Add new photos to your portfolio' },
+  { id: 'library', label: 'Library', Icon: Images, subtitle: 'Manage every photo' },
+  { id: 'arrange', label: 'Arrange', Icon: LayoutGrid, subtitle: 'Set album & photo order' },
+  { id: 'about', label: 'About', Icon: UserRound, subtitle: 'Edit your public profile' },
+];
 
 const CATEGORIES = portfolioData.categories.filter((c) => c !== 'All');
 
@@ -52,9 +72,11 @@ export default function Admin() {
   const [dragging, setDragging] = useState(false);
   const fileInputRef = useRef(null);
 
-  const [activeTab, setActiveTab] = useState('upload'); // 'upload' or 'library'
+  const [activeTab, setActiveTab] = useState('overview');
   const [libraryPhotos, setLibraryPhotos] = useState([]);
   const [loadingLibrary, setLoadingLibrary] = useState(false);
+  const [libFilter, setLibFilter] = useState('All');
+  const [libSearch, setLibSearch] = useState('');
   
   const [editingPhoto, setEditingPhoto] = useState(null);
   const [editCategory, setEditCategory] = useState('');
@@ -101,10 +123,43 @@ export default function Admin() {
   };
 
   useEffect(() => {
-    if (token && activeTab === 'library') {
+    if (token && (activeTab === 'library' || activeTab === 'overview')) {
       fetchLibrary();
     }
   }, [token, activeTab]);
+
+  // Live stats for the Overview view, derived from the fetched library.
+  const stats = useMemo(() => {
+    const sessions = new Set();
+    const covered = new Set();
+    const cats = new Set();
+    for (const p of libraryPhotos) {
+      if (p.category) cats.add(p.category);
+      if (p.session) {
+        sessions.add(p.session);
+        if (p.isCover) covered.add(p.session);
+      }
+    }
+    return {
+      photos: libraryPhotos.length,
+      albums: sessions.size,
+      categories: cats.size,
+      missingCover: sessions.size - covered.size,
+    };
+  }, [libraryPhotos]);
+
+  const filteredLibrary = useMemo(() => {
+    const q = libSearch.trim().toLowerCase();
+    return libraryPhotos.filter((p) => {
+      if (libFilter !== 'All' && p.category !== libFilter) return false;
+      if (!q) return true;
+      return (
+        (p.session || '').toLowerCase().includes(q) ||
+        (p.alt || '').toLowerCase().includes(q) ||
+        (p.category || '').toLowerCase().includes(q)
+      );
+    });
+  }, [libraryPhotos, libFilter, libSearch]);
 
   const handleDeletePhoto = async (id) => {
     if (!window.confirm('Are you sure you want to delete this photo?')) return;
@@ -376,40 +431,126 @@ export default function Admin() {
     return (
       <main className="admin-wrapper">
         <form className="admin-login-form glass-panel" onSubmit={handleLogin}>
-          <h1>Admin Login</h1>
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoFocus
-          />
-          <button type="submit" className="btn-glass" disabled={loggingIn}>
-            {loggingIn ? 'Checking...' : 'Log In'}
+          <div className="admin-login-brand">
+            <span className="admin-brand-mark">P</span>
+            <div>
+              <strong>Studio Admin</strong>
+              <span>Prajjwal Pandey Photography</span>
+            </div>
+          </div>
+          <label className="admin-field">
+            Password
+            <input
+              type="password"
+              placeholder="Enter your password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
+              autoFocus
+            />
+          </label>
+          <button type="submit" className="btn-glass admin-primary-btn" disabled={loggingIn}>
+            {loggingIn ? 'Checking…' : 'Log In'}
           </button>
-          {loginError && <p className="admin-error">{loginError}</p>}
+          {loginError && <p className="admin-error" role="alert">{loginError}</p>}
         </form>
       </main>
     );
   }
 
+  const currentView = NAV.find((n) => n.id === activeTab) || NAV[0];
+
   return (
-    <main className="admin-wrapper">
-      <div className="admin-panel glass-panel" style={{ maxWidth: activeTab === 'library' || activeTab === 'arrange' ? '1200px' : '600px' }}>
-        <div className="admin-header">
-          <h1>Admin Panel</h1>
-          <button onClick={handleLogout} className="admin-logout-btn">Log Out</button>
+    <div className="admin-shell">
+      <aside className="admin-sidebar">
+        <div className="admin-brand">
+          <span className="admin-brand-mark">P</span>
+          <div className="admin-brand-text">
+            <strong>Studio Admin</strong>
+            <span>Prajjwal Pandey</span>
+          </div>
         </div>
+        <nav className="admin-nav">
+          {NAV.map(({ id, label, Icon }) => (
+            <button
+              key={id}
+              className={`admin-nav-item ${activeTab === id ? 'active' : ''}`}
+              onClick={() => setActiveTab(id)}
+              aria-current={activeTab === id ? 'page' : undefined}
+            >
+              <Icon size={19} strokeWidth={1.8} />
+              <span>{label}</span>
+            </button>
+          ))}
+        </nav>
+      </aside>
 
-        <div className="admin-tabs">
-          <button className={`admin-tab ${activeTab === 'upload' ? 'active' : ''}`} onClick={() => setActiveTab('upload')}>Upload</button>
-          <button className={`admin-tab ${activeTab === 'library' ? 'active' : ''}`} onClick={() => setActiveTab('library')}>Photo Library</button>
-          <button className={`admin-tab ${activeTab === 'arrange' ? 'active' : ''}`} onClick={() => setActiveTab('arrange')}>Arrange</button>
-          <button className={`admin-tab ${activeTab === 'about' ? 'active' : ''}`} onClick={() => setActiveTab('about')}>About Page</button>
-        </div>
+      <div className="admin-main">
+        <header className="admin-topbar">
+          <div className="admin-topbar-title">
+            <h1>{currentView.label}</h1>
+            <p>{currentView.subtitle}</p>
+          </div>
+          <button onClick={handleLogout} className="admin-logout-btn">
+            <LogOut size={16} strokeWidth={1.8} />
+            <span>Log Out</span>
+          </button>
+        </header>
 
-        {activeTab === 'upload' ? (
-          <>
+        <div className="admin-content">
+          {activeTab === 'overview' && (
+            <div className="ov">
+              <div className="ov-stats">
+                {[
+                  { key: 'photos', label: 'Photos', Icon: Images, value: stats.photos },
+                  { key: 'albums', label: 'Albums', Icon: FolderOpen, value: stats.albums },
+                  { key: 'categories', label: 'Categories', Icon: Tag, value: stats.categories },
+                  { key: 'missing', label: 'Albums without a cover', Icon: ImageOff, value: stats.missingCover, warn: stats.missingCover > 0 },
+                ].map(({ key, label, Icon, value, warn }) => (
+                  <div key={key} className={`ov-stat ${warn ? 'is-warn' : ''} ${loadingLibrary && libraryPhotos.length === 0 ? 'is-loading' : ''}`}>
+                    <span className="ov-stat-icon"><Icon size={20} strokeWidth={1.8} /></span>
+                    <span className="ov-stat-value">{value}</span>
+                    <span className="ov-stat-label">{label}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="ov-actions">
+                <button className="ov-action" onClick={() => setActiveTab('upload')}>
+                  <UploadIcon size={18} strokeWidth={1.8} /> Upload photos
+                </button>
+                <button className="ov-action" onClick={() => setActiveTab('arrange')}>
+                  <LayoutGrid size={18} strokeWidth={1.8} /> Arrange albums
+                </button>
+                <button className="ov-action" onClick={() => setActiveTab('library')}>
+                  <Images size={18} strokeWidth={1.8} /> Manage library
+                </button>
+              </div>
+
+              <section className="ov-recent">
+                <div className="ov-section-head">
+                  <h2>Recent uploads</h2>
+                  <button className="ov-link" onClick={() => setActiveTab('library')}>View all →</button>
+                </div>
+                {libraryPhotos.length === 0 ? (
+                  <p className="admin-empty">
+                    {loadingLibrary ? 'Loading your library…' : 'No photos yet — head to Upload to add your first shots.'}
+                  </p>
+                ) : (
+                  <div className="ov-recent-grid">
+                    {libraryPhotos.slice(0, 8).map((p) => (
+                      <div key={p.id} className="ov-thumb">
+                        <img src={p.src} alt={p.alt} loading="lazy" />
+                        {p.session && <span className="ov-thumb-badge">{p.session}</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+            </div>
+          )}
+
+          {activeTab === 'upload' && (
             <form onSubmit={handleUpload} className="admin-upload-form">
           <label>
             Category
@@ -517,12 +658,46 @@ export default function Admin() {
                 })()}
           </button>
         </form>
-          </>
-        ) : activeTab === 'library' ? (
+          )}
+
+          {activeTab === 'library' && (
           <div className="admin-library">
-            {loadingLibrary ? <p>Loading library...</p> : (
+            <div className="lib-controls">
+              <div className="lib-search">
+                <Search size={16} strokeWidth={1.8} />
+                <input
+                  type="text"
+                  value={libSearch}
+                  onChange={(e) => setLibSearch(e.target.value)}
+                  placeholder="Search album, category or description…"
+                />
+              </div>
+              <div className="lib-chips">
+                {['All', ...CATEGORIES].map((c) => (
+                  <button
+                    key={c}
+                    className={`lib-chip ${libFilter === c ? 'active' : ''}`}
+                    onClick={() => setLibFilter(c)}
+                  >
+                    {c}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {loadingLibrary ? (
               <div className="admin-library-grid">
-                {libraryPhotos.map(photo => (
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <div key={i} className="admin-library-card is-skeleton" />
+                ))}
+              </div>
+            ) : filteredLibrary.length === 0 ? (
+              <p className="admin-empty">
+                {libraryPhotos.length === 0 ? 'No photos found.' : 'No photos match your filters.'}
+              </p>
+            ) : (
+              <div className="admin-library-grid">
+                {filteredLibrary.map(photo => (
                   <div key={photo.id} className="admin-library-card">
                     <img src={photo.src} alt={photo.alt} />
                     {editingPhoto?.id === photo.id ? (
@@ -563,13 +738,16 @@ export default function Admin() {
                     )}
                   </div>
                 ))}
-                {libraryPhotos.length === 0 && <p>No photos found.</p>}
               </div>
             )}
           </div>
-        ) : activeTab === 'arrange' ? (
-          <ArrangePanel token={token} categories={CATEGORIES} />
-        ) : activeTab === 'about' ? (
+          )}
+
+          {activeTab === 'arrange' && (
+            <ArrangePanel token={token} categories={CATEGORIES} />
+          )}
+
+          {activeTab === 'about' && (
           <form onSubmit={handleAboutSave} className="admin-upload-form">
             <label>
               Name
@@ -619,11 +797,12 @@ export default function Admin() {
               <input type="file" accept="image/*" onChange={e => setAboutHeadshot(e.target.files[0])} />
             </label>
             <button type="submit" className="btn-glass" disabled={savingAbout}>
-              {savingAbout ? 'Saving...' : 'Save About Page'}
+              {savingAbout ? 'Saving…' : 'Save About Page'}
             </button>
           </form>
-        ) : null}
+          )}
+        </div>
       </div>
-    </main>
+    </div>
   );
 }
