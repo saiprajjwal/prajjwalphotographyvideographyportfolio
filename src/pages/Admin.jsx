@@ -31,27 +31,61 @@ const CATEGORIES = portfolioData.categories.filter((c) => c !== 'All');
 // the long edge at 2560px keeps plenty of quality headroom.
 async function compressImage(file, maxSide = 2560, quality = 0.85) {
   if (!file.type.startsWith('image/')) return file;
-  let bitmap;
+  
+  let w, h;
+  let canvasSource;
+  
   try {
-    bitmap = await createImageBitmap(file);
-  } catch {
-    return file; // decode failed — let the server deal with the original
+    if (window.createImageBitmap) {
+      canvasSource = await createImageBitmap(file);
+      w = canvasSource.width;
+      h = canvasSource.height;
+    } else {
+      throw new Error('createImageBitmap not supported');
+    }
+  } catch (err) {
+    // Fallback for older browsers or formats that createImageBitmap rejects
+    canvasSource = await new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error('Image decode failed'));
+      img.src = URL.createObjectURL(file);
+    });
+    w = canvasSource.width;
+    h = canvasSource.height;
   }
-  const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
-  // Small enough already and a normal size? Skip re-encoding to preserve it.
-  if (scale === 1 && file.size <= 8 * 1024 * 1024) { bitmap.close?.(); return file; }
-  const w = Math.round(bitmap.width * scale);
-  const h = Math.round(bitmap.height * scale);
+
+  const scale = Math.min(1, maxSide / Math.max(w, h));
+  
+  // If no resizing needed and file is already under 8MB, keep original
+  if (scale === 1 && file.size <= 8 * 1024 * 1024) {
+    if (canvasSource.close) canvasSource.close();
+    return file;
+  }
+
+  const newW = Math.round(w * scale);
+  const newH = Math.round(h * scale);
   const canvas = document.createElement('canvas');
-  canvas.width = w;
-  canvas.height = h;
+  canvas.width = newW;
+  canvas.height = newH;
+  
   const ctx = canvas.getContext('2d');
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
-  ctx.drawImage(bitmap, 0, 0, w, h);
-  bitmap.close?.();
+  ctx.drawImage(canvasSource, 0, 0, newW, newH);
+  
+  if (canvasSource.close) canvasSource.close();
+  if (canvasSource.src) URL.revokeObjectURL(canvasSource.src);
+
   const blob = await new Promise((res) => canvas.toBlob(res, 'image/jpeg', quality));
-  if (!blob) return file;
+  
+  if (!blob) {
+    if (file.size > 8 * 1024 * 1024) {
+      throw new Error('Could not compress image. The file is too large (>8MB) to upload uncompressed.');
+    }
+    return file;
+  }
+  
   const name = file.name.replace(/\.[^.]+$/, '') + '.jpg';
   return new File([blob], name, { type: 'image/jpeg' });
 }

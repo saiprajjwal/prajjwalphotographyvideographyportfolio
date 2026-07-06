@@ -86,31 +86,24 @@
 
 .masonry-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 2rem;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
   padding: 2rem 0;
 }
 
-/* Tablet / narrow-desktop range: minmax(300px,1fr) can't quite fit 2 columns
-   here, collapsing to 1. Force 2 so no viewport width ever shows a single column. */
+/* Tablet / narrow-desktop range: Keep it at 2 columns */
 @media (min-width: 601px) and (max-width: 899px) {
   .masonry-grid {
     grid-template-columns: repeat(2, 1fr);
+    gap: 2rem;
   }
 }
 
-/* Large screens: the 300px min track only leaves room for 2 columns inside the
-   container at many laptop widths. Force at least 3 per row, and 4 when there's
-   genuinely room for it. */
+/* Large screens: Expand to a max of 3 columns, never 4 */
 @media (min-width: 900px) {
   .masonry-grid {
     grid-template-columns: repeat(3, 1fr);
-  }
-}
-
-@media (min-width: 1400px) {
-  .masonry-grid {
-    grid-template-columns: repeat(4, 1fr);
+    gap: 2rem;
   }
 }
 
