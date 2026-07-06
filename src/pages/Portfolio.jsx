@@ -1,6 +1,7 @@
 import { lazy, Suspense, useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import portfolioData from '../data/portfolio.json';
+import { lenisInstance } from '../utils/lenisInstance';
 import './Portfolio.css';
 
 // Loaded on demand: keeps three.js/@react-three/drei out of this route's critical chunk.
@@ -100,15 +101,21 @@ export default function Portfolio() {
     ? categoryPhotos.filter(p => p.session === activeSession).sort(byPhotoOrder)
     : [];
 
-  // Lock body scroll when overlay is active
+  // Lock scroll when the album overlay is active. Lenis drives the real window
+  // scroll and ignores `body { overflow: hidden }`, so we must pause it too —
+  // otherwise the background scrolls behind the modal. (lenisInstance is null
+  // for reduced-motion users / the editor, where the body lock alone suffices.)
   useEffect(() => {
     if (activeSession) {
       document.body.style.overflow = 'hidden';
+      lenisInstance.current?.stop();
     } else {
       document.body.style.overflow = '';
+      lenisInstance.current?.start();
     }
     return () => {
       document.body.style.overflow = '';
+      lenisInstance.current?.start();
     };
   }, [activeSession]);
 
@@ -303,6 +310,7 @@ export default function Portfolio() {
           >
             <motion.div
               className="album-overlay"
+              data-lenis-prevent
               initial={{ y: lightMotion ? 0 : 40, opacity: 0, scale: lightMotion ? 1 : 0.98 }}
               animate={{ y: 0, opacity: 1, scale: 1 }}
               exit={{ y: lightMotion ? 0 : 20, opacity: 0, scale: lightMotion ? 1 : 0.98 }}

@@ -2,6 +2,7 @@ import { useState, useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Lenis from 'lenis';
+import { lenisInstance } from './utils/lenisInstance';
 import Navigation from './components/Navigation';
 import Footer from './components/Footer';
 import Preloader from './components/Preloader';
@@ -70,10 +71,11 @@ function App() {
       smoothWheel: true,
       touchMultiplier: 1.6,
     });
+    lenisInstance.current = lenis;
     let raf;
     const loop = (time) => { lenis.raf(time); raf = requestAnimationFrame(loop); };
     raf = requestAnimationFrame(loop);
-    return () => { cancelAnimationFrame(raf); lenis.destroy(); };
+    return () => { cancelAnimationFrame(raf); lenis.destroy(); lenisInstance.current = null; };
   }, [isEditorRoute]);
 
   // Block right-click ("Save image as", "Open image in new tab", "Copy image")
