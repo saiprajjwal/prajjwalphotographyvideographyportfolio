@@ -22,6 +22,10 @@ export default function Portfolio() {
   }, []);
   
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // Weaker devices drop frames when every grid photo flies off-screen at once,
+  // so the transition feels slow/janky. Detect low-power hardware (or a
+  // reduced-motion preference) and swap the heavy fly-off for a cheap fade.
+  const lightMotion = reducedMotion || (navigator.hardwareConcurrency || 8) <= 4;
 
   useEffect(() => {
     if (introDone) return;
@@ -244,17 +248,19 @@ export default function Portfolio() {
                     key={photo.id}
                     layout="position"
                     initial={{ opacity: 0, y: 20 }}
-                    animate={activeSession ? {
+                    animate={activeSession ? (lightMotion ? {
+                      opacity: 0
+                    } : {
                       opacity: 0,
                       x: i % 2 === 0 ? '-100vw' : '100vw',
                       y: (i % 3) * 50,
                       rotate: i % 2 === 0 ? -15 : 15
-                    } : { opacity: 1, y: 0, x: 0, rotate: 0 }}
+                    }) : { opacity: 1, y: 0, x: 0, rotate: 0 }}
                     exit={{ opacity: 0, scale: 0.95 }}
                     transition={{
-                      duration: activeSession ? 0.8 : 0.5,
+                      duration: activeSession ? (lightMotion ? 0.3 : 0.8) : 0.5,
                       ease: [0.16, 1, 0.3, 1],
-                      layout: { duration: 0.5, ease: [0.16, 1, 0.3, 1] }
+                      layout: { duration: lightMotion ? 0 : 0.5, ease: [0.16, 1, 0.3, 1] }
                     }}
                     className="masonry-item"
                     onMouseMove={handleMouseMove}
@@ -281,18 +287,18 @@ export default function Portfolio() {
         {activeSession && (
           <motion.div
             className="album-modal-backdrop"
-            initial={{ opacity: 0, backdropFilter: 'blur(0px)' }}
-            animate={{ opacity: 1, backdropFilter: 'blur(4px)' }}
-            exit={{ opacity: 0, backdropFilter: 'blur(0px)' }}
-            transition={{ duration: 0.4 }}
+            initial={{ opacity: 0, backdropFilter: lightMotion ? undefined : 'blur(0px)' }}
+            animate={{ opacity: 1, backdropFilter: lightMotion ? undefined : 'blur(4px)' }}
+            exit={{ opacity: 0, backdropFilter: lightMotion ? undefined : 'blur(0px)' }}
+            transition={{ duration: lightMotion ? 0.25 : 0.4 }}
             onClick={() => setActiveSession(null)}
           >
             <motion.div
               className="album-overlay"
-              initial={{ y: 40, opacity: 0, scale: 0.98 }}
+              initial={{ y: lightMotion ? 0 : 40, opacity: 0, scale: lightMotion ? 1 : 0.98 }}
               animate={{ y: 0, opacity: 1, scale: 1 }}
-              exit={{ y: 20, opacity: 0, scale: 0.98 }}
-              transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+              exit={{ y: lightMotion ? 0 : 20, opacity: 0, scale: lightMotion ? 1 : 0.98 }}
+              transition={{ duration: lightMotion ? 0.3 : 0.5, ease: [0.16, 1, 0.3, 1] }}
               onClick={(e) => e.stopPropagation()}
             >
               <div className="album-overlay-header container">
