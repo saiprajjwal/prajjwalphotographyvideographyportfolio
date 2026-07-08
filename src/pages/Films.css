@@ -423,9 +423,16 @@
    Responsive
    -------------------------------------------------------------------------- */
 @media (max-width: 900px) {
+  .showcase-hero {
+    aspect-ratio: auto;
+    min-height: 60vh; /* Give enough vertical room on mobile */
+  }
   .showcase-hero-content {
     width: 90%;
-    bottom: 10%;
+    bottom: 8%; /* Push text up slightly to avoid collision */
+  }
+  .showcase-row-section {
+    margin-top: -4vh; /* Reduce negative margin so it doesn't overlap buttons */
   }
   .showcase-row-track {
     grid-template-columns: repeat(2, 1fr);
