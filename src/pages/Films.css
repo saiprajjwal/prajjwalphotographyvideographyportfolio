@@ -425,20 +425,40 @@
 @media (max-width: 900px) {
   .showcase-hero {
     aspect-ratio: auto;
-    min-height: 60vh; /* Give enough vertical room on mobile */
-    background-color: #000;
+    min-height: auto;
+    height: auto;
+    display: flex;
+    flex-direction: column;
+    background-color: transparent;
+  }
+  .showcase-hero-background {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    width: 100%;
+    height: auto;
   }
   .showcase-hero-background img,
   .showcase-hero-img {
-    object-fit: contain;
-    object-position: top center;
+    object-fit: cover;
+    object-position: center;
+  }
+  .showcase-hero-vignette-bottom,
+  .showcase-hero-vignette-left {
+    display: none; /* Not needed when stacking */
   }
   .showcase-hero-content {
-    width: 90%;
-    bottom: 5%; /* Push text up slightly to avoid collision */
+    position: relative;
+    width: 92%;
+    bottom: auto;
+    left: auto;
+    margin: 1.5rem auto 2rem;
+    padding: 0;
+  }
+  .showcase-hero-title {
+    font-size: clamp(2rem, 5vw, 3rem); /* Slightly smaller on mobile */
   }
   .showcase-row-section {
-    margin-top: -4vh; /* Reduce negative margin so it doesn't overlap buttons */
+    margin-top: 0; /* Remove negative margin on mobile to prevent overlap */
   }
   .showcase-row-track {
     grid-template-columns: repeat(2, 1fr);
