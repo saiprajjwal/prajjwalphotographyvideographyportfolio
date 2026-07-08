@@ -422,6 +422,15 @@
 /* --------------------------------------------------------------------------
    Responsive
    -------------------------------------------------------------------------- */
+@media (min-width: 901px) and (max-width: 1200px) {
+  .showcase-hero-content {
+    width: 65%;
+    bottom: 20%; /* Push text up higher to avoid collision */
+  }
+  .showcase-row-section {
+    margin-top: -3rem; /* Use a small static margin instead of -8vh which is huge on tall screens */
+  }
+}
 @media (max-width: 900px) {
   .showcase-hero {
     aspect-ratio: auto;
