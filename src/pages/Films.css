@@ -426,10 +426,16 @@
   .showcase-hero {
     aspect-ratio: auto;
     min-height: 60vh; /* Give enough vertical room on mobile */
+    background-color: #000;
+  }
+  .showcase-hero-background img,
+  .showcase-hero-img {
+    object-fit: contain;
+    object-position: top center;
   }
   .showcase-hero-content {
     width: 90%;
-    bottom: 8%; /* Push text up slightly to avoid collision */
+    bottom: 5%; /* Push text up slightly to avoid collision */
   }
   .showcase-row-section {
     margin-top: -4vh; /* Reduce negative margin so it doesn't overlap buttons */
