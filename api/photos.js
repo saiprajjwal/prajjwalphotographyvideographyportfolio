@@ -37,11 +37,6 @@ export default async function handler(req, res) {
         resource.context?.alt ||
         `${category} photo by Prajjwal Pandey`;
         
-      const cameraSettings =
-        resource.context?.custom?.camera_settings ||
-        resource.context?.camera_settings ||
-        '';
-         
       const photoOrder = parseInt(resource.context?.custom?.photo_order, 10) || 0;
       const albumOrder = parseInt(resource.context?.custom?.album_order, 10) || 0;
 
@@ -54,7 +49,6 @@ export default async function handler(req, res) {
         isCover,
         photoOrder,
         albumOrder,
-        cameraSettings,
       };
     });
 

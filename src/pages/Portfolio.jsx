@@ -297,12 +297,7 @@ export default function Portfolio() {
                     onClick={photo.isSessionCover ? () => setActiveSession(photo.sessionName) : undefined}
                     style={photo.isSessionCover ? { cursor: 'pointer' } : {}}
                   >
-                  <div className="letterbox-bar top-bar">
-                    <span>{photo.isSessionCover ? `ALBUM: ${photo.sessionName}` : photo.category}</span>
-                  </div>
-                  <div className="letterbox-bar bottom-bar">
-                    <span>{photo.cameraSettings || 'Sony a7S III · 50mm'}</span>
-                  </div>
+                  <div className="card-badge">{photo.isSessionCover ? photo.sessionName : photo.category}</div>
                   <img
                     src={photo.src}
                     srcSet={`
@@ -362,12 +357,6 @@ export default function Portfolio() {
                       onMouseMove={handleMouseMove}
                       onMouseLeave={handleMouseLeave}
                     >
-                      <div className="letterbox-bar top-bar">
-                        <span>{photo.session || photo.category}</span>
-                      </div>
-                      <div className="letterbox-bar bottom-bar">
-                        <span>{photo.cameraSettings || 'Sony a7S III · 50mm'}</span>
-                      </div>
                       <img
                         src={photo.src}
                         srcSet={`

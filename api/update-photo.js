@@ -19,7 +19,7 @@ export default async function handler(req, res) {
     return;
   }
 
-  const { id, category, session, alt, cameraSettings } = req.body || {};
+  const { id, category, session } = req.body || {};
   if (!id) {
     res.status(400).json({ error: 'id (public_id) is required' });
     return;
@@ -32,26 +32,13 @@ export default async function handler(req, res) {
   try {
     const tags = session ? [category, `session_${session.trim()}`] : [category];
     
-    const explicitParams = {
+    // Explicit API allows us to rewrite the tags of an existing asset
+    const result = await cloudinary.uploader.explicit(id, {
       type: 'upload',
       tags: tags
-    };
-
-    const contextParts = [];
-    if (alt) {
-      contextParts.push(`alt=${alt.trim()}`);
-    }
-    if (cameraSettings) {
-      contextParts.push(`camera_settings=${cameraSettings.trim()}`);
-    }
+    });
     
-    if (contextParts.length > 0) {
-      explicitParams.context = contextParts.join('|');
-    }
-    
-    const result = await cloudinary.uploader.explicit(id, explicitParams);
-    
-    res.status(200).json({ success: true, tags: result.tags, context: result.context });
+    res.status(200).json({ success: true, tags: result.tags });
   } catch (error) {
     res.status(500).json({ error: 'Server error during update', message: error.message });
   }
