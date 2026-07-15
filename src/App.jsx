@@ -18,6 +18,7 @@ const Contact = lazy(() => import('./pages/Contact'));
 const Admin = lazy(() => import('./pages/Admin'));
 const Editor = lazy(() => import('./pages/Editor'));
 const NotFound = lazy(() => import('./pages/NotFound'));
+const Store = lazy(() => import('./pages/Store'));
 
 // Lens Shutter Transition Wrapper
 function PageTransition({ children }) {
@@ -145,6 +146,7 @@ function App() {
             <Route path="/contact" element={<PageTransition><Contact /></PageTransition>} />
             <Route path="/admin" element={<PageTransition><Admin /></PageTransition>} />
             <Route path="/editor" element={<PageTransition><Editor /></PageTransition>} />
+            <Route path="/store" element={<PageTransition><Store /></PageTransition>} />
             <Route path="*" element={<PageTransition><NotFound /></PageTransition>} />
           </Routes>
         </Suspense>

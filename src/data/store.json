@@ -1,0 +1,70 @@
+{
+  "products": [
+    {
+      "id": "1",
+      "title": "Cinematic Moody Preset Pack",
+      "type": "preset",
+      "price": 15,
+      "currency": "$",
+      "description": "A collection of 5 Lightroom presets designed to give your photos a dark, cinematic, and moody look. Perfect for street photography, night scenes, and dramatic portraits.",
+      "beforeImage": "https://images.unsplash.com/photo-1542038784456-1ea8e935640e?q=80&w=2070&auto=format&fit=crop&sat=-50",
+      "afterImage": "https://images.unsplash.com/photo-1542038784456-1ea8e935640e?q=80&w=2070&auto=format&fit=crop",
+      "link": "https://gumroad.com"
+    },
+    {
+      "id": "2",
+      "title": "Vintage Film LUTs",
+      "type": "lut",
+      "price": 25,
+      "currency": "$",
+      "description": "10 high-quality LUTs engineered to emulate the classic look of Kodak and Fujifilm stocks for your video projects. Includes halation curves, grain emulation, and authentic color shifts.",
+      "beforeImage": "https://images.unsplash.com/photo-1485846234645-a62644f84728?q=80&w=2070&auto=format&fit=crop&sat=-30",
+      "afterImage": "https://images.unsplash.com/photo-1485846234645-a62644f84728?q=80&w=2070&auto=format&fit=crop",
+      "link": "https://gumroad.com"
+    },
+    {
+      "id": "3",
+      "title": "Starter Pack - Golden Hour",
+      "type": "preset",
+      "price": 0,
+      "currency": "$",
+      "description": "Enhance your sunset and sunrise photos instantly. Includes 3 free presets for achieving perfect golden hour tones, warming up highlights, and softening shadows.",
+      "beforeImage": "https://images.unsplash.com/photo-1472214103451-9374bd1c798e?q=80&w=2070&auto=format&fit=crop&sat=-40&bri=-10",
+      "afterImage": "https://images.unsplash.com/photo-1472214103451-9374bd1c798e?q=80&w=2070&auto=format&fit=crop",
+      "link": "https://gumroad.com"
+    },
+    {
+      "id": "4",
+      "title": "Cyberpunk Neon LUT",
+      "type": "lut",
+      "price": 0,
+      "currency": "$",
+      "description": "Transform your night footage with this free neon-infused cyberpunk LUT. Works perfectly with Sony S-Log and flat profiles, enhancing blues and magentas.",
+      "beforeImage": "https://images.unsplash.com/photo-1555679427-1f6dfcce943b?q=80&w=2070&auto=format&fit=crop&sat=-60",
+      "afterImage": "https://images.unsplash.com/photo-1555679427-1f6dfcce943b?q=80&w=2070&auto=format&fit=crop",
+      "link": "https://gumroad.com"
+    },
+    {
+      "id": "5",
+      "title": "Minimalist Architecture",
+      "type": "preset",
+      "price": 10,
+      "currency": "$",
+      "description": "Clean, sharp, and high-contrast presets specifically designed for architectural and real-estate photography. Removes color casts and perfectly balances white points.",
+      "beforeImage": "https://images.unsplash.com/photo-1600607688969-a5bfcd646154?q=80&w=2070&auto=format&fit=crop&sat=-30&bri=-10",
+      "afterImage": "https://images.unsplash.com/photo-1600607688969-a5bfcd646154?q=80&w=2070&auto=format&fit=crop",
+      "link": "https://gumroad.com"
+    },
+    {
+      "id": "6",
+      "title": "Wedding Tones Vol. 1",
+      "type": "lut",
+      "price": 35,
+      "currency": "$",
+      "description": "Professional color grading LUTs for wedding filmmakers. Gives skin tones a beautiful, creamy finish while preserving the natural vibrance of the surrounding environment.",
+      "beforeImage": "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?q=80&w=2070&auto=format&fit=crop&sat=-20",
+      "afterImage": "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?q=80&w=2070&auto=format&fit=crop",
+      "link": "https://gumroad.com"
+    }
+  ]
+}
