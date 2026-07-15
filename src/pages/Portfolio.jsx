@@ -298,7 +298,6 @@ export default function Portfolio() {
                     style={photo.isSessionCover ? { cursor: 'pointer' } : {}}
                   >
                   <div className="card-badge">{photo.isSessionCover ? photo.sessionName : photo.category}</div>
-                  <div className="light-leak"></div>
                   <img
                     src={photo.src}
                     srcSet={`
@@ -358,7 +357,6 @@ export default function Portfolio() {
                       onMouseMove={handleMouseMove}
                       onMouseLeave={handleMouseLeave}
                     >
-                      <div className="light-leak"></div>
                       <img
                         src={photo.src}
                         srcSet={`
