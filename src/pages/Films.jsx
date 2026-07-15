@@ -213,66 +213,67 @@ export default function Films() {
           </div>
         </div>
 
-        {/* Showcase Grid Rows */}
-        <motion.div 
-          className="showcase-row-section"
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: doorsOpen ? 1 : 0, y: doorsOpen ? 0 : 30 }}
-          transition={{ duration: 0.7, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
-        >
-          <h2 className="showcase-row-title">Recent Masterpieces</h2>
-          <div className="showcase-row-track">
-            {rowVideos.map((video) => (
-              <div
-                key={video.id}
-                className="showcase-thumbnail-wrapper"
-                onMouseEnter={() => setHoveredVideo(video)}
-                onMouseLeave={() => setHoveredVideo(null)}
-              >
-                <VideoCard video={video} onPlay={() => setActiveVideo(video)} />
-              </div>
-            ))}
-          </div>
-        </motion.div>
-
-        {reels.length > 0 && (
+        <div className="showcase-scrollable-content">
+          {/* Showcase Grid Rows */}
           <motion.div 
             className="showcase-row-section"
-            style={{ marginTop: '3rem' }} /* Override the negative margin used for the first row */
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: doorsOpen ? 1 : 0, y: doorsOpen ? 0 : 30 }}
-            transition={{ duration: 0.7, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: 0.7, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
           >
-            <h2 className="showcase-row-title">Short Form & Reels</h2>
-            <div className="showcase-scroll-container">
-              <button className="scroll-arrow scroll-left" onClick={() => scrollReels('left')} aria-label="Scroll left">
-                <ChevronLeft size={32} />
-              </button>
-              <div
-                className="showcase-scroll-track"
-                ref={reelsTrackRef}
-                onPointerDown={onReelsPointerDown}
-                onPointerMove={onReelsPointerMove}
-                onPointerUp={endReelsDrag}
-                onPointerCancel={endReelsDrag}
-                onPointerLeave={endReelsDrag}
-                onClickCapture={onReelsClickCapture}
-              >
-                {reels.map((videoId, i) => (
-                  <TikTokReel
-                    key={videoId}
-                    videoId={videoId}
-                    onOpen={() => setActiveReelIndex(i)}
-                  />
-                ))}
-              </div>
-              <button className="scroll-arrow scroll-right" onClick={() => scrollReels('right')} aria-label="Scroll right">
-                <ChevronRight size={32} />
-              </button>
+            <h2 className="showcase-row-title">Recent Masterpieces</h2>
+            <div className="showcase-row-track">
+              {rowVideos.map((video) => (
+                <div
+                  key={video.id}
+                  className="showcase-thumbnail-wrapper"
+                  onMouseEnter={() => setHoveredVideo(video)}
+                  onMouseLeave={() => setHoveredVideo(null)}
+                >
+                  <VideoCard video={video} onPlay={() => setActiveVideo(video)} />
+                </div>
+              ))}
             </div>
           </motion.div>
-        )}
-        
+
+          {reels.length > 0 && (
+            <motion.div 
+              className="showcase-row-section"
+              style={{ marginTop: '3rem' }} /* Override the negative margin used for the first row */
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: doorsOpen ? 1 : 0, y: doorsOpen ? 0 : 30 }}
+              transition={{ duration: 0.7, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <h2 className="showcase-row-title">Short Form & Reels</h2>
+              <div className="showcase-scroll-container">
+                <button className="scroll-arrow scroll-left" onClick={() => scrollReels('left')} aria-label="Scroll left">
+                  <ChevronLeft size={32} />
+                </button>
+                <div
+                  className="showcase-scroll-track"
+                  ref={reelsTrackRef}
+                  onPointerDown={onReelsPointerDown}
+                  onPointerMove={onReelsPointerMove}
+                  onPointerUp={endReelsDrag}
+                  onPointerCancel={endReelsDrag}
+                  onPointerLeave={endReelsDrag}
+                  onClickCapture={onReelsClickCapture}
+                >
+                  {reels.map((videoId, i) => (
+                    <TikTokReel
+                      key={videoId}
+                      videoId={videoId}
+                      onOpen={() => setActiveReelIndex(i)}
+                    />
+                  ))}
+                </div>
+                <button className="scroll-arrow scroll-right" onClick={() => scrollReels('right')} aria-label="Scroll right">
+                  <ChevronRight size={32} />
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </div>
       </main>
 
       {/* Cinematic Fullscreen Lightbox Modal */}
