@@ -1,15 +1,32 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingBag, Filter, Download } from 'lucide-react';
-import storeData from '../data/store.json';
+import defaultStoreData from '../data/store.json';
 import ProductModal from '../components/ProductModal';
 import './Store.css';
 
 export default function Store() {
   const [filter, setFilter] = useState('all');
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [products, setProducts] = useState(defaultStoreData.products);
 
-  const filteredProducts = storeData.products.filter(product => {
+  useEffect(() => {
+    fetch('/api/store')
+      .then(res => {
+        if (!res.ok) throw new Error('Store data not found');
+        return res.json();
+      })
+      .then(data => {
+        if (data && Array.isArray(data.products)) {
+          setProducts(data.products);
+        }
+      })
+      .catch(() => {
+        // Fallback to local store data
+      });
+  }, []);
+
+  const filteredProducts = products.filter(product => {
     if (filter === 'all') return true;
     if (filter === 'free') return product.price === 0;
     if (filter === 'paid') return product.price > 0;

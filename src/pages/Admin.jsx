@@ -10,8 +10,10 @@ import {
   FolderOpen,
   Tag,
   ImageOff,
+  ShoppingBag,
 } from 'lucide-react';
 import portfolioData from '../data/portfolio.json';
+import defaultStoreData from '../data/store.json';
 import ArrangePanel from '../components/ArrangePanel';
 import './Admin.css';
 
@@ -20,6 +22,7 @@ const NAV = [
   { id: 'upload', label: 'Upload', Icon: UploadIcon, subtitle: 'Add new photos to your portfolio' },
   { id: 'library', label: 'Library', Icon: Images, subtitle: 'Manage every photo' },
   { id: 'arrange', label: 'Arrange', Icon: LayoutGrid, subtitle: 'Set album & photo order' },
+  { id: 'store', label: 'Store', Icon: ShoppingBag, subtitle: 'Manage presets and LUTs' },
   { id: 'about', label: 'About', Icon: UserRound, subtitle: 'Edit your public profile' },
 ];
 
@@ -126,6 +129,21 @@ export default function Admin() {
   
   const [savingAbout, setSavingAbout] = useState(false);
 
+  // Store Management State
+  const [storeProducts, setStoreProducts] = useState(defaultStoreData.products);
+  const [loadingStore, setLoadingStore] = useState(false);
+  const [savingStore, setSavingStore] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null); // 'new' or product object
+  const [prodTitle, setProdTitle] = useState('');
+  const [prodType, setProdType] = useState('preset');
+  const [prodPrice, setProdPrice] = useState(0);
+  const [prodDesc, setProdDesc] = useState('');
+  const [prodLink, setProdLink] = useState('');
+  const [prodBeforeFile, setProdBeforeFile] = useState(null);
+  const [prodAfterFile, setProdAfterFile] = useState(null);
+  const [prodBeforeUrl, setProdBeforeUrl] = useState('');
+  const [prodAfterUrl, setProdAfterUrl] = useState('');
+
   useEffect(() => {
     fetch('/api/about')
       .then(res => res.ok ? res.json() : null)
@@ -142,6 +160,27 @@ export default function Admin() {
         console.error("Failed to load portfolio metadata:", error);
       });
   }, []);
+
+  const fetchStore = async () => {
+    setLoadingStore(true);
+    try {
+      const res = await fetch('/api/store');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.products) setStoreProducts(data.products);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingStore(false);
+    }
+  };
+
+  useEffect(() => {
+    if (token && (activeTab === 'store' || activeTab === 'overview')) {
+      fetchStore();
+    }
+  }, [token, activeTab]);
 
   const fetchLibrary = async () => {
     setLoadingLibrary(true);
@@ -459,6 +498,145 @@ export default function Admin() {
     } finally {
       setSavingAbout(false);
     }
+  };
+
+  const uploadStoreImage = async (file, fieldName, productName) => {
+    const sigRes = await fetch('/api/get-upload-signature', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ category: 'Store', session: fieldName, altText: productName }),
+    });
+    const sigData = await sigRes.json();
+    if (!sigRes.ok) throw new Error(sigData.error || 'Failed to get upload signature');
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('api_key', sigData.apiKey);
+    formData.append('timestamp', sigData.timestamp);
+    formData.append('signature', sigData.signature);
+    formData.append('folder', sigData.folder);
+    formData.append('tags', sigData.tags);
+    formData.append('context', sigData.context);
+
+    const uploadRes = await fetch(
+      `https://api.cloudinary.com/v1_1/${sigData.cloudName}/image/upload`,
+      { method: 'POST', body: formData }
+    );
+    const uploadData = await uploadRes.json();
+    if (!uploadRes.ok) throw new Error(uploadData.error?.message || 'Upload failed');
+    return uploadData.secure_url;
+  };
+
+  const handleSaveProduct = async (e) => {
+    e.preventDefault();
+    setSavingStore(true);
+    try {
+      let finalBeforeUrl = prodBeforeUrl;
+      let finalAfterUrl = prodAfterUrl;
+
+      if (prodBeforeFile) {
+        finalBeforeUrl = await uploadStoreImage(prodBeforeFile, 'BeforeImage', prodTitle);
+      }
+      if (prodAfterFile) {
+        finalAfterUrl = await uploadStoreImage(prodAfterFile, 'AfterImage', prodTitle);
+      }
+
+      const productPayload = {
+        id: editingProduct === 'new' ? Date.now().toString() : editingProduct.id,
+        title: prodTitle,
+        type: prodType,
+        price: Number(prodPrice),
+        currency: '$',
+        description: prodDesc,
+        beforeImage: finalBeforeUrl,
+        afterImage: finalAfterUrl,
+        link: prodLink
+      };
+
+      let updatedProducts = [];
+      if (editingProduct === 'new') {
+        updatedProducts = [...storeProducts, productPayload];
+      } else {
+        updatedProducts = storeProducts.map(p => p.id === editingProduct.id ? productPayload : p);
+      }
+
+      const res = await fetch('/api/update-store', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ products: updatedProducts })
+      });
+
+      if (!res.ok) throw new Error('Failed to save store data');
+      
+      setStoreProducts(updatedProducts);
+      setEditingProduct(null);
+      clearProductForm();
+      alert('Product saved successfully!');
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setSavingStore(false);
+    }
+  };
+
+  const handleDeleteProduct = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this product?')) return;
+    setSavingStore(true);
+    try {
+      const updatedProducts = storeProducts.filter(p => p.id !== id);
+      const res = await fetch('/api/update-store', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ products: updatedProducts })
+      });
+
+      if (!res.ok) throw new Error('Failed to delete product');
+
+      setStoreProducts(updatedProducts);
+      alert('Product deleted successfully!');
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setSavingStore(false);
+    }
+  };
+
+  const startEditingProduct = (product) => {
+    setEditingProduct(product);
+    setProdTitle(product.title);
+    setProdType(product.type);
+    setProdPrice(product.price);
+    setProdDesc(product.description);
+    setProdLink(product.link);
+    setProdBeforeUrl(product.beforeImage);
+    setProdAfterUrl(product.afterImage);
+    setProdBeforeFile(null);
+    setProdAfterFile(null);
+  };
+
+  const startAddingProduct = () => {
+    setEditingProduct('new');
+    setProdTitle('');
+    setProdType('preset');
+    setProdPrice(0);
+    setProdDesc('');
+    setProdLink('');
+    setProdBeforeUrl('');
+    setProdAfterUrl('');
+    setProdBeforeFile(null);
+    setProdAfterFile(null);
+  };
+
+  const clearProductForm = () => {
+    setProdTitle('');
+    setProdType('preset');
+    setProdPrice(0);
+    setProdDesc('');
+    setProdLink('');
+    setProdBeforeUrl('');
+    setProdAfterUrl('');
+    setProdBeforeFile(null);
+    setProdAfterFile(null);
   };
 
   if (!token) {
@@ -779,6 +957,102 @@ export default function Admin() {
 
           {activeTab === 'arrange' && (
             <ArrangePanel token={token} categories={CATEGORIES} />
+          )}
+
+          {activeTab === 'store' && (
+            <div className="admin-store">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+                <h2>Products Directory</h2>
+                {!editingProduct && (
+                  <button onClick={startAddingProduct} className="btn-glass" style={{ margin: 0 }}>
+                    + Add New Product
+                  </button>
+                )}
+              </div>
+
+              {editingProduct ? (
+                <form onSubmit={handleSaveProduct} className="admin-upload-form glass-panel" style={{ padding: '2rem' }}>
+                  <h3>{editingProduct === 'new' ? 'New Product Details' : `Edit: ${prodTitle}`}</h3>
+                  
+                  <label>
+                    Product Title
+                    <input type="text" value={prodTitle} onChange={e => setProdTitle(e.target.value)} required />
+                  </label>
+
+                  <div style={{ display: 'flex', gap: '1.5rem' }}>
+                    <label style={{ flex: 1 }}>
+                      Product Type
+                      <select value={prodType} onChange={e => setProdType(e.target.value)}>
+                        <option value="preset">Preset</option>
+                        <option value="lut">LUT</option>
+                      </select>
+                    </label>
+                    <label style={{ flex: 1 }}>
+                      Price (USD)
+                      <input type="number" value={prodPrice} onChange={e => setProdPrice(e.target.value)} min="0" required />
+                    </label>
+                  </div>
+
+                  <label>
+                    Description
+                    <textarea value={prodDesc} onChange={e => setProdDesc(e.target.value)} rows="4" required />
+                  </label>
+
+                  <label>
+                    Gumroad/Lemon Squeezy Link
+                    <input type="url" value={prodLink} onChange={e => setProdLink(e.target.value)} placeholder="https://gumroad.com/..." required />
+                  </label>
+
+                  <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '1.5rem' }}>
+                    <div style={{ flex: 1 }}>
+                      <label>
+                        Before Image (Unedited)
+                        {prodBeforeUrl && <img src={prodBeforeUrl} alt="Before Preview" style={{ width: '100px', height: '60px', objectFit: 'cover', margin: '0.5rem 0', borderRadius: '4px', display: 'block' }} />}
+                        <input type="file" accept="image/*" onChange={e => setProdBeforeFile(e.target.files[0])} required={editingProduct === 'new'} />
+                      </label>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <label>
+                        After Image (Edited)
+                        {prodAfterUrl && <img src={prodAfterUrl} alt="After Preview" style={{ width: '100px', height: '60px', objectFit: 'cover', margin: '0.5rem 0', borderRadius: '4px', display: 'block' }} />}
+                        <input type="file" accept="image/*" onChange={e => setProdAfterFile(e.target.files[0])} required={editingProduct === 'new'} />
+                      </label>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '1rem' }}>
+                    <button type="submit" className="btn-glass" disabled={savingStore} style={{ margin: 0, flex: 1 }}>
+                      {savingStore ? 'Saving Product…' : 'Save Product'}
+                    </button>
+                    <button type="button" onClick={() => setEditingProduct(null)} className="cancel-btn" style={{ margin: 0, padding: '0 2rem' }}>
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <div className="admin-library-grid">
+                  {storeProducts.map(product => (
+                    <div key={product.id} className="admin-library-card">
+                      <img src={product.afterImage} alt={product.title} />
+                      <div className="admin-library-details">
+                        <span className="cat-badge">{product.type.toUpperCase()}</span>
+                        <span className="session-badge">{product.price === 0 ? 'FREE' : `$${product.price}`}</span>
+                      </div>
+                      <div style={{ padding: '0 1rem 1rem' }}>
+                        <h4 style={{ margin: '0.5rem 0', fontSize: '1.1rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{product.title}</h4>
+                      </div>
+                      <div className="admin-library-actions">
+                        <button onClick={() => startEditingProduct(product)}>Edit</button>
+                        <button className="delete-btn" onClick={() => handleDeleteProduct(product.id)}>Delete</button>
+                      </div>
+                    </div>
+                  ))}
+                  {storeProducts.length === 0 && (
+                    <p className="admin-empty">No products yet. Click "+ Add New Product" to create one.</p>
+                  )}
+                </div>
+              )}
+            </div>
           )}
 
           {activeTab === 'about' && (
