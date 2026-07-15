@@ -84,6 +84,38 @@
   font-weight: 600;
 }
 
+/* Override the homepage glass style when used inside admin panels */
+.admin-shell .btn-glass,
+.admin-wrapper .btn-glass,
+.admin-upload-form .btn-glass {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.8rem 2rem;
+  background: var(--acc);
+  color: var(--acc-ink);
+  border: none;
+  border-radius: 10px;
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: 0 4px 16px rgba(0, 240, 255, 0.2);
+  cursor: pointer;
+  transition: background 0.25s ease, box-shadow 0.25s ease, transform 0.15s ease;
+}
+
+.admin-shell .btn-glass:hover,
+.admin-wrapper .btn-glass:hover,
+.admin-upload-form .btn-glass:hover {
+  background: #33f5ff;
+  box-shadow: 0 6px 24px rgba(0, 240, 255, 0.35);
+  transform: translateY(-1px);
+}
+
 /* --------------------------------------------------------------------------
    Shell: sidebar + main
    -------------------------------------------------------------------------- */
