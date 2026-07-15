@@ -61,40 +61,46 @@ export default function Navigation() {
     { path: '/contact', label: 'Contact' },
   ];
 
+  const isEditor = location.pathname === '/editor';
+
   return (
     <>
-      <header className="nav-header" ref={navRef}>
+      <header className={`nav-header ${isEditor ? 'is-editor-page' : ''}`} ref={navRef}>
         <div className="container nav-container">
-          <Link 
-            to="/" 
-            className="nav-logo" 
-            onClick={() => {
-              setIsOpen(false);
-              playShutterClick();
-            }}
-            onMouseEnter={playFocusTick}
-          >
-            Prajjwal Pandey
-          </Link>
+          {!isEditor && (
+            <Link 
+              to="/" 
+              className="nav-logo" 
+              onClick={() => {
+                setIsOpen(false);
+                playShutterClick();
+              }}
+              onMouseEnter={playFocusTick}
+            >
+              Prajjwal Pandey
+            </Link>
+          )}
 
           {/* Desktop Links */}
-          <nav className="nav-links desktop-only">
-            {links.map((link) => (
-              <Magnetic key={link.path} tolerance={25}>
-                <Link
-                  to={link.path}
-                  className={`nav-link ${location.pathname === link.path ? 'active' : ''}`}
-                  onClick={() => {
-                    setIsOpen(false);
-                    playShutterClick();
-                  }}
-                  onMouseEnter={playFocusTick}
-                >
-                  {link.label}
-                </Link>
-              </Magnetic>
-            ))}
-          </nav>
+          {!isEditor && (
+            <nav className="nav-links desktop-only">
+              {links.map((link) => (
+                <Magnetic key={link.path} tolerance={25}>
+                  <Link
+                    to={link.path}
+                    className={`nav-link ${location.pathname === link.path ? 'active' : ''}`}
+                    onClick={() => {
+                      setIsOpen(false);
+                      playShutterClick();
+                    }}
+                    onMouseEnter={playFocusTick}
+                  >
+                    {link.label}
+                  </Link>
+                </Magnetic>
+              ))}
+            </nav>
+          )}
 
           {/* Right side controls (Sound & Hamburger) */}
           <div className="nav-controls">

@@ -234,3 +234,58 @@
 .sound-toggle-btn:active {
   transform: scale(0.92);
 }
+
+/* --------------------------------------------------------------------------
+   Editor Page Floating Capsule Navigation
+   -------------------------------------------------------------------------- */
+.nav-header.is-editor-page {
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
+  left: auto;
+  width: auto;
+  max-width: none;
+  transform: none;
+  -webkit-transform: none;
+  z-index: 100;
+}
+
+.nav-header.is-editor-page .nav-container {
+  padding: 0.4rem 0.8rem;
+  min-height: auto;
+  height: 48px;
+  background: rgba(20, 20, 20, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: 100px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-header.is-editor-page .nav-controls {
+  gap: 0.6rem;
+}
+
+/* Show toggle (hamburger) button on desktop inside the editor */
+.nav-header.is-editor-page .nav-toggle {
+  display: block;
+}
+
+/* Adjust sound button size slightly for the editor capsule */
+.nav-header.is-editor-page .sound-toggle-btn {
+  width: 34px;
+  height: 34px;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+/* On mobile, float it slightly differently to not cover main editor back buttons */
+@media (max-width: 600px) {
+  .nav-header.is-editor-page {
+    top: 1rem;
+    right: 1rem;
+  }
+}
+

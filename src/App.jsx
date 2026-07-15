@@ -45,7 +45,7 @@ function App() {
 
   const isEditorRoute = location.pathname === '/editor';
   // Full-screen routes hide the marketing nav/footer for an app-like canvas.
-  const isChromelessRoute = isEditorRoute || location.pathname === '/admin';
+  const isChromelessRoute = location.pathname === '/admin';
 
   // Reset scroll on refresh/load and disable browser auto-scroll memory
   useEffect(() => {
