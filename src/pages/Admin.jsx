@@ -1024,7 +1024,7 @@ export default function Admin() {
                     <button type="submit" className="btn-glass" disabled={savingStore} style={{ margin: 0, flex: 1 }}>
                       {savingStore ? 'Saving Product…' : 'Save Product'}
                     </button>
-                    <button type="button" onClick={() => setEditingProduct(null)} className="cancel-btn" style={{ margin: 0, padding: '0 2rem' }}>
+                    <button type="button" onClick={() => setEditingProduct(null)} className="cancel-btn" style={{ margin: 0 }}>
                       Cancel
                     </button>
                   </div>
@@ -1082,7 +1082,7 @@ export default function Admin() {
                       style={{ flex: 1, margin: 0 }}
                       placeholder="Category Title (e.g. CAMERAS)"
                     />
-                    <button type="button" onClick={() => removeCategory(idx)} style={{ background: '#d32f2f', margin: 0, padding: '0 1rem' }}>Remove</button>
+                    <button type="button" onClick={() => removeCategory(idx)} style={{ background: '#d32f2f', margin: 0, padding: '0.6rem 1.2rem', border: 'none', borderRadius: '8px', color: '#fff', cursor: 'pointer', fontWeight: '500' }}>Remove</button>
                   </div>
                   <textarea 
                     value={(cat.items || []).join('\n')}
@@ -1093,7 +1093,7 @@ export default function Admin() {
                   />
                 </div>
               ))}
-              <button type="button" onClick={addCategory} style={{ background: 'rgba(0, 240, 255, 0.1)', color: '#00f0ff', border: '1px solid #00f0ff', width: '100%' }}>+ Add New Category</button>
+              <button type="button" onClick={addCategory} style={{ background: 'rgba(0, 240, 255, 0.1)', color: '#00f0ff', border: '1px solid #00f0ff', width: '100%', padding: '0.7rem 1.2rem', borderRadius: '8px', cursor: 'pointer', fontWeight: '500' }}>+ Add New Category</button>
             </div>
 
             <label>
