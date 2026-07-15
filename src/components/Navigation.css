@@ -5,7 +5,7 @@
   transform: translateX(-50%) translateZ(0);
   -webkit-transform: translateX(-50%) translateZ(0);
   width: 90%;
-  max-width: 900px;
+  max-width: 1100px;
   z-index: 100;
   will-change: transform;
 }
@@ -124,7 +124,7 @@
 }
 
 /* Desktop Only class to hide normal links on mobile */
-@media (max-width: 900px) {
+@media (max-width: 1024px) {
   .desktop-only {
     display: none !important;
   }
@@ -184,7 +184,7 @@
 }
 
 /* Mobile Redesign & Tablets */
-@media (max-width: 900px) {
+@media (max-width: 1024px) {
   .nav-header {
     top: 1rem;
     width: 95%;
