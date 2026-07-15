@@ -10,11 +10,18 @@ export default function Navigation() {
   const [soundOn, setSoundOn] = useState(getSoundEnabled());
   const location = useLocation();
   const navRef = useRef(null);
+  const overlayRef = useRef(null);
 
   // Close menu on click outside or ESC key
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (isOpen && navRef.current && !navRef.current.contains(event.target)) {
+      if (
+        isOpen && 
+        navRef.current && 
+        !navRef.current.contains(event.target) &&
+        overlayRef.current &&
+        !overlayRef.current.contains(event.target)
+      ) {
         setIsOpen(false);
       }
     };
@@ -119,7 +126,7 @@ export default function Navigation() {
       </header>
 
       {/* Mobile Full-Screen Overlay */}
-      <nav className={`mobile-overlay ${isOpen ? 'open' : ''}`}>
+      <nav className={`mobile-overlay ${isOpen ? 'open' : ''}`} ref={overlayRef}>
         <div className="mobile-overlay-links">
           {links.map((link, index) => (
             <Link
