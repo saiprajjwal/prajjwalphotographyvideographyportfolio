@@ -49,7 +49,7 @@
 }
 
 .video-thumbnail-container:hover .video-thumbnail {
-  transform: scale(1.05);
+  transform: scale(1.08);
 }
 
 .video-thumbnail-container:hover::before {
@@ -95,10 +95,10 @@
 }
 
 .video-thumbnail-container:hover .play-button {
-  transform: scale(1.1);
+  transform: scale(1.15);
   background: var(--text-primary);
   color: var(--bg-color);
-  box-shadow: 0 0 20px rgba(255,255,255,0.4);
+  box-shadow: 0 0 25px rgba(255,255,255,0.6);
 }
 
 .video-iframe-container {

@@ -300,6 +300,13 @@ export default function Portfolio() {
                   <div className="card-badge">{photo.isSessionCover ? photo.sessionName : photo.category}</div>
                   <img
                     src={photo.src}
+                    srcSet={`
+                      ${photo.src.replace('w_1200', 'w_400')} 400w,
+                      ${photo.src.replace('w_1200', 'w_800')} 800w,
+                      ${photo.src.replace('w_1200', 'w_1200')} 1200w,
+                      ${photo.src.replace('w_1200', 'w_1600')} 1600w
+                    `}
+                    sizes="(max-width: 600px) 100vw, (max-width: 1024px) 50vw, 33vw"
                     alt={photo.alt}
                     loading="lazy"
                     className="portfolio-image"
@@ -352,6 +359,13 @@ export default function Portfolio() {
                     >
                       <img
                         src={photo.src}
+                        srcSet={`
+                          ${photo.src.replace('w_1200', 'w_400')} 400w,
+                          ${photo.src.replace('w_1200', 'w_800')} 800w,
+                          ${photo.src.replace('w_1200', 'w_1200')} 1200w,
+                          ${photo.src.replace('w_1200', 'w_1600')} 1600w
+                        `}
+                        sizes="(max-width: 600px) 100vw, (max-width: 1024px) 50vw, 33vw"
                         alt={photo.alt}
                         loading="lazy"
                         className="portfolio-image"

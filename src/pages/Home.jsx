@@ -235,6 +235,11 @@ export default function Home() {
               </Link>
             </div>
           </div>
+
+          <div className="scroll-indicator">
+            <span>Scroll</span>
+            <div className="scroll-line"></div>
+          </div>
         </motion.div>
 
         {/* Final Text at bottom of scroll */}

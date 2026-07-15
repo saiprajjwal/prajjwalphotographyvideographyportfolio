@@ -54,67 +54,89 @@ export default function Navigation() {
   ];
 
   return (
-    <header className="nav-header" ref={navRef}>
-      <div className="container nav-container">
-        <Link 
-          to="/" 
-          className="nav-logo" 
-          onClick={() => {
-            setIsOpen(false);
-            playShutterClick();
-          }}
-          onMouseEnter={playFocusTick}
-        >
-          Prajjwal Pandey
-        </Link>
-
-        {/* Desktop & Mobile Links */}
-        <nav className={`nav-links ${isOpen ? 'open' : ''}`}>
-          {links.map((link) => (
-            <Magnetic key={link.path} tolerance={25}>
-              <Link
-                to={link.path}
-                className={`nav-link ${location.pathname === link.path ? 'active' : ''}`}
-                onClick={() => {
-                  setIsOpen(false);
-                  playShutterClick();
-                }}
-                onMouseEnter={playFocusTick}
-              >
-                {link.label}
-              </Link>
-            </Magnetic>
-          ))}
-        </nav>
-
-        {/* Right side controls (Sound & Hamburger) */}
-        <div className="nav-controls">
-          <Magnetic tolerance={20}>
-            <button 
-              className="sound-toggle-btn"
-              onClick={toggleSound}
-              aria-label="Toggle sound effects"
-              onMouseEnter={playFocusTick}
-            >
-              {soundOn ? <Volume2 size={18} /> : <VolumeX size={18} />}
-            </button>
-          </Magnetic>
-
-          <button 
-            className={`nav-toggle ${isOpen ? 'open' : ''}`} 
+    <>
+      <header className="nav-header" ref={navRef}>
+        <div className="container nav-container">
+          <Link 
+            to="/" 
+            className="nav-logo" 
             onClick={() => {
-              setIsOpen(!isOpen);
+              setIsOpen(false);
               playShutterClick();
             }}
             onMouseEnter={playFocusTick}
-            aria-label="Toggle menu"
           >
-            <span className="hamburger-line top"></span>
-            <span className="hamburger-line middle"></span>
-            <span className="hamburger-line bottom"></span>
-          </button>
+            Prajjwal Pandey
+          </Link>
+
+          {/* Desktop Links */}
+          <nav className="nav-links desktop-only">
+            {links.map((link) => (
+              <Magnetic key={link.path} tolerance={25}>
+                <Link
+                  to={link.path}
+                  className={`nav-link ${location.pathname === link.path ? 'active' : ''}`}
+                  onClick={() => {
+                    setIsOpen(false);
+                    playShutterClick();
+                  }}
+                  onMouseEnter={playFocusTick}
+                >
+                  {link.label}
+                </Link>
+              </Magnetic>
+            ))}
+          </nav>
+
+          {/* Right side controls (Sound & Hamburger) */}
+          <div className="nav-controls">
+            <Magnetic tolerance={20}>
+              <button 
+                className="sound-toggle-btn"
+                onClick={toggleSound}
+                aria-label="Toggle sound effects"
+                onMouseEnter={playFocusTick}
+              >
+                {soundOn ? <Volume2 size={18} /> : <VolumeX size={18} />}
+              </button>
+            </Magnetic>
+
+            <button 
+              className={`nav-toggle ${isOpen ? 'open' : ''}`} 
+              onClick={() => {
+                setIsOpen(!isOpen);
+                playShutterClick();
+              }}
+              onMouseEnter={playFocusTick}
+              aria-label="Toggle menu"
+            >
+              <span className="hamburger-line top"></span>
+              <span className="hamburger-line middle"></span>
+              <span className="hamburger-line bottom"></span>
+            </button>
+          </div>
         </div>
-      </div>
-    </header>
+      </header>
+
+      {/* Mobile Full-Screen Overlay */}
+      <nav className={`mobile-overlay ${isOpen ? 'open' : ''}`}>
+        <div className="mobile-overlay-links">
+          {links.map((link, index) => (
+            <Link
+              key={link.path}
+              to={link.path}
+              className={`mobile-nav-link ${location.pathname === link.path ? 'active' : ''}`}
+              style={{ transitionDelay: `${index * 0.05}s` }}
+              onClick={() => {
+                setIsOpen(false);
+                playShutterClick();
+              }}
+            >
+              {link.label}
+            </Link>
+          ))}
+        </div>
+      </nav>
+    </>
   );
 }
