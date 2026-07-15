@@ -2,6 +2,7 @@ import { useState, useRef, Suspense } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Environment, MeshTransmissionMaterial, Sparkles, Float } from '@react-three/drei';
 import * as THREE from 'three';
+import './AmbientGlassBackground.css';
 
 // A subtle, slow-spinning glass monolith for the background
 function AmbientGlass() {
