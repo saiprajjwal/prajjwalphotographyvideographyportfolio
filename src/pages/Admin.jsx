@@ -109,7 +109,16 @@ export default function Admin() {
   const [dragging, setDragging] = useState(false);
   const fileInputRef = useRef(null);
 
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState(() => {
+    const saved = sessionStorage.getItem('admin-active-tab');
+    const valid = NAV.some((n) => n.id === saved);
+    return valid ? saved : 'overview';
+  });
+
+  // Persist the active tab so it survives page refreshes
+  useEffect(() => {
+    sessionStorage.setItem('admin-active-tab', activeTab);
+  }, [activeTab]);
   const [libraryPhotos, setLibraryPhotos] = useState([]);
   const [loadingLibrary, setLoadingLibrary] = useState(false);
   const [libFilter, setLibFilter] = useState('All');
