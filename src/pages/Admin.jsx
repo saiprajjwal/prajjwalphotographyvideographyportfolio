@@ -118,6 +118,9 @@ export default function Admin() {
   const [editingPhoto, setEditingPhoto] = useState(null);
   const [editCategory, setEditCategory] = useState('');
   const [editSession, setEditSession] = useState('');
+  const [editCameraSettings, setEditCameraSettings] = useState('');
+  const [editAlt, setEditAlt] = useState('');
+  const [cameraSettings, setCameraSettings] = useState('');
 
   // About Page State
   const [aboutName, setAboutName] = useState(portfolioData.about.name);
@@ -298,6 +301,8 @@ export default function Admin() {
     setEditingPhoto(photo);
     setEditCategory(photo.category || CATEGORIES[0]);
     setEditSession(photo.session || '');
+    setEditCameraSettings(photo.cameraSettings || '');
+    setEditAlt(photo.alt || '');
   };
 
   const saveEdit = async () => {
@@ -309,14 +314,22 @@ export default function Admin() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ id: editingPhoto.id, category: editCategory, session: editSession })
+        body: JSON.stringify({ 
+          id: editingPhoto.id, 
+          category: editCategory, 
+          session: editSession,
+          alt: editAlt,
+          cameraSettings: editCameraSettings
+        })
       });
       if (!res.ok) throw new Error('Update failed');
       
       setLibraryPhotos(prev => prev.map(p => p.id === editingPhoto.id ? { 
         ...p, 
         category: editCategory,
-        session: editSession.trim() || null 
+        session: editSession.trim() || null,
+        alt: editAlt.trim(),
+        cameraSettings: editCameraSettings.trim()
       } : p));
       setEditingPhoto(null);
     } catch (err) {
@@ -401,7 +414,7 @@ export default function Admin() {
         const sigRes = await fetch('/api/get-upload-signature', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ category, session, altText }),
+          body: JSON.stringify({ category, session, altText, cameraSettings }),
         });
         const sigData = await sigRes.json();
         if (!sigRes.ok) throw new Error(sigData.error || 'Could not get an upload signature');
@@ -793,6 +806,16 @@ export default function Admin() {
             />
           </label>
 
+          <label>
+            Camera & Lens Metadata (optional)
+            <input
+              type="text"
+              value={cameraSettings}
+              onChange={(e) => setCameraSettings(e.target.value)}
+              placeholder="e.g. Sony a7 IV · 50mm f/1.2 · ISO 100"
+            />
+          </label>
+
           <div
             className={`up-dropzone ${dragging ? 'is-dragging' : ''}`}
             onClick={() => !uploading && fileInputRef.current?.click()}
@@ -922,6 +945,18 @@ export default function Admin() {
                           value={editSession} 
                           onChange={(e) => setEditSession(e.target.value)} 
                           placeholder="Album name (optional)"
+                        />
+                        <input 
+                          type="text" 
+                          value={editCameraSettings} 
+                          onChange={(e) => setEditCameraSettings(e.target.value)} 
+                          placeholder="Camera settings (optional)"
+                        />
+                        <input 
+                          type="text" 
+                          value={editAlt} 
+                          onChange={(e) => setEditAlt(e.target.value)} 
+                          placeholder="Description / Alt text"
                         />
                         <div className="admin-library-edit-actions">
                           <button className="save-btn" onClick={saveEdit}>Save</button>

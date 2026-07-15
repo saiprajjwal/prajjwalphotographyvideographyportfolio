@@ -19,7 +19,7 @@ export default function handler(req, res) {
     return;
   }
 
-  const { category, session, altText } = req.body || {};
+  const { category, session, altText, cameraSettings } = req.body || {};
   if (!category) {
     res.status(400).json({ error: 'category is required' });
     return;
@@ -27,7 +27,12 @@ export default function handler(req, res) {
 
   const timestamp = Math.round(Date.now() / 1000);
   const folder = 'portfolio';
-  const context = `alt=${altText || `${category} photo by Prajjwal Pandey`}`;
+  
+  const contextParts = [`alt=${altText || `${category} photo by Prajjwal Pandey`}`];
+  if (cameraSettings) {
+    contextParts.push(`camera_settings=${cameraSettings.trim()}`);
+  }
+  const context = contextParts.join('|');
 
   // If a session name is provided, combine it with category as a comma-separated tag list.
   // We prefix the session name with 'session_' to reliably identify it later.
