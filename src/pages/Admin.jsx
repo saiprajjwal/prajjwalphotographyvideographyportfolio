@@ -150,10 +150,10 @@ export default function Admin() {
       .then(data => {
         if (data && data.name) {
           setAboutName(data.name || '');
-          setAboutTagline(data.about?.tagline || '');
-          setAboutBio(data.about?.bio || '');
-          setAboutGear(data.about?.gear || []);
-          setAboutEmail(data.about?.email || '');
+          setAboutTagline(data.tagline || '');
+          setAboutBio(data.bio || '');
+          setAboutGear(data.gear || []);
+          setAboutEmail(data.email || '');
         }
       })
       .catch((error) => {
