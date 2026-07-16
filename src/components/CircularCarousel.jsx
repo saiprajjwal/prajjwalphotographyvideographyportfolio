@@ -3,6 +3,35 @@ import { motion, useMotionValue, animate } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import './CircularCarousel.css';
 
+let audioCtx = null;
+const playTick = () => {
+  try {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.03);
+    
+    gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.03);
+    
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.03);
+  } catch(e) {
+    // Ignore if audio context is blocked
+  }
+};
+
 export default function CircularCarousel() {
   const [allAlbums, setAllAlbums] = useState([]);
   const [filter, setFilter] = useState('All');
@@ -95,6 +124,29 @@ export default function CircularCarousel() {
   
   // Responsive radius: tighter on mobile to match smaller card width and maintain proper gaps
   const radius = windowWidth < 768 ? 1200 : 1500;
+
+  const lastTickIndex = useRef(0);
+
+  // Trigger Apple-style tick sound on crossing halfway points
+  useEffect(() => {
+    if (!rotation) return;
+    const handleChange = (latest) => {
+      const rawIndex = -latest / anglePerItem;
+      const nearestIndex = Math.round(rawIndex);
+      if (nearestIndex !== lastTickIndex.current) {
+        lastTickIndex.current = nearestIndex;
+        // Don't play on initial load when it settles
+        if (isDragging.current || animControl.current) {
+          playTick();
+        }
+      }
+    };
+    if (rotation.on) {
+      return rotation.on('change', handleChange);
+    } else if (rotation.onChange) {
+      return rotation.onChange(handleChange);
+    }
+  }, [rotation, anglePerItem]);
 
   // Extract unique categories for filter pills
   const categories = ['All', ...new Set(allAlbums.map(a => a.category).filter(Boolean))];
