@@ -1,4 +1,4 @@
-/* Outer wrapper: fully transparent — 3D canvas shows through */
+/* Outer wrapper: Google Labs style bright background with colorful blobs */
 .cc-wrapper {
   width: 100%;
   display: flex;
@@ -8,16 +8,31 @@
   gap: 2rem;
   position: relative;
   overflow: visible;
+  background-color: #f7f9fc;
+  background-image: 
+    radial-gradient(circle at -10% 20%, rgba(66, 133, 244, 0.4) 0%, transparent 45%),
+    radial-gradient(circle at 90% -10%, rgba(52, 168, 83, 0.3) 0%, transparent 50%),
+    radial-gradient(circle at 110% 80%, rgba(234, 67, 53, 0.25) 0%, transparent 45%),
+    radial-gradient(circle at 10% 110%, rgba(251, 188, 4, 0.3) 0%, transparent 40%);
+  padding: 4rem 0 6rem 0;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .cc-title {
   font-family: var(--font-sans);
-  font-size: clamp(1.8rem, 3.5vw, 2.8rem);
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  color: #ffffff;
+  font-size: clamp(2rem, 4vw, 3.5rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: #1a1a1a;
   margin: 0;
-  text-shadow: 0 4px 30px rgba(255, 255, 255, 0.1);
+}
+
+/* Optional subtitle style */
+.cc-subtitle {
+  font-family: var(--font-sans);
+  font-size: 1.2rem;
+  color: #555;
+  margin-top: 0.5rem;
 }
 
 /* ---- 3-D Stage ---- */
@@ -185,66 +200,76 @@
   color: rgba(0, 200, 255, 0.9);
 }
 
-/* ---- Controls ---- */
+/* Navigation Controls */
 .cc-controls {
   display: flex;
   align-items: center;
   gap: 1.5rem;
+  margin-top: 3rem;
   position: relative;
-  z-index: 2;
+  z-index: 10;
 }
 
-/* Circular icon buttons */
-.cc-btn {
-  width: 44px;
-  height: 44px;
+.cc-arrow {
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  color: #1a1a1a;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.1s ease;
-  flex-shrink: 0;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
-.cc-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.25);
-  color: #ffffff;
+.cc-arrow:hover {
+  background: #ffffff;
+  transform: scale(1.05);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
 }
 
-.cc-btn:active {
-  transform: scale(0.93);
+.cc-arrow:active {
+  transform: scale(0.95);
 }
 
-/* Dot row */
-.cc-dots {
+/* Filter Pills */
+.cc-filters {
   display: flex;
-  gap: 0.5rem;
   flex-wrap: wrap;
   justify-content: center;
-  max-width: 300px;
+  gap: 0.75rem;
+  margin-top: 2rem;
+  padding: 0 1rem;
+  position: relative;
+  z-index: 10;
 }
 
-.cc-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.2);
+.cc-filter-pill {
+  padding: 0.6rem 1.2rem;
+  border-radius: 30px;
+  background: rgba(230, 230, 230, 0.6);
   border: none;
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #333;
   cursor: pointer;
-  padding: 0;
-  transition: background 0.25s ease, transform 0.25s ease;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
-.cc-dot--active {
-  background: rgba(0, 200, 255, 0.85);
-  transform: scale(1.35);
+.cc-filter-pill:hover {
+  background: rgba(200, 200, 200, 0.8);
+  color: #000;
+}
+
+.cc-filter-pill.active {
+  background: #1a1a1a;
+  color: #ffffff;
 }
 
 /* ---- Responsive ---- */

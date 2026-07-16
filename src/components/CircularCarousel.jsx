@@ -4,7 +4,8 @@ import { Link } from 'react-router-dom';
 import './CircularCarousel.css';
 
 export default function CircularCarousel() {
-  const [albums, setAlbums] = useState([]);
+  const [allAlbums, setAllAlbums] = useState([]);
+  const [filter, setFilter] = useState('All');
   const [activeIndex, setActiveIndex] = useState(0);
   const rotation = useMotionValue(0);
   const isDragging = useRef(false);
@@ -56,7 +57,7 @@ export default function CircularCarousel() {
           .slice(0, 16); // show up to 16 albums
 
         if (sortedAlbums.length > 0) {
-          setAlbums(sortedAlbums);
+          setAllAlbums(sortedAlbums);
         }
       })
       .catch(err => {
@@ -64,13 +65,31 @@ export default function CircularCarousel() {
       });
   }, []);
 
-  const numItems = albums.length;
+  // 1. Filter albums
+  const filteredAlbums = filter === 'All' 
+    ? allAlbums 
+    : allAlbums.filter(a => a.category === filter);
+
+  // 2. Clone albums to create a massive ring (minimum 28 items)
+  let displayAlbums = [...filteredAlbums];
+  if (displayAlbums.length > 0) {
+    while (displayAlbums.length < 28) {
+      displayAlbums = [...displayAlbums, ...filteredAlbums];
+    }
+    // Cap at exactly 28 for consistent massive radius geometry
+    displayAlbums = displayAlbums.slice(0, 28);
+  }
+
+  const numItems = displayAlbums.length;
   if (numItems === 0) return null;
 
   const anglePerItem = 360 / numItems;
-  // Formula: radius so that adjacent cards have ~40px gap
-  // card width = 260px, so half = 130px
-  const radius = Math.round(140 / Math.tan(Math.PI / numItems)) + 30;
+  
+  // Huge radius to create a gentle arc (Google Labs style)
+  const radius = 1500;
+
+  // Extract unique categories for filter pills
+  const categories = ['All', ...new Set(allAlbums.map(a => a.category).filter(Boolean))];
 
   const goToIndex = (idx) => {
     const clamped = ((idx % numItems) + numItems) % numItems;
@@ -122,17 +141,17 @@ export default function CircularCarousel() {
       <div className="cc-stage">
         <motion.div
           className="cc-scene"
-          style={{ rotateY: rotation }}
+          style={{ rotateY: rotation, rotateX: '-2deg' }}
           onPanStart={handlePanStart}
           onPan={handlePan}
           onPanEnd={handlePanEnd}
         >
-          {albums.map((album, index) => {
+          {displayAlbums.map((album, index) => {
             const angle = index * anglePerItem;
             const isActive = index === activeIndex;
             return (
               <div
-                key={album.id}
+                key={`${album.id}-${index}`}
                 className={`cc-card ${isActive ? 'cc-card--active' : ''}`}
                 style={{
                   transform: `rotateY(${angle}deg) translateZ(${radius}px)`,
@@ -170,7 +189,7 @@ export default function CircularCarousel() {
       {/* Arrow controls */}
       <div className="cc-controls">
         <button
-          className="cc-btn"
+          className="cc-arrow"
           onClick={() => goToIndex(activeIndex - 1)}
           aria-label="Previous album"
         >
@@ -179,20 +198,8 @@ export default function CircularCarousel() {
           </svg>
         </button>
 
-        {/* Dot indicators */}
-        <div className="cc-dots">
-          {albums.map((_, i) => (
-            <button
-              key={i}
-              className={`cc-dot ${i === activeIndex ? 'cc-dot--active' : ''}`}
-              onClick={() => goToIndex(i)}
-              aria-label={`Go to album ${i + 1}`}
-            />
-          ))}
-        </div>
-
         <button
-          className="cc-btn"
+          className="cc-arrow"
           onClick={() => goToIndex(activeIndex + 1)}
           aria-label="Next album"
         >
@@ -201,6 +208,25 @@ export default function CircularCarousel() {
           </svg>
         </button>
       </div>
+
+      {/* Category Pills */}
+      {categories.length > 1 && (
+        <div className="cc-filters">
+          {categories.map(cat => (
+            <button
+              key={cat}
+              className={`cc-filter-pill ${filter === cat ? 'active' : ''}`}
+              onClick={() => {
+                setFilter(cat);
+                setActiveIndex(0);
+                rotation.set(0);
+              }}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
