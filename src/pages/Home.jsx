@@ -57,14 +57,14 @@ function GlassMonolith({ scrollYProgress }) {
 
     // Push the monolith closer to the camera on scroll until it engulfs the view
     // Camera is at Z=10, push it up to Z=12
-    const targetZ = 2 + (offset * 10);
+    // Speed up the Z movement so it passes the camera earlier in the scroll
+    const targetZ = 2 + (offset * 20);
     meshRef.current.position.z = THREE.MathUtils.lerp(meshRef.current.position.z, targetZ, 0.1);
 
-    // Fade out the monolith directly from scroll progress (not the lerped/lagging
-    // z-position) so the reveal tracks the scrollbar 1:1 regardless of scroll speed.
     // Fade out the monolith directly from scroll progress
     if (meshRef.current.material) {
-      const opacity = 1 - THREE.MathUtils.clamp((offset - 0.4) / (0.9 - 0.4), 0, 1);
+      // Fade out completely between 30% and 45% scroll
+      const opacity = 1 - THREE.MathUtils.clamp((offset - 0.3) / (0.45 - 0.3), 0, 1);
       meshRef.current.material.transparent = true;
       meshRef.current.material.opacity = opacity;
       meshRef.current.visible = opacity > 0;
@@ -156,15 +156,15 @@ export default function Home() {
   const heroTextBlur = useTransform(scrollYProgress, [0, 0.16], ['blur(0px)', 'blur(20px)']);
   const heroPointer = useTransform(scrollYProgress, (v) => (v < 0.16 ? 'auto' : 'none'));
 
-  // "The Vision is Clear" CTA — appears mid-scroll
-  const enterOpacity = useTransform(scrollYProgress, [0, 0.22, 0.30, 0.52, 0.60, 1], [0, 0, 1, 1, 0, 0]);
-  const enterScale   = useTransform(scrollYProgress, [0.22, 0.30, 0.52, 0.60], [0.85, 1, 1, 1.06]);
-  const enterPointer = useTransform(scrollYProgress, (v) => (v > 0.22 && v < 0.60 ? 'auto' : 'none'));
+  // "The Vision is Clear" CTA — appears after Glass Monolith passes (mid-scroll)
+  const enterOpacity = useTransform(scrollYProgress, [0, 0.45, 0.52, 0.65, 0.72, 1], [0, 0, 1, 1, 0, 0]);
+  const enterScale   = useTransform(scrollYProgress, [0.45, 0.52, 0.65, 0.72], [0.85, 1, 1, 1.06]);
+  const enterPointer = useTransform(scrollYProgress, (v) => (v > 0.45 && v < 0.72 ? 'auto' : 'none'));
 
   // Carousel — fades in AFTER the CTA fades out, holds until the very end
-  const carouselOpacity = useTransform(scrollYProgress, [0, 0.63, 0.72, 0.95, 1], [0, 0, 1, 1, 0]);
-  const carouselScale  = useTransform(scrollYProgress, [0.63, 0.72, 0.95, 1], [0.9, 1, 1, 1.05]);
-  const carouselPointer = useTransform(scrollYProgress, (v) => (v > 0.63 ? 'auto' : 'none'));
+  const carouselOpacity = useTransform(scrollYProgress, [0, 0.75, 0.82, 0.95, 1], [0, 0, 1, 1, 0]);
+  const carouselScale  = useTransform(scrollYProgress, [0.75, 0.82, 0.95, 1], [0.9, 1, 1, 1.05]);
+  const carouselPointer = useTransform(scrollYProgress, (v) => (v > 0.75 ? 'auto' : 'none'));
 
   return (
     <motion.div
@@ -220,8 +220,8 @@ export default function Home() {
       </div>
     
 
-      {/* 320vh Scroll Container — 3D overlays are fixed; this just creates the scroll room */}
-      <div className="home-scroll-content" style={{ height: '320vh', position: 'relative' }}>
+      {/* 420vh Scroll Container — 3D overlays are fixed; this just creates the scroll room */}
+      <div className="home-scroll-content" style={{ height: '420vh', position: 'relative' }}>
 
         {/* Initial Hero Text - Flies forward and blurs on scroll */}
         <motion.div
