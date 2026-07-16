@@ -18,12 +18,19 @@ export default function CircularCarousel() {
         return res.json();
       })
       .then(data => {
-        const allPhotos = (data.photos || []);
+        const PORTFOLIO_CATEGORIES = ['Portraits', 'Pets', 'Travel', 'Products', 'Behind The Scene'];
+        // Only include photos that belong to a named session AND a known portfolio category.
+        // This excludes the About headshot and any loose/miscellaneous uploads.
+        const allPhotos = (data.photos || []).filter(p =>
+          p.session &&
+          PORTFOLIO_CATEGORIES.some(cat =>
+            (p.category || '').toLowerCase() === cat.toLowerCase()
+          )
+        );
 
         // Group by session
         const sessionMap = {};
         allPhotos.forEach(p => {
-          if (!p.session) return;
           if (!sessionMap[p.session]) {
             sessionMap[p.session] = {
               id: `session-${p.session}`,
@@ -34,12 +41,10 @@ export default function CircularCarousel() {
               albumOrder: p.albumOrder || 999,
             };
           } else {
-            // Prefer the designated cover image
             if (p.isCover) {
               sessionMap[p.session].coverSrc = p.src;
               sessionMap[p.session].isCover = true;
             }
-            // Use lowest albumOrder
             if ((p.albumOrder || 999) < sessionMap[p.session].albumOrder) {
               sessionMap[p.session].albumOrder = p.albumOrder;
             }
@@ -48,7 +53,7 @@ export default function CircularCarousel() {
 
         const sortedAlbums = Object.values(sessionMap)
           .sort((a, b) => a.albumOrder - b.albumOrder)
-          .slice(0, 12); // cap at 12 for the 3D circle
+          .slice(0, 16); // show up to 16 albums
 
         if (sortedAlbums.length > 0) {
           setAlbums(sortedAlbums);
@@ -73,8 +78,9 @@ export default function CircularCarousel() {
     if (animControl.current) animControl.current.stop();
     animControl.current = animate(rotation, -clamped * anglePerItem, {
       type: 'spring',
-      damping: 28,
-      stiffness: 70,
+      damping: 22,       // silkier, less abrupt
+      stiffness: 55,     // slower, more cinematic
+      mass: 0.8,
     });
   };
 
@@ -85,7 +91,8 @@ export default function CircularCarousel() {
   };
 
   const handlePan = (_, info) => {
-    rotation.set(startRotation.current + info.offset.x * 0.18);
+    // 0.14 degrees per px — deliberate but responsive
+    rotation.set(startRotation.current + info.offset.x * 0.14);
   };
 
   const handlePanEnd = (_, info) => {
@@ -93,10 +100,11 @@ export default function CircularCarousel() {
     const velocity = info.velocity.x;
     const currentRot = rotation.get();
 
-    // Calculate which card we're closest to
+    // Nearest card snap, extended by momentum on a fast flick
     let rawIndex = -currentRot / anglePerItem;
-    if (Math.abs(velocity) > 120) {
-      rawIndex += velocity > 0 ? -0.8 : 0.8;
+    if (Math.abs(velocity) > 80) {
+      const carry = Math.min(Math.abs(velocity) / 400, 2.5);
+      rawIndex += velocity > 0 ? -carry : carry;
     }
 
     const snappedIndex = Math.round(rawIndex);

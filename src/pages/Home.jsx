@@ -156,15 +156,15 @@ export default function Home() {
   const heroTextBlur = useTransform(scrollYProgress, [0, 0.16], ['blur(0px)', 'blur(20px)']);
   const heroPointer = useTransform(scrollYProgress, (v) => (v < 0.16 ? 'auto' : 'none'));
 
-  // "The Vision is Clear" CTA — appears mid-scroll, fades out before carousel
-  const enterOpacity = useTransform(scrollYProgress, [0, 0.38, 0.45, 0.55, 0.62, 1], [0, 0, 1, 1, 0, 0]);
-  const enterScale = useTransform(scrollYProgress, [0.38, 0.45, 0.55, 0.62], [0.85, 1, 1, 1.08]);
-  const enterPointer = useTransform(scrollYProgress, (v) => (v > 0.38 && v < 0.62 ? 'auto' : 'none'));
+  // Carousel — appears after hero flies away, holds through most of scroll
+  const carouselOpacity = useTransform(scrollYProgress, [0, 0.18, 0.26, 0.56, 0.64, 1], [0, 0, 1, 1, 0, 0]);
+  const carouselScale  = useTransform(scrollYProgress, [0.18, 0.26, 0.56, 0.64], [0.9, 1, 1, 1.06]);
+  const carouselPointer = useTransform(scrollYProgress, (v) => (v > 0.18 && v < 0.64 ? 'auto' : 'none'));
 
-  // Carousel — fades in after CTA fades out, stays until very end of scroll
-  const carouselOpacity = useTransform(scrollYProgress, [0, 0.65, 0.72, 0.94, 1], [0, 0, 1, 1, 0]);
-  const carouselScale = useTransform(scrollYProgress, [0.65, 0.72, 0.94, 1], [0.88, 1, 1, 1.06]);
-  const carouselPointer = useTransform(scrollYProgress, (v) => (v > 0.65 && v < 1 ? 'auto' : 'none'));
+  // "The Vision is Clear" CTA — appears AFTER the carousel fades out
+  const enterOpacity = useTransform(scrollYProgress, [0, 0.66, 0.74, 0.94, 1], [0, 0, 1, 1, 0]);
+  const enterScale   = useTransform(scrollYProgress, [0.66, 0.74, 0.94, 1], [0.85, 1, 1, 1.06]);
+  const enterPointer = useTransform(scrollYProgress, (v) => (v > 0.66 ? 'auto' : 'none'));
 
   return (
     <motion.div
