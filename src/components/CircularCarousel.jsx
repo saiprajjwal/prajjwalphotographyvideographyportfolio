@@ -141,7 +141,7 @@ export default function CircularCarousel() {
       <div className="cc-stage">
         <motion.div
           className="cc-scene"
-          style={{ rotateY: rotation, rotateX: '-2deg' }}
+          style={{ rotateY: rotation, rotateX: '-2deg', z: -radius }}
           onPanStart={handlePanStart}
           onPan={handlePan}
           onPanEnd={handlePanEnd}
