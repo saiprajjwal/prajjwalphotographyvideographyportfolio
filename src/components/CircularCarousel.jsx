@@ -107,7 +107,6 @@ export default function CircularCarousel() {
     <div className="cc-wrapper">
       {/* Section heading */}
       <div className="cc-header">
-        <p className="cc-eyebrow">My Work</p>
         <h2 className="cc-title">Photo Albums</h2>
       </div>
 
