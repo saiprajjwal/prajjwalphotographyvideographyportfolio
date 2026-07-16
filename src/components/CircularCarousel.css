@@ -75,13 +75,59 @@
     0 10px 40px rgba(0, 0, 0, 0.5),
     inset 0 1px 0 rgba(255, 255, 255, 0.06);
 
-  backface-visibility: hidden;
+  transform-style: preserve-3d;
   will-change: transform;
 
   transition: border-color 0.4s ease, box-shadow 0.4s ease;
   user-select: none;
   -webkit-user-select: none;
   -webkit-user-drag: none;
+}
+
+/* Card Faces */
+.cc-card-front,
+.cc-card-back {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  border-radius: inherit;
+  overflow: hidden;
+}
+
+.cc-card-back {
+  transform: rotateY(180deg);
+  background: rgba(10, 10, 10, 0.95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.cc-card-back-text {
+  font-family: var(--font-sans);
+  color: white;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.cc-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: cc-spin 1s linear infinite;
+}
+
+@keyframes cc-spin {
+  to { transform: rotate(360deg); }
+}
+
+.cc-card--animating {
+  transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  z-index: 50 !important;
 }
 
 .cc-card--active {
@@ -114,7 +160,7 @@
 }
 
 /* Glass gloss sweep (matches portfolio cards) */
-.cc-card::after {
+.cc-card-front::after {
   content: '';
   position: absolute;
   top: 0;
@@ -134,7 +180,7 @@
   pointer-events: none;
 }
 
-.cc-card--active::after {
+.cc-card--active .cc-card-front::after {
   animation: gloss-sweep 1.4s ease forwards;
 }
 
