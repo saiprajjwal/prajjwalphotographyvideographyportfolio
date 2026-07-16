@@ -9,8 +9,11 @@ export default function CircularCarousel({ scrollYProgress }) {
   const [activeIndex, setActiveIndex] = useState(0);
   
   // Motion values for scroll-driven rotation & manual drag
+  const defaultScroll = useMotionValue(0);
+  const scrollSrc = scrollYProgress || defaultScroll;
+  
   const dragOffset = useMotionValue(0);
-  const scrollRot = useTransform(scrollYProgress || useMotionValue(0), [0, 1], [0, -1080]);
+  const scrollRot = useTransform(scrollSrc, [0, 1], [0, -1080]);
   const rotation = useTransform([scrollRot, dragOffset], ([s, d]) => s + d);
 
   const isDragging = useRef(false);
@@ -122,8 +125,8 @@ export default function CircularCarousel({ scrollYProgress }) {
   const categories = ['All', ...new Set(allAlbums.map(a => a.category).filter(Boolean))];
 
   // Set up fading opacity for header and controls based on page scroll progress
-  const controlsOpacity = useTransform(scrollYProgress || useMotionValue(0), [0.75, 0.82], [0, 1]);
-  const controlsPointer = useTransform(scrollYProgress || useMotionValue(0), (v) => (v > 0.75 ? 'auto' : 'none'));
+  const controlsOpacity = useTransform(scrollSrc, [0.75, 0.82], [0, 1]);
+  const controlsPointer = useTransform(scrollSrc, (v) => (v > 0.75 ? 'auto' : 'none'));
 
   const goToIndex = (idx) => {
     const clamped = ((idx % numItems) + numItems) % numItems;
