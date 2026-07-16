@@ -65,6 +65,14 @@ export default function CircularCarousel() {
       });
   }, []);
 
+  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
+
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // 1. Filter albums
   const filteredAlbums = filter === 'All' 
     ? allAlbums 
@@ -85,8 +93,8 @@ export default function CircularCarousel() {
 
   const anglePerItem = 360 / numItems;
   
-  // Huge radius to create a gentle arc (Google Labs style)
-  const radius = 1500;
+  // Responsive radius: tighter on mobile to match smaller card width and maintain proper gaps
+  const radius = windowWidth < 768 ? 1200 : 1500;
 
   // Extract unique categories for filter pills
   const categories = ['All', ...new Set(allAlbums.map(a => a.category).filter(Boolean))];
