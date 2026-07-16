@@ -216,25 +216,6 @@ export default function CircularCarousel() {
           </svg>
         </button>
       </div>
-
-      {/* Category Pills */}
-      {categories.length > 1 && (
-        <div className="cc-filters">
-          {categories.map(cat => (
-            <button
-              key={cat}
-              className={`cc-filter-pill ${filter === cat ? 'active' : ''}`}
-              onClick={() => {
-                setFilter(cat);
-                setActiveIndex(0);
-                rotation.set(0);
-              }}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
