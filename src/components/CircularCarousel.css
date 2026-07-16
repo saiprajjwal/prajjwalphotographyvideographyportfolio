@@ -40,6 +40,8 @@
   touch-action: pan-y;
   position: relative;
   z-index: 2;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .cc-stage:active {
@@ -77,6 +79,9 @@
   will-change: transform;
 
   transition: border-color 0.4s ease, box-shadow 0.4s ease;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
 }
 
 .cc-card--active {
