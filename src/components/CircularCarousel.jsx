@@ -97,12 +97,7 @@ export default function CircularCarousel({ scrollYProgress }) {
   }
 
   const numItems = displayAlbums.length;
-  if (numItems === 0) return null;
-
-  const anglePerItem = 360 / numItems;
-  
-  // responsive radius: tighter on mobile to match smaller card width and maintain proper gaps
-  const radius = windowWidth < 768 ? 1200 : 1500;
+  const anglePerItem = numItems > 0 ? 360 / numItems : 0;
 
   // Update active card index in real-time as scroll/drag rotation changes
   useEffect(() => {
@@ -121,12 +116,17 @@ export default function CircularCarousel({ scrollYProgress }) {
     }
   }, [rotation, anglePerItem, numItems]);
 
-  // Extract unique categories for filter pills
-  const categories = ['All', ...new Set(allAlbums.map(a => a.category).filter(Boolean))];
-
   // Set up fading opacity for header and controls based on page scroll progress
   const controlsOpacity = useTransform(scrollSrc, [0.75, 0.82], [0, 1]);
   const controlsPointer = useTransform(scrollSrc, (v) => (v > 0.75 ? 'auto' : 'none'));
+
+  if (numItems === 0) return null;
+  
+  // responsive radius: tighter on mobile to match smaller card width and maintain proper gaps
+  const radius = windowWidth < 768 ? 1200 : 1500;
+
+  // Extract unique categories for filter pills
+  const categories = ['All', ...new Set(allAlbums.map(a => a.category).filter(Boolean))];
 
   const goToIndex = (idx) => {
     const clamped = ((idx % numItems) + numItems) % numItems;
