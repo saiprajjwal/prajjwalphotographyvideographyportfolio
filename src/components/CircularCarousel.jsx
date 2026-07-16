@@ -3,56 +3,13 @@ import { motion, useMotionValue, animate } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import './CircularCarousel.css';
 
-const FALLBACK_ALBUMS = [
-  {
-    id: "fb-1",
-    title: "Summer Bloom",
-    category: "Portraits",
-    description: "Atmospheric, sun-drenched portraits capturing the warmth of golden hour in Georgia.",
-    url: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=600&auto=format&fit=crop"
-  },
-  {
-    id: "fb-2",
-    title: "Neon Nights",
-    category: "Travel",
-    description: "Vibrant, cyberpunk-inspired street and urban photography of night landscapes.",
-    url: "https://images.unsplash.com/photo-1506157786151-b8491531f063?q=80&w=600&auto=format&fit=crop"
-  },
-  {
-    id: "fb-3",
-    title: "Furry Friends",
-    category: "Pets",
-    description: "Heartwarming pet portraits that capture unique character and playfulness.",
-    url: "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=600&auto=format&fit=crop"
-  },
-  {
-    id: "fb-4",
-    title: "Minimal Objects",
-    category: "Products",
-    description: "Sleek, product-focused commercial shots with strong shadows and clean composition.",
-    url: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?q=80&w=600&auto=format&fit=crop"
-  },
-  {
-    id: "fb-5",
-    title: "Studio Behind The Scene",
-    category: "Behind The Scene",
-    description: "A candid look behind the camera, featuring setups, lighting, and workflow.",
-    url: "https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?q=80&w=600&auto=format&fit=crop"
-  }
-];
-
 export default function CircularCarousel() {
   const [albums, setAlbums] = useState([]);
-  
-  // Track the current active item index (for button navigation)
   const [activeIndex, setActiveIndex] = useState(0);
-
-  // We'll track the total rotation in degrees.
   const rotation = useMotionValue(0);
-  
-  // For dragging, we store the start rotation
-  const [isDragging, setIsDragging] = useState(false);
+  const isDragging = useRef(false);
   const startRotation = useRef(0);
+  const animControl = useRef(null);
 
   useEffect(() => {
     fetch('/api/photos')
@@ -61,165 +18,179 @@ export default function CircularCarousel() {
         return res.json();
       })
       .then(data => {
-        const allPhotos = (data.photos || []).filter(p => !p.isVideo);
-        
-        // Group photos by session/album
-        const sessions = {};
+        const allPhotos = (data.photos || []);
+
+        // Group by session
+        const sessionMap = {};
         allPhotos.forEach(p => {
-          if (p.session) {
-            if (!sessions[p.session]) {
-              sessions[p.session] = {
-                id: `session-${p.session}`,
-                title: p.session,
-                category: p.category || 'Portraits',
-                description: p.description || `Explore our session gallery for ${p.session}.`,
-                url: p.url
-              };
-            } else if (p.isCover) {
-              sessions[p.session].url = p.url;
-              if (p.description) sessions[p.session].description = p.description;
+          if (!p.session) return;
+          if (!sessionMap[p.session]) {
+            sessionMap[p.session] = {
+              id: `session-${p.session}`,
+              title: p.session,
+              category: p.category || '',
+              coverSrc: p.src,
+              isCover: p.isCover,
+              albumOrder: p.albumOrder || 999,
+            };
+          } else {
+            // Prefer the designated cover image
+            if (p.isCover) {
+              sessionMap[p.session].coverSrc = p.src;
+              sessionMap[p.session].isCover = true;
+            }
+            // Use lowest albumOrder
+            if ((p.albumOrder || 999) < sessionMap[p.session].albumOrder) {
+              sessionMap[p.session].albumOrder = p.albumOrder;
             }
           }
         });
-        
-        const groupedAlbums = Object.values(sessions);
-        if (groupedAlbums.length > 0) {
-          setAlbums(groupedAlbums);
-        } else {
-          setAlbums(FALLBACK_ALBUMS);
+
+        const sortedAlbums = Object.values(sessionMap)
+          .sort((a, b) => a.albumOrder - b.albumOrder)
+          .slice(0, 12); // cap at 12 for the 3D circle
+
+        if (sortedAlbums.length > 0) {
+          setAlbums(sortedAlbums);
         }
       })
-      .catch(() => {
-        setAlbums(FALLBACK_ALBUMS);
+      .catch(err => {
+        console.warn('Carousel: API unavailable', err);
       });
   }, []);
 
-  const numItems = albums.length || 5;
+  const numItems = albums.length;
+  if (numItems === 0) return null;
+
   const anglePerItem = 360 / numItems;
-  
-  // Larger radius to give a gentle curve matching the reference (approx 650px)
-  const radius = Math.round(200 / Math.tan(Math.PI / numItems)) + 60;
+  // Formula: radius so that adjacent cards have ~40px gap
+  // card width = 260px, so half = 130px
+  const radius = Math.round(140 / Math.tan(Math.PI / numItems)) + 30;
 
-  // Handle Dragging
+  const goToIndex = (idx) => {
+    const clamped = ((idx % numItems) + numItems) % numItems;
+    setActiveIndex(clamped);
+    if (animControl.current) animControl.current.stop();
+    animControl.current = animate(rotation, -clamped * anglePerItem, {
+      type: 'spring',
+      damping: 28,
+      stiffness: 70,
+    });
+  };
+
   const handlePanStart = () => {
-    setIsDragging(true);
+    isDragging.current = true;
     startRotation.current = rotation.get();
+    if (animControl.current) animControl.current.stop();
   };
 
-  const handlePan = (event, info) => {
-    // 1 pixel of drag = roughly 0.15 degrees of rotation for smoother control
-    const dragDelta = info.offset.x;
-    rotation.set(startRotation.current + dragDelta * 0.15);
+  const handlePan = (_, info) => {
+    rotation.set(startRotation.current + info.offset.x * 0.18);
   };
 
-  const handlePanEnd = (event, info) => {
-    setIsDragging(false);
+  const handlePanEnd = (_, info) => {
+    isDragging.current = false;
     const velocity = info.velocity.x;
-    
-    // Snap to the nearest card index
-    let currentRot = rotation.get();
-    let currentAngleIndex = -Math.round(currentRot / anglePerItem);
-    
-    // Apply momentum if dragged quickly
-    if (Math.abs(velocity) > 100) {
-      const snapDirection = velocity > 0 ? -1 : 1;
-      currentAngleIndex += snapDirection;
+    const currentRot = rotation.get();
+
+    // Calculate which card we're closest to
+    let rawIndex = -currentRot / anglePerItem;
+    if (Math.abs(velocity) > 120) {
+      rawIndex += velocity > 0 ? -0.8 : 0.8;
     }
-    
-    // Keep it in bounds
-    currentAngleIndex = (currentAngleIndex % numItems + numItems) % numItems;
-    setActiveIndex(currentAngleIndex);
-    
-    animate(rotation, -currentAngleIndex * anglePerItem, {
-      type: 'spring',
-      damping: 30,
-      stiffness: 80,
-    });
-  };
 
-  // Nav Button handlers
-  const handlePrev = () => {
-    const nextIndex = (activeIndex - 1 + numItems) % numItems;
-    setActiveIndex(nextIndex);
-    animate(rotation, -nextIndex * anglePerItem, {
-      type: 'spring',
-      damping: 25,
-      stiffness: 70
-    });
+    const snappedIndex = Math.round(rawIndex);
+    goToIndex(snappedIndex);
   };
-
-  const handleNext = () => {
-    const nextIndex = (activeIndex + 1) % numItems;
-    setActiveIndex(nextIndex);
-    animate(rotation, -nextIndex * anglePerItem, {
-      type: 'spring',
-      damping: 25,
-      stiffness: 70
-    });
-  };
-
-  if (albums.length === 0) return null;
 
   return (
-    <div className="circular-carousel-wrapper">
-      {/* Background Gradient Blobs matching Google reference */}
-      <div className="carousel-blob-bg green-blob"></div>
-      <div className="carousel-blob-bg blue-blob"></div>
-
-      <div className="carousel-header">
-        <h2 className="carousel-heading-title">Be the first to experiment</h2>
+    <div className="cc-wrapper">
+      {/* Section heading */}
+      <div className="cc-header">
+        <p className="cc-eyebrow">My Work</p>
+        <h2 className="cc-title">Photo Albums</h2>
       </div>
 
-      <div className="circular-carousel-container">
-        <motion.div 
-          className="circular-scene"
+      {/* 3D cylinder */}
+      <div className="cc-stage">
+        <motion.div
+          className="cc-scene"
           style={{ rotateY: rotation }}
           onPanStart={handlePanStart}
           onPan={handlePan}
           onPanEnd={handlePanEnd}
         >
           {albums.map((album, index) => {
-            const itemRotation = index * anglePerItem;
-            // Highlight card if it's the active index
+            const angle = index * anglePerItem;
             const isActive = index === activeIndex;
             return (
-              <motion.div
-                key={album.id || index}
-                className={`circular-card ${isActive ? 'active' : ''}`}
+              <div
+                key={album.id}
+                className={`cc-card ${isActive ? 'cc-card--active' : ''}`}
                 style={{
-                  transform: `rotateY(${itemRotation}deg) translateZ(${radius}px)`
+                  transform: `rotateY(${angle}deg) translateZ(${radius}px)`,
                 }}
               >
-                <div className="card-image-wrapper">
-                  <img src={album.url} alt={album.title} loading="lazy" />
-                  {album.category && <span className="card-badge">{album.category}</span>}
+                {/* Photo fills the card */}
+                <div className="cc-card-img-wrap">
+                  <img
+                    src={album.coverSrc}
+                    alt={album.title}
+                    loading="lazy"
+                    draggable={false}
+                  />
                 </div>
-                <div className="card-content">
-                  <h3 className="card-title">{album.title}</h3>
-                  <p className="card-desc">{album.description}</p>
-                  <Link 
+                {/* Glass label at bottom */}
+                <div className="cc-card-label">
+                  {album.category && (
+                    <span className="cc-card-cat">{album.category}</span>
+                  )}
+                  <span className="cc-card-name">{album.title}</span>
+                  <Link
                     to={`/portfolio?category=${encodeURIComponent(album.category)}`}
-                    className="card-cta"
+                    className="cc-card-link"
+                    onClick={(e) => e.stopPropagation()}
                   >
-                    View Album <span className="cta-arrow">→</span>
+                    View →
                   </Link>
                 </div>
-              </motion.div>
+              </div>
             );
           })}
         </motion.div>
       </div>
 
-      {/* Navigation arrows at the bottom */}
-      <div className="carousel-nav-controls">
-        <button className="carousel-nav-btn prev" onClick={handlePrev} aria-label="Previous card">
-          <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="15 18 9 12 15 6"></polyline>
+      {/* Arrow controls */}
+      <div className="cc-controls">
+        <button
+          className="cc-btn"
+          onClick={() => goToIndex(activeIndex - 1)}
+          aria-label="Previous album"
+        >
+          <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="15 18 9 12 15 6" />
           </svg>
         </button>
-        <button className="carousel-nav-btn next" onClick={handleNext} aria-label="Next card">
-          <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="9 18 15 12 9 6"></polyline>
+
+        {/* Dot indicators */}
+        <div className="cc-dots">
+          {albums.map((_, i) => (
+            <button
+              key={i}
+              className={`cc-dot ${i === activeIndex ? 'cc-dot--active' : ''}`}
+              onClick={() => goToIndex(i)}
+              aria-label={`Go to album ${i + 1}`}
+            />
+          ))}
+        </div>
+
+        <button
+          className="cc-btn"
+          onClick={() => goToIndex(activeIndex + 1)}
+          aria-label="Next album"
+        >
+          <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="9 18 15 12 9 6" />
           </svg>
         </button>
       </div>

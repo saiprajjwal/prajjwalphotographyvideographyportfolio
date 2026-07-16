@@ -156,10 +156,15 @@ export default function Home() {
   const heroTextBlur = useTransform(scrollYProgress, [0, 0.16], ['blur(0px)', 'blur(20px)']);
   const heroPointer = useTransform(scrollYProgress, (v) => (v < 0.16 ? 'auto' : 'none'));
 
-  // Bring in the "Enter" text overlay, then fade it out before the carousel scrolls up.
-  const enterOpacity = useTransform(scrollYProgress, [0, 0.52, 0.58, 0.68, 0.75, 1], [0, 0, 1, 1, 0, 0]);
-  const enterScale = useTransform(scrollYProgress, [0.52, 0.58, 0.68, 0.75], [0.8, 1, 1, 1.1]);
-  const enterPointer = useTransform(scrollYProgress, (v) => (v > 0.52 && v < 0.75 ? 'auto' : 'none'));
+  // "The Vision is Clear" CTA — appears mid-scroll, fades out before carousel
+  const enterOpacity = useTransform(scrollYProgress, [0, 0.38, 0.45, 0.55, 0.62, 1], [0, 0, 1, 1, 0, 0]);
+  const enterScale = useTransform(scrollYProgress, [0.38, 0.45, 0.55, 0.62], [0.85, 1, 1, 1.08]);
+  const enterPointer = useTransform(scrollYProgress, (v) => (v > 0.38 && v < 0.62 ? 'auto' : 'none'));
+
+  // Carousel — fades in after CTA fades out, stays until very end of scroll
+  const carouselOpacity = useTransform(scrollYProgress, [0, 0.65, 0.72, 0.94, 1], [0, 0, 1, 1, 0]);
+  const carouselScale = useTransform(scrollYProgress, [0.65, 0.72, 0.94, 1], [0.88, 1, 1, 1.06]);
+  const carouselPointer = useTransform(scrollYProgress, (v) => (v > 0.65 && v < 1 ? 'auto' : 'none'));
 
   return (
     <motion.div
@@ -215,8 +220,8 @@ export default function Home() {
       </div>
     
 
-      {/* 420vh Scroll Container to create the scrollbar and house the relative content */}
-      <div className="home-scroll-content" style={{ height: '420vh', position: 'relative' }}>
+      {/* 320vh Scroll Container — 3D overlays are fixed; this just creates the scroll room */}
+      <div className="home-scroll-content" style={{ height: '320vh', position: 'relative' }}>
 
         {/* Initial Hero Text - Flies forward and blurs on scroll */}
         <motion.div
@@ -243,7 +248,7 @@ export default function Home() {
             <div className="scroll-line"></div>
           </div>
         </motion.div>
-        {/* Final Text at bottom of scroll */}
+        {/* Final CTA text — fixed overlay, mid scroll */}
         <motion.div className="monolith-content-overlay" style={{ opacity: enterOpacity, scale: enterScale, pointerEvents: enterPointer }}>
           <div className="monolith-text-container">
             <h2 className="section-heading">The Vision is Clear.</h2>
@@ -269,9 +274,20 @@ export default function Home() {
           </div>
         </motion.div>
 
-        {/* Circular 3D Carousel & Footer positioned at the absolute bottom of the scroll flow */}
-        <div style={{ position: 'absolute', top: '300vh', left: 0, right: 0, width: '100%', zIndex: 10 }}>
+        {/* 3D Circular Carousel — fixed overlay, appears after CTA fades */}
+        <motion.div
+          className="monolith-content-overlay"
+          style={{
+            opacity: carouselOpacity,
+            scale: carouselScale,
+            pointerEvents: carouselPointer,
+          }}
+        >
           <CircularCarousel />
+        </motion.div>
+
+        {/* Footer — absolute, lives at the very bottom of the scroll flow */}
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, width: '100%', zIndex: 10 }}>
           <Footer />
         </div>
 
