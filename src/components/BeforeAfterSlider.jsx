@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { getOptimizedUrl } from '../utils/imageOptimizer';
 import './BeforeAfterSlider.css';
 
 export default function BeforeAfterSlider({ beforeImage, afterImage }) {
@@ -48,32 +49,8 @@ export default function BeforeAfterSlider({ beforeImage, afterImage }) {
     };
   }, [isDragging]);
 
-  const getOptimizedUrl = (url) => {
-    if (!url) return '';
-    if (url.includes('images.unsplash.com')) {
-      let optimized = url;
-      if (optimized.includes('w=')) {
-        optimized = optimized.replace(/w=\d+/, 'w=800');
-      } else {
-        optimized += '&w=800';
-      }
-      if (optimized.includes('q=')) {
-        optimized = optimized.replace(/q=\d+/, 'q=70');
-      } else {
-        optimized += '&q=70';
-      }
-      return optimized;
-    }
-    if (url.includes('res.cloudinary.com')) {
-      if (url.includes('/upload/') && !url.includes('/raw/')) {
-        return url.replace('/upload/', '/upload/w_800,c_limit,q_auto,f_auto/');
-      }
-    }
-    return url;
-  };
-
-  const optimizedBefore = getOptimizedUrl(beforeImage);
-  const optimizedAfter = getOptimizedUrl(afterImage);
+  const optimizedBefore = getOptimizedUrl(beforeImage, 800, 70);
+  const optimizedAfter = getOptimizedUrl(afterImage, 800, 70);
 
   return (
     <div 

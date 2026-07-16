@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingBag, Filter, Download } from 'lucide-react';
 import defaultStoreData from '../data/store.json';
 import ProductModal from '../components/ProductModal';
+import { getOptimizedUrl } from '../utils/imageOptimizer';
 import './Store.css';
 
 export default function Store() {
@@ -99,7 +100,7 @@ export default function Store() {
                   className="product-card glass-panel"
                 >
                   <div className="product-image-container" onClick={() => handleProductClick(product)}>
-                    <img src={product.afterImage} alt={product.title} loading="lazy" />
+                    <img src={getOptimizedUrl(product.afterImage, 500, 70)} alt={product.title} loading="lazy" />
                     <div className="product-type-badge">
                       {product.type.toUpperCase()}
                     </div>
