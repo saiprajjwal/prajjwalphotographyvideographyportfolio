@@ -1,13 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, useMotionValue, animate } from 'framer-motion';
+import { motion, useMotionValue, animate, useTransform } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import './CircularCarousel.css';
 
-export default function CircularCarousel() {
+export default function CircularCarousel({ scrollYProgress }) {
   const [allAlbums, setAllAlbums] = useState([]);
   const [filter, setFilter] = useState('All');
   const [activeIndex, setActiveIndex] = useState(0);
-  const rotation = useMotionValue(0);
+  
+  // Motion values for scroll-driven rotation & manual drag
+  const dragOffset = useMotionValue(0);
+  const scrollRot = useTransform(scrollYProgress || useMotionValue(0), [0, 1], [0, -1080]);
+  const rotation = useTransform([scrollRot, dragOffset], ([s, d]) => s + d);
+
   const isDragging = useRef(false);
   const startRotation = useRef(0);
   const animControl = useRef(null);
@@ -93,17 +98,41 @@ export default function CircularCarousel() {
 
   const anglePerItem = 360 / numItems;
   
-  // Responsive radius: tighter on mobile to match smaller card width and maintain proper gaps
+  // responsive radius: tighter on mobile to match smaller card width and maintain proper gaps
   const radius = windowWidth < 768 ? 1200 : 1500;
+
+  // Update active card index in real-time as scroll/drag rotation changes
+  useEffect(() => {
+    const handleChange = (latest) => {
+      if (numItems === 0) return;
+      const rawIndex = -latest / anglePerItem;
+      const snappedIndex = Math.round(rawIndex);
+      const clamped = ((snappedIndex % numItems) + numItems) % numItems;
+      setActiveIndex(clamped);
+    };
+
+    if (rotation.on) {
+      return rotation.on('change', handleChange);
+    } else if (rotation.onChange) {
+      return rotation.onChange(handleChange);
+    }
+  }, [rotation, anglePerItem, numItems]);
 
   // Extract unique categories for filter pills
   const categories = ['All', ...new Set(allAlbums.map(a => a.category).filter(Boolean))];
 
+  // Set up fading opacity for header and controls based on page scroll progress
+  const controlsOpacity = useTransform(scrollYProgress || useMotionValue(0), [0.75, 0.82], [0, 1]);
+  const controlsPointer = useTransform(scrollYProgress || useMotionValue(0), (v) => (v > 0.75 ? 'auto' : 'none'));
+
   const goToIndex = (idx) => {
     const clamped = ((idx % numItems) + numItems) % numItems;
-    setActiveIndex(clamped);
+    
+    const currentScrollRot = scrollRot.get();
+    const targetDragOffset = -clamped * anglePerItem - currentScrollRot;
+
     if (animControl.current) animControl.current.stop();
-    animControl.current = animate(rotation, -clamped * anglePerItem, {
+    animControl.current = animate(dragOffset, targetDragOffset, {
       type: 'spring',
       damping: 22,       // silkier, less abrupt
       stiffness: 55,     // slower, more cinematic
@@ -113,37 +142,50 @@ export default function CircularCarousel() {
 
   const handlePanStart = () => {
     isDragging.current = true;
-    startRotation.current = rotation.get();
+    startRotation.current = dragOffset.get();
     if (animControl.current) animControl.current.stop();
   };
 
   const handlePan = (_, info) => {
     // 0.14 degrees per px — deliberate but responsive
-    rotation.set(startRotation.current + info.offset.x * 0.14);
+    dragOffset.set(startRotation.current + info.offset.x * 0.14);
   };
 
   const handlePanEnd = (_, info) => {
     isDragging.current = false;
     const velocity = info.velocity.x;
-    const currentRot = rotation.get();
+    const currentDragRot = dragOffset.get();
+    const currentScrollRot = scrollRot.get();
+    const totalRot = currentScrollRot + currentDragRot;
 
     // Nearest card snap, extended by momentum on a fast flick
-    let rawIndex = -currentRot / anglePerItem;
+    let rawIndex = -totalRot / anglePerItem;
     if (Math.abs(velocity) > 80) {
       const carry = Math.min(Math.abs(velocity) / 400, 2.5);
       rawIndex += velocity > 0 ? -carry : carry;
     }
 
     const snappedIndex = Math.round(rawIndex);
-    goToIndex(snappedIndex);
+    const targetDragOffset = -snappedIndex * anglePerItem - currentScrollRot;
+
+    if (animControl.current) animControl.current.stop();
+    animControl.current = animate(dragOffset, targetDragOffset, {
+      type: 'spring',
+      damping: 22,
+      stiffness: 55,
+      mass: 0.8,
+    });
   };
 
   return (
     <div className="cc-wrapper">
       {/* Section heading */}
-      <div className="cc-header">
+      <motion.div 
+        className="cc-header"
+        style={{ opacity: controlsOpacity, pointerEvents: controlsPointer }}
+      >
         <h2 className="cc-title">Photo Albums</h2>
-      </div>
+      </motion.div>
 
       {/* 3D cylinder */}
       <div className="cc-stage">
@@ -195,7 +237,10 @@ export default function CircularCarousel() {
       </div>
 
       {/* Arrow controls */}
-      <div className="cc-controls">
+      <motion.div 
+        className="cc-controls"
+        style={{ opacity: controlsOpacity, pointerEvents: controlsPointer }}
+      >
         <button
           className="cc-arrow"
           onClick={() => goToIndex(activeIndex - 1)}
@@ -215,7 +260,7 @@ export default function CircularCarousel() {
             <polyline points="9 18 15 12 9 6" />
           </svg>
         </button>
-      </div>
+      </motion.div>
     </div>
   );
 }

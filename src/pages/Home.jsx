@@ -159,9 +159,9 @@ export default function Home() {
   const enterScale   = useTransform(scrollYProgress, [0.55, 0.62, 0.72, 0.78], [0.85, 1, 1, 1.06]);
   const enterPointer = useTransform(scrollYProgress, (v) => (v > 0.55 && v < 0.78 ? 'auto' : 'none'));
 
-  // Carousel — fades in smoothly AFTER the CTA fades out
-  const carouselOpacity = useTransform(scrollYProgress, [0, 0.78, 0.85, 0.95, 1], [0, 0, 1, 1, 0]);
-  const carouselScale  = useTransform(scrollYProgress, [0.78, 0.85, 0.95, 1], [0.95, 1, 1, 1.02]);
+  // Carousel — fades in early to orbit the monolith, becomes interactive at the bottom
+  const carouselOpacity = useTransform(scrollYProgress, [0, 0.16, 0.24, 0.95, 1], [0, 0, 1, 1, 0]);
+  const carouselScale  = useTransform(scrollYProgress, [0.16, 0.24, 0.95, 1], [0.9, 1, 1, 1.02]);
   const carouselPointer = useTransform(scrollYProgress, (v) => (v > 0.78 ? 'auto' : 'none'));
 
   return (
@@ -272,16 +272,17 @@ export default function Home() {
           </div>
         </motion.div>
 
-        {/* 3D Circular Carousel — fixed overlay, appears after CTA fades */}
+        {/* 3D Circular Carousel — fixed overlay, orbits the monolith */}
         <motion.div
           className="monolith-content-overlay"
           style={{
             opacity: carouselOpacity,
             scale: carouselScale,
             pointerEvents: carouselPointer,
+            zIndex: 2 // Sits behind CTA/Hero text (z-index 3) but in front of Canvas (z-index 1)
           }}
         >
-          <CircularCarousel />
+          <CircularCarousel scrollYProgress={scrollYProgress} />
         </motion.div>
 
         {/* Footer — absolute, lives at the very bottom of the scroll flow */}
