@@ -118,9 +118,7 @@ export default function CircularCarousel() {
   }
 
   const numItems = displayAlbums.length;
-  if (numItems === 0) return null;
-
-  const anglePerItem = 360 / numItems;
+  const anglePerItem = numItems > 0 ? 360 / numItems : 0;
   
   // Responsive radius: tighter on mobile to match smaller card width and maintain proper gaps
   const radius = windowWidth < 768 ? 1200 : 1500;
@@ -131,6 +129,7 @@ export default function CircularCarousel() {
   useEffect(() => {
     if (!rotation) return;
     const handleChange = (latest) => {
+      if (numItems === 0) return;
       const rawIndex = -latest / anglePerItem;
       const nearestIndex = Math.round(rawIndex);
       if (nearestIndex !== lastTickIndex.current) {
@@ -146,10 +145,12 @@ export default function CircularCarousel() {
     } else if (rotation.onChange) {
       return rotation.onChange(handleChange);
     }
-  }, [rotation, anglePerItem]);
+  }, [rotation, anglePerItem, numItems]);
 
   // Extract unique categories for filter pills
   const categories = ['All', ...new Set(allAlbums.map(a => a.category).filter(Boolean))];
+
+  if (numItems === 0) return null;
 
   const goToIndex = (idx) => {
     const clamped = ((idx % numItems) + numItems) % numItems;
