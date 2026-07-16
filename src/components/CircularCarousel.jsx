@@ -14,11 +14,18 @@ export default function CircularCarousel() {
   const startRotation = React.useRef(0);
 
   useEffect(() => {
-    // Pick ~10-12 random photos from the portfolio to show in the carousel
-    // Or just take the first 10 for consistency
-    const allPhotos = portfolioData.photos.filter(p => !p.isVideo);
-    const selected = allPhotos.slice(0, 10);
-    setPhotos(selected);
+    fetch('/api/photos')
+      .then(res => {
+        if (!res.ok) throw new Error('API offline');
+        return res.json();
+      })
+      .then(data => {
+        const allPhotos = (data.photos || []).filter(p => !p.isVideo);
+        setPhotos(allPhotos.slice(0, 10));
+      })
+      .catch(err => {
+        console.error('Failed to load photos for carousel:', err);
+      });
   }, []);
 
   const numItems = photos.length || 10; // Fallback to avoid div by zero
