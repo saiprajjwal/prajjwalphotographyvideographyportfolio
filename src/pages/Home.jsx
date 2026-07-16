@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import { InstagramIcon, YoutubeIcon, TiktokIcon, PinterestIcon } from '../components/Icons';
 import Magnetic from '../components/Magnetic';
 import CircularCarousel from '../components/CircularCarousel';
+import Footer from '../components/Footer';
 import '../components/Footer.css';
 import './Home.css';
 
@@ -155,15 +156,10 @@ export default function Home() {
   const heroTextBlur = useTransform(scrollYProgress, [0, 0.16], ['blur(0px)', 'blur(20px)']);
   const heroPointer = useTransform(scrollYProgress, (v) => (v < 0.16 ? 'auto' : 'none'));
 
-  // Bring in the "Enter" text only at the end of the scroll; held at 0 before.
-  const enterOpacity = useTransform(scrollYProgress, [0, 0.72, 1], [0, 0, 1]);
-  const enterScale = useTransform(scrollYProgress, [0.72, 1], [0.8, 1]);
-  const enterPointer = useTransform(scrollYProgress, (v) => (v > 0.72 ? 'auto' : 'none'));
-
-  // Carousel appears in the middle chunk of the scroll journey
-  const carouselOpacity = useTransform(scrollYProgress, [0, 0.18, 0.25, 0.6, 0.7, 1], [0, 0, 1, 1, 0, 0]);
-  const carouselPointer = useTransform(scrollYProgress, (v) => (v > 0.18 && v < 0.7 ? 'auto' : 'none'));
-  const carouselScale = useTransform(scrollYProgress, [0.18, 0.25, 0.6, 0.7], [0.8, 1, 1, 1.2]);
+  // Bring in the "Enter" text overlay, then fade it out before the carousel scrolls up.
+  const enterOpacity = useTransform(scrollYProgress, [0, 0.52, 0.58, 0.68, 0.75, 1], [0, 0, 1, 1, 0, 0]);
+  const enterScale = useTransform(scrollYProgress, [0.52, 0.58, 0.68, 0.75], [0.8, 1, 1, 1.1]);
+  const enterPointer = useTransform(scrollYProgress, (v) => (v > 0.52 && v < 0.75 ? 'auto' : 'none'));
 
   return (
     <motion.div
@@ -219,8 +215,8 @@ export default function Home() {
       </div>
     
 
-      {/* 300vh Scroll Container to create the scrollbar without actual HTML content below */}
-      <div className="home-scroll-content" style={{ height: '300vh' }}>
+      {/* 420vh Scroll Container to create the scrollbar and house the relative content */}
+      <div className="home-scroll-content" style={{ height: '420vh', position: 'relative' }}>
 
         {/* Initial Hero Text - Flies forward and blurs on scroll */}
         <motion.div
@@ -247,18 +243,6 @@ export default function Home() {
             <div className="scroll-line"></div>
           </div>
         </motion.div>
-        {/* 3D Circular Carousel Section */}
-        <motion.div 
-          className="monolith-content-overlay" 
-          style={{ 
-            opacity: carouselOpacity, 
-            scale: carouselScale, 
-            pointerEvents: carouselPointer 
-          }}
-        >
-          <CircularCarousel />
-        </motion.div>
-
         {/* Final Text at bottom of scroll */}
         <motion.div className="monolith-content-overlay" style={{ opacity: enterOpacity, scale: enterScale, pointerEvents: enterPointer }}>
           <div className="monolith-text-container">
@@ -284,6 +268,12 @@ export default function Home() {
             </div>
           </div>
         </motion.div>
+
+        {/* Circular 3D Carousel & Footer positioned at the absolute bottom of the scroll flow */}
+        <div style={{ position: 'absolute', top: '300vh', left: 0, right: 0, width: '100%', zIndex: 10 }}>
+          <CircularCarousel />
+          <Footer />
+        </div>
 
       </div>
     </motion.div>

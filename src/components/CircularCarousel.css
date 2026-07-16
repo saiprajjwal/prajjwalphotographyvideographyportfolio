@@ -1,18 +1,72 @@
+.circular-carousel-wrapper {
+  position: relative;
+  width: 100%;
+  padding: 6rem 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background-color: #f7f7f9; /* Light background matching the reference */
+  color: #1f1f1f;
+  z-index: 10;
+}
+
+/* Background blob gradients matching the Google style guide */
+.carousel-blob-bg {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(120px);
+  opacity: 0.15;
+  pointer-events: none;
+  z-index: 0;
+  will-change: transform;
+}
+
+.green-blob {
+  width: 500px;
+  height: 500px;
+  background-color: #34a853;
+  top: -10%;
+  right: 5%;
+}
+
+.blue-blob {
+  width: 600px;
+  height: 600px;
+  background-color: #4285f4;
+  bottom: -20%;
+  left: -10%;
+}
+
+/* Header style */
+.carousel-header {
+  text-align: center;
+  margin-bottom: 3.5rem;
+  z-index: 2;
+}
+
+.carousel-heading-title {
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: clamp(2rem, 4.5vw, 3.5rem);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: #1f1f1f;
+  margin: 0;
+}
+
+/* Container & 3D Math */
 .circular-carousel-container {
-  width: 100vw;
-  height: 60vh;
-  min-height: 500px;
-  max-height: 800px;
+  width: 100%;
+  height: 550px;
   display: flex;
   align-items: center;
   justify-content: center;
-  perspective: 1200px;
-  overflow: hidden;
+  perspective: 1400px;
   position: relative;
-  /* Allow touching to drag without scrolling the page */
   touch-action: pan-y;
   cursor: grab;
-  z-index: 10;
+  z-index: 2;
 }
 
 .circular-carousel-container:active {
@@ -29,55 +83,160 @@
   justify-content: center;
 }
 
+/* White Card Design from reference */
 .circular-card {
   position: absolute;
-  width: 320px;
+  width: 290px;
   height: 440px;
-  border-radius: 16px;
+  border-radius: 24px;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.02);
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.03);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-  /* The rotateY and translateZ will be applied via inline styles in React */
   backface-visibility: hidden;
-  /* Add subtle glow border when hovered if desired */
-  transition: border-color 0.3s ease;
+  transition: box-shadow 0.3s ease, border-color 0.3s ease, transform 0.4s ease;
   will-change: transform;
 }
 
-.circular-card:hover {
-  border-color: rgba(255, 255, 255, 0.4);
+.circular-card.active {
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.03);
+  border-color: rgba(0, 0, 0, 0.08);
 }
 
-.circular-card img {
+.card-image-wrapper {
+  position: relative;
+  width: 100%;
+  height: 200px;
+  overflow: hidden;
+}
+
+.card-image-wrapper img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  pointer-events: none; /* Prevents dragging the image itself instead of the carousel */
-}
-
-/* Optional label at the bottom of the card */
-.circular-card-label {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 1.5rem;
-  background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0) 100%);
-  color: #fff;
-  font-family: var(--font-sans);
-  font-size: 0.9rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
   pointer-events: none;
+  transition: transform 0.5s ease;
 }
 
-/* Responsive adjustments */
+.circular-card:hover .card-image-wrapper img {
+  transform: scale(1.04);
+}
+
+.card-badge {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  background: rgba(255, 255, 255, 0.9);
+  color: #1f1f1f;
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.3rem 0.8rem;
+  border-radius: 100px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.card-content {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.card-title {
+  font-family: var(--font-sans);
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0 0 0.5rem 0;
+  color: #1f1f1f;
+}
+
+.card-desc {
+  font-family: var(--font-sans);
+  font-size: 0.88rem;
+  color: #5f6368;
+  line-height: 1.5;
+  margin: 0 0 1.5rem 0;
+  flex: 1;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.card-cta {
+  font-family: var(--font-sans);
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: #1a73e8; /* Google blue brand color */
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: auto;
+  transition: color 0.2s ease;
+}
+
+.card-cta:hover {
+  color: #1557b0;
+}
+
+.cta-arrow {
+  transition: transform 0.2s ease;
+}
+
+.card-cta:hover .cta-arrow {
+  transform: translateX(3px);
+}
+
+/* Nav controls matching bottom reference */
+.carousel-nav-controls {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  z-index: 2;
+}
+
+.carousel-nav-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  color: #5f6368;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+  transition: background-color 0.2s, border-color 0.2s, color 0.2s, transform 0.1s;
+}
+
+.carousel-nav-btn:hover {
+  background-color: #f8f9fa;
+  border-color: rgba(0, 0, 0, 0.15);
+  color: #1f1f1f;
+}
+
+.carousel-nav-btn:active {
+  transform: scale(0.96);
+}
+
+/* Responsive sizes */
 @media (max-width: 768px) {
+  .circular-carousel-wrapper {
+    padding: 4rem 0;
+  }
+  .circular-carousel-container {
+    height: 480px;
+  }
   .circular-card {
-    width: 240px;
-    height: 340px;
+    width: 260px;
+    height: 400px;
+  }
+  .card-image-wrapper {
+    height: 160px;
   }
 }
