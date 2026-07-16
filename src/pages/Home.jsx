@@ -6,6 +6,7 @@ import { Environment, MeshTransmissionMaterial, Sparkles, Image, Float } from '@
 import * as THREE from 'three';
 import { InstagramIcon, YoutubeIcon, TiktokIcon, PinterestIcon } from '../components/Icons';
 import Magnetic from '../components/Magnetic';
+import CircularCarousel from '../components/CircularCarousel';
 import '../components/Footer.css';
 import './Home.css';
 
@@ -159,6 +160,11 @@ export default function Home() {
   const enterScale = useTransform(scrollYProgress, [0.72, 1], [0.8, 1]);
   const enterPointer = useTransform(scrollYProgress, (v) => (v > 0.72 ? 'auto' : 'none'));
 
+  // Carousel appears in the middle chunk of the scroll journey
+  const carouselOpacity = useTransform(scrollYProgress, [0, 0.18, 0.25, 0.6, 0.7, 1], [0, 0, 1, 1, 0, 0]);
+  const carouselPointer = useTransform(scrollYProgress, (v) => (v > 0.18 && v < 0.7 ? 'auto' : 'none'));
+  const carouselScale = useTransform(scrollYProgress, [0.18, 0.25, 0.6, 0.7], [0.8, 1, 1, 1.2]);
+
   return (
     <motion.div
       className="home-wrapper-full"
@@ -240,6 +246,17 @@ export default function Home() {
             <span>Scroll</span>
             <div className="scroll-line"></div>
           </div>
+        </motion.div>
+        {/* 3D Circular Carousel Section */}
+        <motion.div 
+          className="monolith-content-overlay" 
+          style={{ 
+            opacity: carouselOpacity, 
+            scale: carouselScale, 
+            pointerEvents: carouselPointer 
+          }}
+        >
+          <CircularCarousel />
         </motion.div>
 
         {/* Final Text at bottom of scroll */}

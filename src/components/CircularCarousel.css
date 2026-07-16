@@ -1,0 +1,83 @@
+.circular-carousel-container {
+  width: 100vw;
+  height: 60vh;
+  min-height: 500px;
+  max-height: 800px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  perspective: 1200px;
+  overflow: hidden;
+  position: relative;
+  /* Allow touching to drag without scrolling the page */
+  touch-action: pan-y;
+  cursor: grab;
+  z-index: 10;
+}
+
+.circular-carousel-container:active {
+  cursor: grabbing;
+}
+
+.circular-scene {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.circular-card {
+  position: absolute;
+  width: 320px;
+  height: 440px;
+  border-radius: 16px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  /* The rotateY and translateZ will be applied via inline styles in React */
+  backface-visibility: hidden;
+  /* Add subtle glow border when hovered if desired */
+  transition: border-color 0.3s ease;
+  will-change: transform;
+}
+
+.circular-card:hover {
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.circular-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none; /* Prevents dragging the image itself instead of the carousel */
+}
+
+/* Optional label at the bottom of the card */
+.circular-card-label {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 1.5rem;
+  background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0) 100%);
+  color: #fff;
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .circular-card {
+    width: 240px;
+    height: 340px;
+  }
+}
