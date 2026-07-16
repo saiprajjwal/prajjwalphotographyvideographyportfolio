@@ -1,18 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, useMotionValue, animate } from 'framer-motion';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import './CircularCarousel.css';
 
 export default function CircularCarousel() {
   const [allAlbums, setAllAlbums] = useState([]);
   const [filter, setFilter] = useState('All');
   const [activeIndex, setActiveIndex] = useState(0);
-  const [animatingIndex, setAnimatingIndex] = useState(null);
   const rotation = useMotionValue(0);
   const isDragging = useRef(false);
   const startRotation = useRef(0);
   const animControl = useRef(null);
-  const navigate = useNavigate();
 
   useEffect(() => {
     fetch('/api/photos')
@@ -140,21 +138,6 @@ export default function CircularCarousel() {
     goToIndex(snappedIndex);
   };
 
-  const handleCardClick = (index, album) => {
-    if (index !== activeIndex) {
-      goToIndex(index);
-      return;
-    }
-    
-    // Trigger the flip & scale animation
-    setAnimatingIndex(index);
-    
-    // Wait for the animation to finish (800ms) before navigating
-    setTimeout(() => {
-      navigate(`/portfolio?category=${encodeURIComponent(album.category)}`);
-    }, 800);
-  };
-
   return (
     <div className="cc-wrapper">
       {/* Section heading */}
@@ -174,48 +157,36 @@ export default function CircularCarousel() {
           {displayAlbums.map((album, index) => {
             const angle = index * anglePerItem;
             const isActive = index === activeIndex;
-            const isAnimating = index === animatingIndex;
-            
-            // Standard transform, or flip + scale + translate toward camera if animating
-            const transform = isAnimating
-              ? `rotateY(${angle + 180}deg) translateZ(${radius - 300}px) scale(1.4)`
-              : `rotateY(${angle}deg) translateZ(${radius}px)`;
-
             return (
               <div
                 key={`${album.id}-${index}`}
-                className={`cc-card ${isActive ? 'cc-card--active' : ''} ${isAnimating ? 'cc-card--animating' : ''}`}
-                style={{ transform }}
-                onClick={() => handleCardClick(index, album)}
+                className={`cc-card ${isActive ? 'cc-card--active' : ''}`}
+                style={{
+                  transform: `rotateY(${angle}deg) translateZ(${radius}px)`,
+                }}
               >
-                <div className="cc-card-front">
-                  {/* Photo fills the card */}
-                  <div className="cc-card-img-wrap">
-                    <img
-                      src={album.coverSrc}
-                      alt={album.title}
-                      loading="lazy"
-                      draggable={false}
-                    />
-                  </div>
-                  {/* Glass label at bottom */}
-                  <div className="cc-card-label">
-                    {album.category && (
-                      <span className="cc-card-cat">{album.category}</span>
-                    )}
-                    <span className="cc-card-name">{album.title}</span>
-                    <button
-                      className="cc-card-link"
-                      style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
-                    >
-                      View →
-                    </button>
-                  </div>
+                {/* Photo fills the card */}
+                <div className="cc-card-img-wrap">
+                  <img
+                    src={album.coverSrc}
+                    alt={album.title}
+                    loading="lazy"
+                    draggable={false}
+                  />
                 </div>
-                
-                <div className="cc-card-back">
-                  <div className="cc-spinner"></div>
-                  <div className="cc-card-back-text">Loading Album...</div>
+                {/* Glass label at bottom */}
+                <div className="cc-card-label">
+                  {album.category && (
+                    <span className="cc-card-cat">{album.category}</span>
+                  )}
+                  <span className="cc-card-name">{album.title}</span>
+                  <Link
+                    to={`/portfolio?category=${encodeURIComponent(album.category)}`}
+                    className="cc-card-link"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    View →
+                  </Link>
                 </div>
               </div>
             );
