@@ -73,7 +73,32 @@ const FALLBACK_IMAGES = {
 };
 
 // ──────────────────────────────────────────────────────────────
-// Paint one category panel: photo + iridescent wash + glass lettering
+// Which photo represents a category on the band.
+//
+// Driven by the album ordering set in admin: the lowest-numbered album wins,
+// and its own cover is used. So Portraits leads with Ivory (albumOrder 1)
+// rather than whichever flagged photo happened to sort first in the API
+// response. Reordering albums in admin re-points the band.
+// ──────────────────────────────────────────────────────────────
+const albumRank = (v) => (v > 0 ? v : Infinity);
+
+function pickCover(catPhotos) {
+  if (catPhotos.length === 0) return null;
+
+  const albums = [...new Set(catPhotos.map((p) => p.session).filter(Boolean))];
+  const leadAlbum = albums.sort((a, b) => {
+    const rankOf = (name) =>
+      Math.min(...catPhotos.filter((p) => p.session === name).map((p) => albumRank(p.albumOrder)));
+    return rankOf(a) - rankOf(b);
+  })[0];
+
+  const pool = leadAlbum ? catPhotos.filter((p) => p.session === leadAlbum) : catPhotos;
+  const cover = pool.find((p) => p.isCover) || pool[0] || catPhotos.find((p) => p.isCover) || catPhotos[0];
+  return cover?.src || null;
+}
+
+// ──────────────────────────────────────────────────────────────
+// Paint one category panel: photo + neutral edge shading + glass lettering
 // ──────────────────────────────────────────────────────────────
 function panelFont() {
   return `400 ${Math.round(TEX_H * 0.30)}px "Bodoni Moda", "Playfair Display", Didot, serif`;
@@ -99,9 +124,10 @@ function paintPanel(img, label) {
   //    black at low alpha, so it darkens the edges into the curve without
   //    shifting hue.
   const vig = ctx.createLinearGradient(0, 0, TEX_W, 0);
-  vig.addColorStop(0, 'rgba(0, 0, 0, 0.22)');
-  vig.addColorStop(0.5, 'rgba(0, 0, 0, 0)');
-  vig.addColorStop(1, 'rgba(0, 0, 0, 0.22)');
+  vig.addColorStop(0, 'rgba(0, 0, 0, 0.10)');
+  vig.addColorStop(0.32, 'rgba(0, 0, 0, 0)');
+  vig.addColorStop(0.68, 'rgba(0, 0, 0, 0)');
+  vig.addColorStop(1, 'rgba(0, 0, 0, 0.10)');
   ctx.fillStyle = vig;
   ctx.fillRect(0, 0, TEX_W, TEX_H);
 
@@ -160,7 +186,13 @@ function paintPanel(img, label) {
   ctx.restore();
 
   const tex = new THREE.CanvasTexture(canvas);
-  tex.colorSpace = THREE.SRGBColorSpace;
+  // NoColorSpace, deliberately. A raw ShaderMaterial doesn't get three.js's
+  // colorspace_fragment chunk, so nothing re-encodes linear back to sRGB on
+  // output. Tagging the texture sRGB would make the GPU decode it to linear on
+  // sample with no matching encode — the photos come out noticeably darker
+  // than the originals. Passing the canvas through untouched renders them
+  // exactly as graded.
+  tex.colorSpace = THREE.NoColorSpace;
   tex.minFilter = THREE.LinearMipmapLinearFilter;
   tex.magFilter = THREE.LinearFilter;
   tex.anisotropy = 8;
@@ -207,6 +239,7 @@ const PANEL_FRAG = /* glsl */ `
   uniform float uOpacity;
   uniform float uHasMap;
   uniform float uFlat;
+  uniform float uHover;
   varying vec2 vUv;
 
   const float PW = ${PANEL_WIDTH.toFixed(5)};
@@ -221,6 +254,11 @@ const PANEL_FRAG = /* glsl */ `
   void main() {
     if (uHasMap < 0.5) discard;
     vec4 c = texture2D(uMap, vUv);
+
+    // Hovering lifts the panel out of its resting state: a little exposure
+    // plus a touch more contrast around the midpoint.
+    c.rgb = mix(c.rgb, (c.rgb - 0.5) * 1.06 + 0.5, uHover);
+    c.rgb *= 1.0 + uHover * 0.10;
 
     // Reflections fade with distance from the band, which keeps the falloff
     // tied to the geometry instead of a viewport percentage.
@@ -248,6 +286,7 @@ function makePanelMaterial(isReflection) {
       uReflect: { value: isReflection ? 1 : 0 },
       uOpacity: { value: 1 },
       uHasMap: { value: 0 },
+      uHover: { value: 0 },
     },
     transparent: true,
     depthWrite: !isReflection,
@@ -427,8 +466,7 @@ function PhotoBand({ textures, activeIndex, flatMode, onSnap, onHoverChange, onT
     hoverLift.current += ((hovering.current ? 1 : 0) - hoverLift.current) * 0.12;
 
     if (bandGroup.current) {
-      const s = 1 + hoverLift.current * 0.035;
-      bandGroup.current.scale.setScalar(s);
+      bandGroup.current.scale.setScalar(1 + hoverLift.current * 0.055);
     }
 
     const base = Math.round(pos.current);
@@ -463,6 +501,7 @@ function PhotoBand({ textures, activeIndex, flatMode, onSnap, onHoverChange, onT
           mat.uniforms.uHasMap.value = tex ? 1 : 0;
         }
         mat.uniforms.uFlat.value = f;
+        mat.uniforms.uHover.value = hoverLift.current;
       }
       band.uniforms.uOpacity.value = 1;
       reflection.uniforms.uOpacity.value = 1;
@@ -587,10 +626,9 @@ export default function PortfolioHeroScene({
         const catPhotos = photos.filter(
           (p) => (p.category || '').toLowerCase() === cat.toLowerCase()
         );
-        const cover = catPhotos.find((p) => p.isCover) || catPhotos[0];
         return {
           key: cat,
-          src: cover?.src || FALLBACK_IMAGES[cat] || FALLBACK_IMAGES.Portraits,
+          src: pickCover(catPhotos) || FALLBACK_IMAGES[cat] || FALLBACK_IMAGES.Portraits,
         };
       }),
     [categories, photos]
