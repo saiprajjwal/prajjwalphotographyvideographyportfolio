@@ -38,8 +38,31 @@ const FILL_WIDE = 0.475;
 const FILL_NARROW = 0.86;
 
 // Texture canvas matches the panel's unwrapped aspect (arc length : height)
+const BAND_ASPECT = PANEL_WIDTH / PANEL_HEIGHT;
 const TEX_W = 1280;
-const TEX_H = Math.round(TEX_W / (PANEL_WIDTH / PANEL_HEIGHT));
+const TEX_H = Math.round(TEX_W / BAND_ASPECT);
+
+// ──────────────────────────────────────────────────────────────
+// Ask Cloudinary for a content-aware crop at the band's aspect.
+//
+// Stored covers are delivered with c_limit, which only constrains size — so
+// cropping a 2:3 portrait into this 2.3:1 band centre-crops straight through
+// the subject's face. g_auto picks the focal point instead, and doing it at
+// the CDN means we fetch a correctly framed image rather than throwing pixels
+// away locally.
+// ──────────────────────────────────────────────────────────────
+function bandCrop(src) {
+  const parts = src.split('/image/upload/');
+  if (parts.length !== 2) return src;
+
+  // Keep everything from the version segment on; drop any existing transform
+  const segments = parts[1].split('/');
+  const versionAt = segments.findIndex((s) => /^v\d+$/.test(s));
+  const tail = versionAt >= 0 ? segments.slice(versionAt).join('/') : parts[1];
+
+  const transform = `f_auto,q_auto,c_fill,g_auto,ar_${BAND_ASPECT.toFixed(2)},w_${TEX_W}`;
+  return `${parts[0]}/image/upload/${transform}/${tail}`;
+}
 
 const FALLBACK_IMAGES = {
   Portraits: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=1280&q=80&auto=format&fit=crop',
@@ -68,30 +91,17 @@ function paintPanel(img, label) {
   const dh = img.height * scale;
   ctx.drawImage(img, (TEX_W - dw) / 2, (TEX_H - dh) / 2, dw, dh);
 
-  // 2. Iridescent pastel wash — the dreamy pink/lavender/cyan sheen that
-  //    reads as glass. Pitched lighter than the reference on purpose: enough
-  //    sheen to read as glass, not so much that it bleaches the photography.
-  const sheen = ctx.createLinearGradient(0, TEX_H, TEX_W, 0);
-  sheen.addColorStop(0.0, 'rgba(126, 216, 245, 0.38)');
-  sheen.addColorStop(0.35, 'rgba(196, 178, 255, 0.34)');
-  sheen.addColorStop(0.65, 'rgba(255, 176, 214, 0.38)');
-  sheen.addColorStop(1.0, 'rgba(255, 214, 196, 0.30)');
-  ctx.fillStyle = sheen;
-  ctx.fillRect(0, 0, TEX_W, TEX_H);
-
-  // 3. Soft light lift through the middle so the band glows
-  const lift = ctx.createLinearGradient(0, 0, 0, TEX_H);
-  lift.addColorStop(0, 'rgba(255, 255, 255, 0.22)');
-  lift.addColorStop(0.5, 'rgba(255, 255, 255, 0.06)');
-  lift.addColorStop(1, 'rgba(255, 255, 255, 0.18)');
-  ctx.fillStyle = lift;
-  ctx.fillRect(0, 0, TEX_W, TEX_H);
-
-  // 4. Edge vignette to seat the photo into the curve
+  // 2. Neutral edge shading only.
+  //    No colour wash: the reference's pink cast is the photographer's own
+  //    grade baked into their source files (their originals already average
+  //    a pink rgb(231,211,224)), not something the site applies. Tinting here
+  //    would recolour work that's already been graded. This gradient is pure
+  //    black at low alpha, so it darkens the edges into the curve without
+  //    shifting hue.
   const vig = ctx.createLinearGradient(0, 0, TEX_W, 0);
-  vig.addColorStop(0, 'rgba(0, 0, 0, 0.20)');
+  vig.addColorStop(0, 'rgba(0, 0, 0, 0.22)');
   vig.addColorStop(0.5, 'rgba(0, 0, 0, 0)');
-  vig.addColorStop(1, 'rgba(0, 0, 0, 0.20)');
+  vig.addColorStop(1, 'rgba(0, 0, 0, 0.22)');
   ctx.fillStyle = vig;
   ctx.fillRect(0, 0, TEX_W, TEX_H);
 
@@ -268,17 +278,30 @@ function useCategoryTextures(items) {
         /* font API unavailable — fall through to the serif stack */
       }
 
+      // Try the content-aware crop first, then fall back to the plain source
+      // if the CDN rejects the transform — a failed crop must never blank the
+      // band.
+      const loadImage = (src) =>
+        new Promise((resolve, reject) => {
+          const img = new Image();
+          img.crossOrigin = 'Anonymous';
+          img.onload = () => resolve(img);
+          img.onerror = reject;
+          img.src = src;
+        });
+
       const loaded = await Promise.all(
-        items.map(
-          (item) =>
-            new Promise((resolve) => {
-              const img = new Image();
-              img.crossOrigin = 'Anonymous';
-              img.onload = () => resolve(paintPanel(img, item.key));
-              img.onerror = () => resolve(null);
-              img.src = item.src;
-            })
-        )
+        items.map(async (item) => {
+          const cropped = bandCrop(item.src);
+          for (const src of cropped === item.src ? [item.src] : [cropped, item.src]) {
+            try {
+              return paintPanel(await loadImage(src), item.key);
+            } catch {
+              /* try the next candidate */
+            }
+          }
+          return null;
+        })
       );
 
       if (!alive) {

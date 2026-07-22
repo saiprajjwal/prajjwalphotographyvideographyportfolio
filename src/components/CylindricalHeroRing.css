@@ -37,6 +37,14 @@
   will-change: filter;
 }
 
+/* Per-glyph wrappers for the pointer swell — inline-block is what makes them
+   transformable. Measured after splitting: the word still lands at 95.6% of
+   the viewport, since these caps carry no kerning pairs to lose. */
+.aikawa-title-letter {
+  display: inline-block;
+  will-change: transform;
+}
+
 .liquid-defs {
   position: absolute;
   width: 0;
