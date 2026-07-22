@@ -16,13 +16,11 @@ const byPhotoOrder = (a, b) => rank(a.photoOrder) - rank(b.photoOrder);
 const byAlbumOrder = (a, b) => rank(a.albumOrder) - rank(b.albumOrder);
 
 export default function Portfolio() {
-  const categories = portfolioData.categories || [
-    'Portraits',
-    'Pets',
-    'Travel',
-    'Products',
-    'Behind The Scene',
-  ];
+  // Seeded from the bundled list so the first paint has filters, then replaced
+  // by whatever is saved in admin once /api/photos responds.
+  const [categories, setCategories] = useState(
+    portfolioData.categories || ['Portraits', 'Pets', 'Travel', 'Products', 'Behind The Scene']
+  );
 
   const gridRef = useRef(null);
 
@@ -88,6 +86,10 @@ export default function Portfolio() {
       })
       .then((data) => {
         setPhotos(data.photos || []);
+        // null until the list has been saved in admin — keep the bundled default
+        if (Array.isArray(data.categories) && data.categories.length) {
+          setCategories(data.categories);
+        }
       })
       .catch(() => {
         setPhotos([]);

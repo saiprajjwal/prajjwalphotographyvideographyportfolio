@@ -1,6 +1,7 @@
 import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
+import { pickCategoryCover } from '../utils/categoryCover';
 
 // ──────────────────────────────────────────────────────────────
 // Geometry constants
@@ -72,34 +73,6 @@ const FALLBACK_IMAGES = {
   Products: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=1280&q=80&auto=format&fit=crop',
   'Behind The Scene': 'https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?w=1280&q=80&auto=format&fit=crop',
 };
-
-// ──────────────────────────────────────────────────────────────
-// Which photo represents a category on the band.
-//
-// 1. An explicit pick from admin ("Set Hero") always wins.
-// 2. Otherwise fall back to the lowest-numbered album's own cover, so a
-//    category still shows something sensible before anything is chosen —
-//    that's what puts Portraits on Ivory (albumOrder 1).
-// ──────────────────────────────────────────────────────────────
-const albumRank = (v) => (v > 0 ? v : Infinity);
-
-function pickCover(catPhotos) {
-  if (catPhotos.length === 0) return null;
-
-  const chosen = catPhotos.find((p) => p.isHero);
-  if (chosen) return chosen.src;
-
-  const albums = [...new Set(catPhotos.map((p) => p.session).filter(Boolean))];
-  const leadAlbum = albums.sort((a, b) => {
-    const rankOf = (name) =>
-      Math.min(...catPhotos.filter((p) => p.session === name).map((p) => albumRank(p.albumOrder)));
-    return rankOf(a) - rankOf(b);
-  })[0];
-
-  const pool = leadAlbum ? catPhotos.filter((p) => p.session === leadAlbum) : catPhotos;
-  const cover = pool.find((p) => p.isCover) || pool[0] || catPhotos.find((p) => p.isCover) || catPhotos[0];
-  return cover?.src || null;
-}
 
 // ──────────────────────────────────────────────────────────────
 // Paint one category panel: photo + neutral edge shading + glass lettering
@@ -658,7 +631,7 @@ export default function PortfolioHeroScene({
         );
         return {
           key: cat,
-          src: pickCover(catPhotos) || FALLBACK_IMAGES[cat] || FALLBACK_IMAGES.Portraits,
+          src: pickCategoryCover(catPhotos)?.src || FALLBACK_IMAGES[cat] || FALLBACK_IMAGES.Portraits,
         };
       }),
     [categories, photos]

@@ -11,15 +11,22 @@ import {
   Tag,
   ImageOff,
   ShoppingBag,
+  GalleryHorizontalEnd,
+  Plus,
+  Trash2,
+  ChevronUp,
+  ChevronDown,
 } from 'lucide-react';
 import portfolioData from '../data/portfolio.json';
 import defaultStoreData from '../data/store.json';
 import ArrangePanel from '../components/ArrangePanel';
+import { pickCategoryCover } from '../utils/categoryCover';
 import './Admin.css';
 
 const NAV = [
   { id: 'overview', label: 'Overview', Icon: LayoutDashboard, subtitle: 'At a glance' },
   { id: 'upload', label: 'Upload', Icon: UploadIcon, subtitle: 'Add new photos to your portfolio' },
+  { id: 'covers', label: 'Portfolio Covers', Icon: GalleryHorizontalEnd, subtitle: 'The photo each category shows on the spinning portfolio band' },
   { id: 'library', label: 'Library', Icon: Images, subtitle: 'Manage every photo' },
   { id: 'arrange', label: 'Arrange', Icon: LayoutGrid, subtitle: 'Set album & photo order' },
   { id: 'store', label: 'Store', Icon: ShoppingBag, subtitle: 'Manage presets and LUTs' },
@@ -121,6 +128,12 @@ export default function Admin() {
   }, [activeTab]);
   const [libraryPhotos, setLibraryPhotos] = useState([]);
   const [loadingLibrary, setLoadingLibrary] = useState(false);
+  // Editable category list. Seeded from the bundled default, replaced by the
+  // saved list once /api/photos responds.
+  const [categories, setCategories] = useState(CATEGORIES);
+  const [newCategory, setNewCategory] = useState('');
+  // Which category's cover picker is open, if any
+  const [pickingCoverFor, setPickingCoverFor] = useState(null);
   const [libFilter, setLibFilter] = useState('All');
   const [libSearch, setLibSearch] = useState('');
   
@@ -197,6 +210,10 @@ export default function Admin() {
       const res = await fetch('/api/photos');
       const data = await res.json();
       if (data.photos) setLibraryPhotos(data.photos);
+      // null until the list has been saved once — keep the bundled default
+      if (Array.isArray(data.categories) && data.categories.length) {
+        setCategories(data.categories);
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -205,10 +222,61 @@ export default function Admin() {
   };
 
   useEffect(() => {
-    if (token && (activeTab === 'library' || activeTab === 'overview')) {
+    if (token && (activeTab === 'library' || activeTab === 'overview' || activeTab === 'covers')) {
       fetchLibrary();
     }
   }, [token, activeTab]);
+
+  // ── Category list ───────────────────────────────────────────
+  // Persisted through POST /api/photos. Saving replaces the whole list, so
+  // every mutation below goes through this one function.
+  const saveCategories = async (next) => {
+    const previous = categories;
+    setCategories(next);                       // optimistic
+    try {
+      const res = await fetch('/api/photos', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ categories: next })
+      });
+      if (!res.ok) throw new Error((await res.json()).error || 'Failed to save categories');
+    } catch (err) {
+      setCategories(previous);                 // roll back so the UI can't lie
+      alert(err.message);
+    }
+  };
+
+  const handleAddCategory = async (e) => {
+    e.preventDefault();
+    const name = newCategory.trim();
+    if (!name) return;
+    if (categories.some((c) => c.toLowerCase() === name.toLowerCase())) {
+      alert(`"${name}" already exists.`);
+      return;
+    }
+    setNewCategory('');
+    await saveCategories([...categories, name]);
+  };
+
+  const handleRemoveCategory = async (name) => {
+    const count = libraryPhotos.filter((p) => p.category === name).length;
+    const warning = count
+      ? `"${name}" still has ${count} photo${count === 1 ? '' : 's'}. Removing it only hides the category — the photos stay in your library and keep their tag. Continue?`
+      : `Remove "${name}"?`;
+    if (!confirm(warning)) return;
+    await saveCategories(categories.filter((c) => c !== name));
+  };
+
+  const moveCategory = async (index, delta) => {
+    const target = index + delta;
+    if (target < 0 || target >= categories.length) return;
+    const next = [...categories];
+    [next[index], next[target]] = [next[target], next[index]];
+    await saveCategories(next);
+  };
 
   // Live stats for the Overview view, derived from the fetched library.
   const stats = useMemo(() => {
@@ -803,7 +871,7 @@ export default function Admin() {
           <label>
             Category
             <select value={category} onChange={(e) => setCategory(e.target.value)}>
-              {CATEGORIES.map((cat) => (
+              {categories.map((cat) => (
                 <option key={cat} value={cat}>{cat}</option>
               ))}
             </select>
@@ -908,6 +976,128 @@ export default function Admin() {
         </form>
           )}
 
+          {activeTab === 'covers' && (
+            <div className="cov">
+              <p className="cov-intro">
+                The Portfolio page opens with a spinning band of category images.
+                This is where you choose which photo each category shows there.
+                Categories added here also appear in the Upload dropdown and as
+                filters on the Portfolio page.
+              </p>
+
+              <form className="cov-add" onSubmit={handleAddCategory}>
+                <input
+                  type="text"
+                  value={newCategory}
+                  onChange={(e) => setNewCategory(e.target.value)}
+                  placeholder="New category name — e.g. Weddings"
+                  aria-label="New category name"
+                />
+                <button type="submit" className="cov-add-btn">
+                  <Plus size={15} strokeWidth={2} />
+                  <span>Add category</span>
+                </button>
+              </form>
+
+              {loadingLibrary ? (
+                <p className="cov-loading">Loading your photos…</p>
+              ) : (
+                <div className="cov-list">
+                  {categories.map((cat, index) => {
+                    const inCategory = libraryPhotos.filter((p) => p.category === cat);
+                    // Same helper the live band uses, so this preview matches
+                    const shown = pickCategoryCover(inCategory);
+                    const explicit = inCategory.some((p) => p.isHero);
+
+                    return (
+                      <div className="cov-card" key={cat}>
+                        <div className="cov-thumb">
+                          {shown ? (
+                            <img src={shown.src} alt={`${cat} cover`} />
+                          ) : (
+                            <span className="cov-thumb-empty">No photos yet</span>
+                          )}
+                        </div>
+
+                        <div className="cov-body">
+                          <div className="cov-head">
+                            <h3>{cat}</h3>
+                            <span className="cov-meta">
+                              {inCategory.length} photo{inCategory.length === 1 ? '' : 's'}
+                              {' · '}
+                              {explicit ? 'cover chosen' : 'using default'}
+                            </span>
+                          </div>
+
+                          <div className="cov-actions">
+                            <button
+                              type="button"
+                              onClick={() => setPickingCoverFor(pickingCoverFor === cat ? null : cat)}
+                              disabled={inCategory.length === 0}
+                            >
+                              {pickingCoverFor === cat ? 'Close' : 'Change cover'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => { setCategory(cat); setActiveTab('upload'); }}
+                            >
+                              Upload photo
+                            </button>
+                            <button
+                              type="button"
+                              className="cov-icon-btn"
+                              onClick={() => moveCategory(index, -1)}
+                              disabled={index === 0}
+                              aria-label={`Move ${cat} up`}
+                            >
+                              <ChevronUp size={15} strokeWidth={2} />
+                            </button>
+                            <button
+                              type="button"
+                              className="cov-icon-btn"
+                              onClick={() => moveCategory(index, 1)}
+                              disabled={index === categories.length - 1}
+                              aria-label={`Move ${cat} down`}
+                            >
+                              <ChevronDown size={15} strokeWidth={2} />
+                            </button>
+                            <button
+                              type="button"
+                              className="cov-icon-btn cov-danger"
+                              onClick={() => handleRemoveCategory(cat)}
+                              aria-label={`Remove ${cat}`}
+                            >
+                              <Trash2 size={15} strokeWidth={2} />
+                            </button>
+                          </div>
+
+                          {pickingCoverFor === cat && (
+                            <div className="cov-picker">
+                              {inCategory.map((photo) => (
+                                <button
+                                  type="button"
+                                  key={photo.id}
+                                  className={`cov-pick ${photo.isHero ? 'is-current' : ''}`}
+                                  onClick={async () => {
+                                    await handleSetHero(photo.id, cat);
+                                    setPickingCoverFor(null);
+                                  }}
+                                  title={photo.session || 'No album'}
+                                >
+                                  <img src={photo.src} alt={photo.alt} loading="lazy" />
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
           {activeTab === 'library' && (
           <div className="admin-library">
             <div className="lib-controls">
@@ -921,7 +1111,7 @@ export default function Admin() {
                 />
               </div>
               <div className="lib-chips">
-                {['All', ...CATEGORIES].map((c) => (
+                {['All', ...categories].map((c) => (
                   <button
                     key={c}
                     className={`lib-chip ${libFilter === c ? 'active' : ''}`}
@@ -951,7 +1141,7 @@ export default function Admin() {
                     {editingPhoto?.id === photo.id ? (
                       <div className="admin-library-edit-form">
                         <select value={editCategory} onChange={(e) => setEditCategory(e.target.value)}>
-                          {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                          {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                         </select>
                         <input 
                           type="text" 
@@ -981,13 +1171,14 @@ export default function Admin() {
                               {photo.isCover ? '★ Cover' : 'Set Cover'}
                             </button>
                           )}
-                          <button
-                            className={photo.isHero ? 'hero-active' : ''}
-                            onClick={() => handleSetHero(photo.id, photo.category)}
-                            title={`Show this photo for "${photo.category}" on the portfolio hero band`}
-                          >
-                            {photo.isHero ? '◆ Hero' : 'Set Hero'}
-                          </button>
+                          {/* Read-only marker. Choosing the cover lives in the
+                              Portfolio Covers tab, where you can see every
+                              category's current image side by side. */}
+                          {photo.isHero && (
+                            <span className="hero-badge" title={`Shown for "${photo.category}" on the portfolio band`}>
+                              ◆ Portfolio cover
+                            </span>
+                          )}
                           <button className="delete-btn" onClick={() => handleDeletePhoto(photo.id)}>Delete</button>
                         </div>
                       </>
@@ -1000,7 +1191,7 @@ export default function Admin() {
           )}
 
           {activeTab === 'arrange' && (
-            <ArrangePanel token={token} categories={CATEGORIES} />
+            <ArrangePanel token={token} categories={categories} />
           )}
 
           {activeTab === 'store' && (
