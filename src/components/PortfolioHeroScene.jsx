@@ -18,9 +18,10 @@ const PANEL_HEIGHT = 2.15;
 
 // Unwrapped width of one panel, and the gap between panels once flattened
 const PANEL_WIDTH = RADIUS * ANGLE_PER_SLOT;
-// Wide enough that the neighbouring panels sit at the very edges of the frame
-// rather than crowding the centre one
-const FLAT_GAP = 1.6;
+// Spacing in flat mode. Tuned so the neighbouring categories peek in at either
+// edge — that sliver is the only cue that there's more to slide to, since flat
+// mode has no curve implying a carousel.
+const FLAT_GAP = 0.8;
 // Corner rounding applied only once the panels have flattened out
 const FLAT_CORNER = 0.1;
 
@@ -210,6 +211,7 @@ function paintPanel(img, label) {
 const PANEL_VERT = /* glsl */ `
   uniform float uFlat;
   uniform float uReflect;
+  uniform float uSide;
   varying vec2 vUv;
 
   const float RADIUS = ${RADIUS.toFixed(4)};
@@ -226,6 +228,11 @@ const PANEL_VERT = /* glsl */ `
     vec3 planar = vec3((uv.x - 0.5) * RADIUS * ARC, y, RADIUS);
     vec3 p = mix(curved, planar, uFlat);
 
+    // Flat mode only: sit the off-centre slides back a touch so the focused
+    // one stays dominant. In arc mode the curve already does this.
+    float recede = mix(1.0, 1.0 - 0.07 * clamp(uSide, 0.0, 1.0), uFlat);
+    p.xy *= recede;
+
     // Mirror about the panel's lower edge for the reflection copy
     p.y = mix(p.y, -p.y - H, uReflect);
 
@@ -240,6 +247,7 @@ const PANEL_FRAG = /* glsl */ `
   uniform float uHasMap;
   uniform float uFlat;
   uniform float uHover;
+  uniform float uSide;
   varying vec2 vUv;
 
   const float PW = ${PANEL_WIDTH.toFixed(5)};
@@ -265,6 +273,10 @@ const PANEL_FRAG = /* glsl */ `
     float fade = pow(1.0 - vUv.y, 1.7) * 0.30;
     float a = c.a * uOpacity * mix(1.0, fade, uReflect);
 
+    // Hold the peeking neighbours back so they read as "more to slide to"
+    // rather than competing with the focused slide.
+    a *= mix(1.0, 1.0 - 0.42 * clamp(uSide, 0.0, 1.0), uFlat);
+
     // Round the corners once flattened. Measured in world units so the
     // radius stays even across the panel's 2.3:1 aspect.
     vec2 half_ = vec2(PW, H) * 0.5;
@@ -287,6 +299,7 @@ function makePanelMaterial(isReflection) {
       uOpacity: { value: 1 },
       uHasMap: { value: 0 },
       uHover: { value: 0 },
+      uSide: { value: 0 },
     },
     transparent: true,
     depthWrite: !isReflection,
@@ -502,6 +515,8 @@ function PhotoBand({ textures, activeIndex, flatMode, onSnap, onHoverChange, onT
         }
         mat.uniforms.uFlat.value = f;
         mat.uniforms.uHover.value = hoverLift.current;
+        // Continuous, so the neighbours fade up as they slide into focus
+        mat.uniforms.uSide.value = Math.min(Math.abs(offset), 1);
       }
       band.uniforms.uOpacity.value = 1;
       reflection.uniforms.uOpacity.value = 1;
@@ -602,9 +617,21 @@ function PhotoBand({ textures, activeIndex, flatMode, onSnap, onHoverChange, onT
       {[0, 1, 2].map((j) => (
         // Band and reflection share one slot group, so they can never drift
         // out of alignment as the ring turns.
+        // frustumCulled={false} is required, not an optimisation opt-out.
+        // Panel vertices are placed by the vertex shader, so the geometry's
+        // bounding sphere still describes the original unit plane sitting at
+        // the slot origin. In flat mode the slot is translated a full panel
+        // width sideways, which puts that stale sphere outside the frustum —
+        // three.js culls the neighbours even though their real geometry
+        // reaches back into frame. Six meshes cost nothing to always draw.
         <group key={`slot-${j}`} ref={(el) => { slots.current[j] = el; }}>
-          <mesh geometry={geometry} material={materials[j].band} />
-          <mesh geometry={geometry} material={materials[j].reflection} renderOrder={-1} />
+          <mesh geometry={geometry} material={materials[j].band} frustumCulled={false} />
+          <mesh
+            geometry={geometry}
+            material={materials[j].reflection}
+            renderOrder={-1}
+            frustumCulled={false}
+          />
         </group>
       ))}
     </group>
