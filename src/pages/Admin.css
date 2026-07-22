@@ -649,6 +649,14 @@
   border-color: var(--acc-line);
 }
 
+/* Distinct from the album cover so the two states are tellable apart at a
+   glance when a photo is both its album's cover and its category's hero */
+.admin-library-actions button.hero-active {
+  background: #1d2a44;
+  color: #cfe0ff;
+  border-color: #2f4470;
+}
+
 /* Inline edit */
 .admin-library-edit-form {
   padding: 1rem;

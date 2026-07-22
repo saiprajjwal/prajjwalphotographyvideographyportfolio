@@ -283,6 +283,30 @@ export default function Admin() {
     }
   };
 
+  // Chooses the image a category shows on the portfolio hero band. Distinct
+  // from the album cover above: this is one photo per category, not per album.
+  const handleSetHero = async (id, category) => {
+    try {
+      const res = await fetch('/api/set-hero', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ id, category })
+      });
+      if (!res.ok) throw new Error('Failed to set portfolio hero');
+      // Only one hero per category, so clear the flag across that category
+      setLibraryPhotos(prev => prev.map(p => ({
+        ...p,
+        isHero: p.id === id ? true : (p.category === category ? false : p.isHero)
+      })));
+      alert(`"${category}" will now show this photo on the portfolio hero.`);
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
   const updateCategoryName = (idx, newName) => {
     const newGear = [...aboutGear];
     newGear[idx].category = newName;
@@ -946,13 +970,21 @@ export default function Admin() {
                         <div className="admin-library-actions">
                           <button onClick={() => startEditing(photo)}>Edit</button>
                           {photo.session && (
-                            <button 
-                              className={photo.isCover ? 'cover-active' : ''} 
+                            <button
+                              className={photo.isCover ? 'cover-active' : ''}
                               onClick={() => handleSetCover(photo.id, photo.session)}
+                              title={`Use as the cover of the "${photo.session}" album`}
                             >
                               {photo.isCover ? '★ Cover' : 'Set Cover'}
                             </button>
                           )}
+                          <button
+                            className={photo.isHero ? 'hero-active' : ''}
+                            onClick={() => handleSetHero(photo.id, photo.category)}
+                            title={`Show this photo for "${photo.category}" on the portfolio hero band`}
+                          >
+                            {photo.isHero ? '◆ Hero' : 'Set Hero'}
+                          </button>
                           <button className="delete-btn" onClick={() => handleDeletePhoto(photo.id)}>Delete</button>
                         </div>
                       </>

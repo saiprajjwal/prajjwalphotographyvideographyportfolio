@@ -27,10 +27,18 @@ export default async function handler(req, res) {
 
     const photos = resources.map((resource) => {
       const tags = resource.tags || [];
-      const category = tags.find(t => !t.startsWith('session_') && !t.startsWith('cover_')) || 'Uncategorized';
+      // Category is "the tag that isn't one of our prefixed markers", so every
+      // marker prefix must be excluded here — a hero_ tag left in would be
+      // read as the photo's category and drop it out of its real one.
+      const category =
+        tags.find(
+          t => !t.startsWith('session_') && !t.startsWith('cover_') && !t.startsWith('hero_')
+        ) || 'Uncategorized';
       const sessionTag = tags.find(t => t.startsWith('session_'));
       const session = sessionTag ? sessionTag.replace(/^session_/, '').replace(/_/g, ' ') : null;
       const isCover = tags.some(t => t.startsWith('cover_'));
+      // Marks the one photo a category shows on the portfolio hero band
+      const isHero = tags.some(t => t.startsWith('hero_'));
 
       const alt =
         resource.context?.custom?.alt ||
@@ -47,6 +55,7 @@ export default async function handler(req, res) {
         category,
         session,
         isCover,
+        isHero,
         photoOrder,
         albumOrder,
       };

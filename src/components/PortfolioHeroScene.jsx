@@ -76,15 +76,18 @@ const FALLBACK_IMAGES = {
 // ──────────────────────────────────────────────────────────────
 // Which photo represents a category on the band.
 //
-// Driven by the album ordering set in admin: the lowest-numbered album wins,
-// and its own cover is used. So Portraits leads with Ivory (albumOrder 1)
-// rather than whichever flagged photo happened to sort first in the API
-// response. Reordering albums in admin re-points the band.
+// 1. An explicit pick from admin ("Set Hero") always wins.
+// 2. Otherwise fall back to the lowest-numbered album's own cover, so a
+//    category still shows something sensible before anything is chosen —
+//    that's what puts Portraits on Ivory (albumOrder 1).
 // ──────────────────────────────────────────────────────────────
 const albumRank = (v) => (v > 0 ? v : Infinity);
 
 function pickCover(catPhotos) {
   if (catPhotos.length === 0) return null;
+
+  const chosen = catPhotos.find((p) => p.isHero);
+  if (chosen) return chosen.src;
 
   const albums = [...new Set(catPhotos.map((p) => p.session).filter(Boolean))];
   const leadAlbum = albums.sort((a, b) => {
