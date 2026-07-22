@@ -285,9 +285,12 @@ export default function Admin() {
 
   // Chooses the image a category shows on the portfolio hero band. Distinct
   // from the album cover above: this is one photo per category, not per album.
+  // Shares /api/set-cover — sending `category` instead of `session` selects
+  // hero mode. They're one endpoint because Vercel's Hobby plan caps this
+  // deployment at 12 Serverless Functions and we're exactly at it.
   const handleSetHero = async (id, category) => {
     try {
-      const res = await fetch('/api/set-hero', {
+      const res = await fetch('/api/set-cover', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
