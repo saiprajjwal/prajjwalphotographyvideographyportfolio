@@ -1,0 +1,254 @@
+/* ──────────────────────────────────────────────────────────────
+   Floating liquid-glass dock
+   Layer stack per surface, mirroring the reference:
+     tint + backdrop blur  →  refraction  →  specular shine
+   ────────────────────────────────────────────────────────────── */
+/* Centred with flex rather than translateX(-50%): framer-motion writes its own
+   inline transform for the entrance animation, which would clobber it. */
+.lg-dock {
+  position: absolute;
+  bottom: 2rem;
+  left: 0;
+  right: 0;
+  z-index: 35;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.65rem;
+  user-select: none;
+  /* The bar spans the viewport, so let drags through to the canvas beside it */
+  pointer-events: none;
+}
+
+.lg-bar,
+.lg-orb {
+  pointer-events: auto;
+}
+
+.lg-defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+/* ── Shared glass material ── */
+.lg-bar,
+.lg-orb {
+  position: relative;
+  isolation: isolate;
+  background: rgba(12, 12, 12, 0.30);
+  backdrop-filter: blur(4px) saturate(1.8);
+  -webkit-backdrop-filter: blur(4px) saturate(1.8);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05),
+    inset 2px 3px 0 -2px rgba(255, 255, 255, 0.45),
+    inset -2px -2px 0 -2px rgba(255, 255, 255, 0.40),
+    inset -3px -8px 1px -6px rgba(255, 255, 255, 0.30),
+    inset 0 -1px 4px 0 rgba(0, 0, 0, 0.06),
+    inset -2px 3px 0 -2px rgba(0, 0, 0, 0.10),
+    inset 0 3px 4px -2px rgba(0, 0, 0, 0.10),
+    inset 2px -7px 1px -4px rgba(0, 0, 0, 0.05),
+    /* Layered ambient + contact shadow gives the dock real weight above the
+       white page, rather than one flat drop shadow. */
+    0 1px 2px rgba(0, 0, 0, 0.10),
+    0 3px 6px rgba(0, 0, 0, 0.07),
+    0 8px 18px rgba(0, 0, 0, 0.09),
+    0 18px 40px rgba(0, 0, 0, 0.11),
+    0 32px 64px rgba(24, 18, 40, 0.09);
+}
+
+/* Effect layers ride inside the surface and never eat pointer events */
+.lg-effect {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+/* Chromium refracts the backdrop through the turbulence map; elsewhere this
+   layer is simply inert, leaving the blur + tint intact. */
+.lg-effect--distort {
+  z-index: -1;
+  backdrop-filter: url(#glass-distortion);
+  -webkit-backdrop-filter: url(#glass-distortion);
+}
+
+.lg-effect--shine {
+  z-index: 1;
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.36),
+    inset 0 -1px 0 0 rgba(0, 0, 0, 0.05),
+    inset 1px 1px 0 0 rgba(255, 255, 255, 0.18),
+    inset -1px -1px 0 0 rgba(0, 0, 0, 0.04);
+}
+
+/* ── Main bar ── */
+.lg-bar {
+  border-radius: 18px;
+}
+
+.lg-bar__content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.5rem 0.5rem 0.5rem;
+}
+
+.lg-thumb {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.22),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.22);
+}
+
+.lg-thumb__img {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+}
+
+.lg-label {
+  min-width: 118px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+}
+
+.lg-label__eyebrow {
+  font-family: var(--font-sans, system-ui, sans-serif);
+  font-size: 0.53rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.62);
+  white-space: nowrap;
+}
+
+.lg-label__text {
+  font-family: var(--font-sans, system-ui, sans-serif);
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #ffffff;
+  white-space: nowrap;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
+/* ── Stepper ── */
+.lg-stepper {
+  display: flex;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.26);
+  border-radius: 999px;
+  padding: 0.15rem 0.2rem;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
+.lg-stepper__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  background: transparent;
+  border-radius: 50%;
+  color: #ffffff;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.lg-stepper__btn:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.lg-stepper__btn:active {
+  transform: scale(0.92);
+}
+
+.lg-stepper__divider {
+  width: 1px;
+  height: 14px;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+/* ── Detached orb ── */
+.lg-orb {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border: none;
+  border-radius: 50%;
+  color: #ffffff;
+  cursor: pointer;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.lg-orb__icon {
+  position: relative;
+  z-index: 2;
+  width: 22px;
+  height: 22px;
+  overflow: visible;
+}
+
+.lg-orb:hover {
+  transform: translateY(-2px);
+}
+
+.lg-orb:active {
+  transform: translateY(0) scale(0.95);
+}
+
+.lg-bar :focus-visible,
+.lg-orb:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.75);
+  outline-offset: 2px;
+}
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+  .lg-dock {
+    bottom: 1.4rem;
+    gap: 0.5rem;
+  }
+  .lg-bar__content {
+    gap: 0.55rem;
+    padding: 0.4rem;
+  }
+  .lg-thumb {
+    width: 36px;
+    height: 36px;
+  }
+  .lg-label {
+    min-width: 88px;
+  }
+  .lg-label__text {
+    font-size: 0.66rem;
+    letter-spacing: 0.11em;
+  }
+  .lg-orb {
+    width: 46px;
+    height: 46px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lg-orb,
+  .lg-stepper__btn {
+    transition: none;
+  }
+}

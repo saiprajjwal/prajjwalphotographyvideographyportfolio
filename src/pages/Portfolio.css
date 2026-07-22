@@ -476,3 +476,141 @@
   flex: 1;
   padding-bottom: 6rem;
 }
+
+/* --------------------------------------------------------------------------
+   Portfolio Hero Section (aikawakenichi.com layout)
+   -------------------------------------------------------------------------- */
+.portfolio-hero-section {
+  position: relative;
+  width: 100%;
+  z-index: 10;
+  background: #ffffff;
+}
+
+/* Quiet corner byline. Sits bottom-left rather than centred at the top like
+   the reference, because this site's floating nav already owns that slot. */
+.portfolio-top-tagline-bar {
+  position: absolute;
+  bottom: 3.1rem;
+  left: 2.5rem;
+  max-width: 20rem;
+  z-index: 30;
+  text-align: left;
+  pointer-events: none;
+}
+
+.tagline-text {
+  margin: 0;
+  font-family: var(--font-sans, system-ui, sans-serif);
+  font-size: 0.8rem;
+  font-weight: 400;
+  line-height: 1.4;
+  color: rgba(0, 0, 0, 0.72);
+}
+
+.tagline-link {
+  color: #000000;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+  pointer-events: auto;
+  transition: opacity 0.25s ease;
+}
+
+.tagline-link:hover {
+  opacity: 0.55;
+}
+
+/* Scroll cue, mirroring the byline on the opposite corner */
+.portfolio-scroll-cue {
+  position: absolute;
+  bottom: 3.1rem;
+  right: 2.5rem;
+  z-index: 30;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-family: var(--font-sans, system-ui, sans-serif);
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(0, 0, 0, 0.45);
+  transition: color 0.25s ease;
+}
+
+.portfolio-scroll-cue:hover {
+  color: rgba(0, 0, 0, 0.85);
+}
+
+.portfolio-scroll-cue__rule {
+  display: block;
+  width: 34px;
+  height: 1px;
+  background: currentColor;
+  transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.portfolio-scroll-cue:hover .portfolio-scroll-cue__rule {
+  width: 52px;
+}
+
+/* ── Category overlay heading ── */
+.category-overlay-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.category-overlay-back {
+  align-self: flex-start;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-family: var(--font-sans, system-ui, sans-serif);
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-secondary, rgba(0, 0, 0, 0.55));
+  transition: opacity 0.2s ease;
+}
+
+.category-overlay-back:hover {
+  opacity: 0.6;
+}
+
+.category-overlay-count {
+  font-family: var(--font-sans, system-ui, sans-serif);
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-secondary, rgba(0, 0, 0, 0.5));
+}
+
+/* On narrow screens the dock fills the bottom, so the byline moves above it */
+@media (max-width: 900px) {
+  .portfolio-scroll-cue {
+    display: none;
+  }
+
+  .portfolio-top-tagline-bar {
+    bottom: 6.5rem;
+    left: 0;
+    right: 0;
+    max-width: none;
+    padding: 0 1.5rem;
+    text-align: center;
+  }
+  .tagline-text {
+    font-size: 0.72rem;
+  }
+}
+
+

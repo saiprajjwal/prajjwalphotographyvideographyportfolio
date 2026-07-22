@@ -1,0 +1,135 @@
+/* ──────────────────────────────────────────────────────────────
+   Portfolio hero stage — aikawakenichi.com layout
+   Giant serif word anchored to the top, curved photo band centred
+   over it, soft reflection falling away below.
+   ────────────────────────────────────────────────────────────── */
+.aikawa-hero-stage-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100svh;
+  min-height: 620px;
+  overflow: hidden;
+  user-select: none;
+  background: #ffffff;
+}
+
+/* ── Giant display word, pinned to the top and bled off both edges ── */
+.aikawa-backdrop-title {
+  position: absolute;
+  top: 12.5svh;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: 'Bodoni Moda', 'Playfair Display', Didot, 'Times New Roman', serif;
+  /* "PORTFOLIO" measures 5.56x its font-size in Bodoni Moda, so 17.2vw lands
+     the word at ~96% of the viewport — the same edge-to-edge fit as the
+     reference. Keep this ratio in step with any change to the word. */
+  font-size: 17.2vw;
+  font-weight: 400;
+  letter-spacing: -0.005em;
+  line-height: 0.78;
+  color: #000000;
+  text-transform: uppercase;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 1;
+  /* filter is set from JS (see the liquid-title effect) — declaring the
+     property here keeps the first frame from re-rasterising the glyphs */
+  will-change: filter;
+}
+
+.liquid-defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+/* ── R3F canvas sits above the word and fades into the floor ── */
+.aikawa-canvas-container {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  /* The reflection's own falloff lives in the panel shader, so this is just a
+     safety fade at the very bottom to stop the canvas meeting the section
+     edge hard. */
+  mask-image: linear-gradient(to bottom, #000 0%, #000 88%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 88%, transparent 100%);
+}
+
+/* ── "View" chip that trails the pointer over the band ── */
+.aikawa-view-chip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 6;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.44rem 0.95rem;
+  border-radius: 999px;
+  font-family: var(--font-sans, system-ui, sans-serif);
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #ffffff;
+  white-space: nowrap;
+  pointer-events: none;
+  background: rgba(18, 18, 20, 0.42);
+  backdrop-filter: blur(6px) saturate(1.6);
+  -webkit-backdrop-filter: blur(6px) saturate(1.6);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.34),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.10),
+    0 6px 18px rgba(0, 0, 0, 0.18);
+  opacity: 0;
+  scale: 0.82;
+  transition: opacity 0.25s ease, scale 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.aikawa-view-chip.is-visible {
+  opacity: 1;
+  scale: 1;
+}
+
+.aikawa-canvas-loading {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.aikawa-loading-spinner {
+  width: 34px;
+  height: 34px;
+  border: 1.5px solid rgba(0, 0, 0, 0.1);
+  border-top-color: rgba(0, 0, 0, 0.55);
+  border-radius: 50%;
+  animation: aikawa-spin 0.8s linear infinite;
+}
+
+@keyframes aikawa-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Responsive ── */
+/* Font-size stays proportional to width at every breakpoint so the word keeps
+   its edge-to-edge fit — only the vertical anchor shifts. Taller viewports sit
+   the word lower, since the band shrinks relative to the frame there and would
+   otherwise leave a gap under the word. */
+@media (max-width: 900px) {
+  .aikawa-backdrop-title {
+    top: 18svh;
+  }
+}
+
+@media (max-width: 600px) {
+  .aikawa-hero-stage-wrapper {
+    min-height: 540px;
+  }
+  .aikawa-backdrop-title {
+    top: 22svh;
+  }
+}
+

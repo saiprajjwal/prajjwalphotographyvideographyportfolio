@@ -1,28 +1,36 @@
-import { lazy, Suspense, useState, useEffect, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { lazy, Suspense, useState, useEffect, useCallback, useRef } from 'react';
+import { useSearchParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import portfolioData from '../data/portfolio.json';
 import { lenisInstance } from '../utils/lenisInstance';
+import CylindricalHeroRing from '../components/CylindricalHeroRing';
+import FloatingNavPill from '../components/FloatingNavPill';
 import './Portfolio.css';
 
 // Loaded on demand: keeps three.js/@react-three/drei out of this route's critical chunk.
 const PortfolioScene = lazy(() => import('./PortfolioScene'));
 
-// Admin-set sequence numbers (1, 2, 3…) lead in ascending order; anything still
-// unset (0) sorts to the end and keeps its original API position. Array.sort is
-// stable, so equal keys preserve the incoming created_at-desc order — meaning a
-// portfolio with no manual ordering yet looks exactly as it did before.
+// Admin-set sequence numbers (1, 2, 3…) lead in ascending order
 const rank = (v) => (v > 0 ? v : Infinity);
 const byPhotoOrder = (a, b) => rank(a.photoOrder) - rank(b.photoOrder);
 const byAlbumOrder = (a, b) => rank(a.albumOrder) - rank(b.albumOrder);
 
 export default function Portfolio() {
-  const categories = portfolioData.categories;
-  // Category lives in the URL (?category=Travel) so a refresh — and shared
-  // links — keep the selected category instead of snapping back to the first.
+  const categories = portfolioData.categories || [
+    'Portraits',
+    'Pets',
+    'Travel',
+    'Products',
+    'Behind The Scene',
+  ];
+
+  const gridRef = useRef(null);
+
+  // Category lives in the URL (?category=Travel) so a refresh / share keeps selected category
   const [searchParams, setSearchParams] = useSearchParams();
   const urlCategory = searchParams.get('category');
   const filter = categories.includes(urlCategory) ? urlCategory : (categories[0] || 'Portraits');
+  
   const setFilter = (cat) =>
     setSearchParams(
       (prev) => {
@@ -32,22 +40,25 @@ export default function Portfolio() {
       },
       { replace: true }
     );
+
   const [activeSession, setActiveSession] = useState(null);
+  // Hero band layout: curved arc (default) or flattened plane
+  const [flatMode, setFlatMode] = useState(false);
+  // Full-screen category view opened by clicking the hero band, plus the
+  // album drilled into from within it
+  const [openCategory, setOpenCategory] = useState(null);
+  const [overlayAlbum, setOverlayAlbum] = useState(null);
   const [canvasReady, setCanvasReady] = useState(false);
   const [photos, setPhotos] = useState([]);
   const [photosLoaded, setPhotosLoaded] = useState(false);
   const [introDone, setIntroDone] = useState(() => sessionStorage.getItem('last_visited_page') === 'Portfolio');
   const [doorsOpen, setDoorsOpen] = useState(() => sessionStorage.getItem('last_visited_page') === 'Portfolio');
-  const [hoveredPhotoId, setHoveredPhotoId] = useState(null);
 
   useEffect(() => {
     sessionStorage.setItem('last_visited_page', 'Portfolio');
   }, []);
-  
+
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  // Weaker devices drop frames when every grid photo flies off-screen at once,
-  // so the transition feels slow/janky. Detect low-power hardware (or a
-  // reduced-motion preference) and swap the heavy fly-off for a cheap fade.
   const lightMotion = reducedMotion || (navigator.hardwareConcurrency || 8) <= 4;
 
   useEffect(() => {
@@ -79,48 +90,79 @@ export default function Portfolio() {
         setPhotos(data.photos || []);
       })
       .catch(() => {
-        // API unavailable (e.g. running under plain Vite dev) — show the
-        // branded empty state rather than stock placeholder photos.
         setPhotos([]);
       })
       .finally(() => setPhotosLoaded(true));
   }, []);
 
-  const categoryPhotos = photos.filter(photo => photo.category === filter);
-  const distinctSessions = [...new Set(categoryPhotos.map(p => p.session).filter(Boolean))];
+  const scrollToGrid = () => {
+    if (gridRef.current) {
+      gridRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  const categoryPhotos = photos.filter((photo) => photo.category === filter);
+  const distinctSessions = [...new Set(categoryPhotos.map((p) => p.session).filter(Boolean))];
 
   const shouldShowTiers = distinctSessions.length >= 1;
 
   let displayItems = [];
 
   if (shouldShowTiers) {
-    const sessionCovers = distinctSessions.map(sessionName => {
-      const sessionPhotos = categoryPhotos.filter(p => p.session === sessionName);
-      const firstPhoto = sessionPhotos.find(p => p.isCover) || sessionPhotos[0];
-      return {
-        ...firstPhoto,
-        isSessionCover: true,
-        id: `session-${sessionName}`, // Use unique id to avoid collisions
-        sessionName
-      };
-    }).sort(byAlbumOrder);
-    const noSessionPhotos = categoryPhotos.filter(p => !p.session).sort(byPhotoOrder);
+    const sessionCovers = distinctSessions
+      .map((sessionName) => {
+        const sessionPhotos = categoryPhotos.filter((p) => p.session === sessionName);
+        const firstPhoto = sessionPhotos.find((p) => p.isCover) || sessionPhotos[0];
+        return {
+          ...firstPhoto,
+          isSessionCover: true,
+          id: `session-${sessionName}`,
+          sessionName,
+        };
+      })
+      .sort(byAlbumOrder);
+    const noSessionPhotos = categoryPhotos.filter((p) => !p.session).sort(byPhotoOrder);
     displayItems = [...sessionCovers, ...noSessionPhotos];
   } else {
     displayItems = [...categoryPhotos].sort(byPhotoOrder);
   }
 
-  // Active session photos for the overlay modal
+  // Active session photos for overlay modal
   const activeSessionPhotos = activeSession
-    ? categoryPhotos.filter(p => p.session === activeSession).sort(byPhotoOrder)
+    ? categoryPhotos.filter((p) => p.session === activeSession).sort(byPhotoOrder)
     : [];
 
-  // Lock scroll when the album overlay is active. Lenis drives the real window
-  // scroll and ignores `body { overflow: hidden }`, so we must pause it too —
-  // otherwise the background scrolls behind the modal. (lenisInstance is null
-  // for reduced-motion users / the editor, where the body lock alone suffices.)
+  // ── Full-screen category view (opened from the hero band) ──
+  // Same album-cover-then-photos shape as the grid, scoped to one category.
+  const overlayPhotos = openCategory
+    ? photos.filter((p) => p.category === openCategory)
+    : [];
+
+  const overlayItems = (() => {
+    if (!openCategory) return [];
+    if (overlayAlbum) {
+      return overlayPhotos.filter((p) => p.session === overlayAlbum).sort(byPhotoOrder);
+    }
+    const sessions = [...new Set(overlayPhotos.map((p) => p.session).filter(Boolean))];
+    const covers = sessions
+      .map((sessionName) => {
+        const inSession = overlayPhotos.filter((p) => p.session === sessionName);
+        const cover = inSession.find((p) => p.isCover) || inSession[0];
+        return { ...cover, isSessionCover: true, id: `ov-${sessionName}`, sessionName };
+      })
+      .sort(byAlbumOrder);
+    const loose = overlayPhotos.filter((p) => !p.session).sort(byPhotoOrder);
+    return [...covers, ...loose];
+  })();
+
+  const closeCategory = useCallback(() => {
+    setOpenCategory(null);
+    setOverlayAlbum(null);
+  }, []);
+
+  // Lock scroll while either overlay is open
   useEffect(() => {
-    if (activeSession) {
+    if (activeSession || openCategory) {
       document.body.style.overflow = 'hidden';
       lenisInstance.current?.stop();
     } else {
@@ -131,19 +173,19 @@ export default function Portfolio() {
       document.body.style.overflow = '';
       lenisInstance.current?.start();
     };
-  }, [activeSession]);
+  }, [activeSession, openCategory]);
 
-  // Handle ESC key to close modal
+  // ESC steps back out one level at a time
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === 'Escape' && activeSession) {
-        setActiveSession(null);
-      }
+      if (e.key !== 'Escape') return;
+      if (activeSession) setActiveSession(null);
+      else if (overlayAlbum) setOverlayAlbum(null);
+      else if (openCategory) closeCategory();
     };
-    
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeSession]);
+  }, [activeSession, overlayAlbum, openCategory, closeCategory]);
 
   const handleMouseMove = (e) => {
     const card = e.currentTarget;
@@ -151,12 +193,11 @@ export default function Portfolio() {
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    const pctX = (x / rect.width) - 0.5;
-    const pctY = (y / rect.height) - 0.5;
+    const pctX = x / rect.width - 0.5;
+    const pctY = y / rect.height - 0.5;
 
-    // Pan the image inside its crop window to follow mouse movement
-    const moveX = pctX * 16; // up to 8px horizontal translation
-    const moveY = pctY * 16; // up to 8px vertical translation
+    const moveX = pctX * 16;
+    const moveY = pctY * 16;
 
     const img = card.querySelector('.portfolio-image');
     if (img) {
@@ -167,9 +208,12 @@ export default function Portfolio() {
   const handleMouseLeave = (e) => {
     const img = e.currentTarget.querySelector('.portfolio-image');
     if (img) {
-      img.style.transform = ''; // Return smoothly via CSS transition
+      img.style.transform = '';
     }
   };
+
+  // Find cover for current category to pass to floating nav pill
+  const activeCategoryPhoto = categoryPhotos.find((p) => p.isCover) || categoryPhotos[0];
 
   return (
     <motion.div
@@ -218,7 +262,7 @@ export default function Portfolio() {
         )}
       </AnimatePresence>
 
-      {/* 3D Background Canvas */}
+      {/* Ambient 3D Canvas Background */}
       <div
         className="portfolio-canvas-fixed"
         style={{
@@ -231,8 +275,58 @@ export default function Portfolio() {
         </Suspense>
       </div>
 
-      {/* Main Content Overlay */}
-      <main className="page-wrapper section-padding portfolio-content-overlay" style={{ pointerEvents: activeSession ? 'none' : 'auto' }}>
+      {/* TOP HERO SECTION (aikawakenichi.com inspired) */}
+      <section className="portfolio-hero-section">
+        {/* Byline, set quietly above the display word */}
+        <div className="portfolio-top-tagline-bar">
+          <p className="tagline-text">
+            <Link to="/about" className="tagline-link">Prajjwal Pandey</Link>
+            {' '}is a storyteller &amp; photographer based in Atlanta, Georgia.
+          </p>
+        </div>
+
+        {/* Curved photo band + giant display word */}
+        <CylindricalHeroRing
+          categories={categories}
+          activeCategory={filter}
+          onSelectCategory={(cat) => {
+            setFilter(cat);
+            setActiveSession(null);
+          }}
+          photos={photos}
+          flatMode={flatMode}
+          onOpenCategory={(cat) => {
+            setOverlayAlbum(null);
+            setOpenCategory(cat);
+          }}
+        />
+
+        {/* Floating glass dock, anchored to the bottom of the hero */}
+        <FloatingNavPill
+          categories={categories}
+          activeCategory={filter}
+          onSelectCategory={(cat) => {
+            setFilter(cat);
+            setActiveSession(null);
+          }}
+          activePhotoSrc={activeCategoryPhoto?.src}
+          flatMode={flatMode}
+          onToggleMode={setFlatMode}
+        />
+
+        {/* Quiet scroll affordance, opposite the byline */}
+        <button type="button" className="portfolio-scroll-cue" onClick={scrollToGrid}>
+          <span>Albums</span>
+          <span className="portfolio-scroll-cue__rule" aria-hidden="true" />
+        </button>
+      </section>
+
+      {/* BOTTOM MASONRY ALBUM GRID SECTION (Current album layout preserved) */}
+      <main
+        ref={gridRef}
+        className="page-wrapper section-padding portfolio-content-overlay"
+        style={{ pointerEvents: activeSession ? 'none' : 'auto' }}
+      >
         <div className="container">
           <header className="page-header">
             <motion.h1
@@ -240,16 +334,17 @@ export default function Portfolio() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
             >
-              Portfolio
+              Selected Works
             </motion.h1>
 
+            {/* Category Filter Pills */}
             <motion.div
               className="filter-nav"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
             >
-              {categories.map(cat => (
+              {categories.map((cat) => (
                 <button
                   key={cat}
                   className={`filter-btn ${filter === cat ? 'active' : ''}`}
@@ -266,38 +361,46 @@ export default function Portfolio() {
 
           {photosLoaded && categoryPhotos.length === 0 && (
             <p className="portfolio-empty-message">
-              {photos.length === 0 ? 'No photos yet — check back soon.' : `No photos in "${filter}" yet.`}
+              {photos.length === 0
+                ? 'No photos yet — check back soon.'
+                : `No photos in "${filter}" yet.`}
             </p>
           )}
 
           <div className="masonry-grid">
             <AnimatePresence mode="popLayout">
               {displayItems.map((photo, i) => (
-                  <motion.div
-                    key={photo.id}
-                    layout="position"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={activeSession ? (lightMotion ? {
-                      opacity: 0
-                    } : {
-                      opacity: 0,
-                      x: i % 2 === 0 ? '-100vw' : '100vw',
-                      y: (i % 3) * 50,
-                      rotate: i % 2 === 0 ? -15 : 15
-                    }) : { opacity: 1, y: 0, x: 0, rotate: 0 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    transition={{
-                      duration: activeSession ? (lightMotion ? 0.3 : 0.8) : 0.5,
-                      ease: [0.16, 1, 0.3, 1],
-                      layout: { duration: lightMotion ? 0 : 0.5, ease: [0.16, 1, 0.3, 1] }
-                    }}
-                    className="masonry-item"
-                    onMouseMove={handleMouseMove}
-                    onMouseLeave={handleMouseLeave}
-                    onClick={photo.isSessionCover ? () => setActiveSession(photo.sessionName) : undefined}
-                    style={photo.isSessionCover ? { cursor: 'pointer' } : {}}
-                  >
-                  <div className="card-badge">{photo.isSessionCover ? photo.sessionName : photo.category}</div>
+                <motion.div
+                  key={photo.id}
+                  layout="position"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={
+                    activeSession
+                      ? lightMotion
+                        ? { opacity: 0 }
+                        : {
+                            opacity: 0,
+                            x: i % 2 === 0 ? '-100vw' : '100vw',
+                            y: (i % 3) * 50,
+                            rotate: i % 2 === 0 ? -15 : 15,
+                          }
+                      : { opacity: 1, y: 0, x: 0, rotate: 0 }
+                  }
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{
+                    duration: activeSession ? (lightMotion ? 0.3 : 0.8) : 0.5,
+                    ease: [0.16, 1, 0.3, 1],
+                    layout: { duration: lightMotion ? 0 : 0.5, ease: [0.16, 1, 0.3, 1] },
+                  }}
+                  className="masonry-item"
+                  onMouseMove={handleMouseMove}
+                  onMouseLeave={handleMouseLeave}
+                  onClick={photo.isSessionCover ? () => setActiveSession(photo.sessionName) : undefined}
+                  style={photo.isSessionCover ? { cursor: 'pointer' } : {}}
+                >
+                  <div className="card-badge">
+                    {photo.isSessionCover ? photo.sessionName : photo.category}
+                  </div>
                   <img
                     src={photo.src}
                     srcSet={`
@@ -318,7 +421,98 @@ export default function Portfolio() {
         </div>
       </main>
 
-      {/* Glassy Album Overlay */}
+      {/* Category view, opened by clicking the hero band */}
+      <AnimatePresence>
+        {openCategory && (
+          <motion.div
+            className="album-modal-backdrop"
+            initial={{ opacity: 0, backdropFilter: lightMotion ? undefined : 'blur(0px)' }}
+            animate={{ opacity: 1, backdropFilter: lightMotion ? undefined : 'blur(6px)' }}
+            exit={{ opacity: 0, backdropFilter: lightMotion ? undefined : 'blur(0px)' }}
+            transition={{ duration: lightMotion ? 0.25 : 0.4 }}
+            onClick={closeCategory}
+          >
+            <motion.div
+              className="album-overlay"
+              data-lenis-prevent
+              initial={{ y: lightMotion ? 0 : 48, opacity: 0, scale: lightMotion ? 1 : 0.97 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              exit={{ y: lightMotion ? 0 : 24, opacity: 0, scale: lightMotion ? 1 : 0.97 }}
+              transition={{ duration: lightMotion ? 0.3 : 0.55, ease: [0.16, 1, 0.3, 1] }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="album-overlay-header container">
+                <div className="category-overlay-heading">
+                  {overlayAlbum && (
+                    <button
+                      className="category-overlay-back"
+                      onClick={() => setOverlayAlbum(null)}
+                    >
+                      &larr; {openCategory}
+                    </button>
+                  )}
+                  <h2>{overlayAlbum || openCategory}</h2>
+                  <span className="category-overlay-count">
+                    {overlayAlbum
+                      ? `${overlayItems.length} photo${overlayItems.length === 1 ? '' : 's'}`
+                      : `${overlayItems.length} item${overlayItems.length === 1 ? '' : 's'}`}
+                  </span>
+                </div>
+                <button className="album-overlay-close" onClick={closeCategory}>
+                  Close &times;
+                </button>
+              </div>
+
+              <div className="album-overlay-content container">
+                {overlayItems.length === 0 ? (
+                  <p className="portfolio-empty-message">
+                    No photos in &ldquo;{openCategory}&rdquo; yet.
+                  </p>
+                ) : (
+                  <div className="masonry-grid">
+                    {overlayItems.map((photo) => (
+                      <motion.div
+                        key={photo.id}
+                        initial={{ opacity: 0, y: 24 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                        className="masonry-item"
+                        onMouseMove={handleMouseMove}
+                        onMouseLeave={handleMouseLeave}
+                        onClick={
+                          photo.isSessionCover
+                            ? () => setOverlayAlbum(photo.sessionName)
+                            : undefined
+                        }
+                        style={photo.isSessionCover ? { cursor: 'pointer' } : {}}
+                      >
+                        {photo.isSessionCover && (
+                          <div className="card-badge">{photo.sessionName}</div>
+                        )}
+                        <img
+                          src={photo.src}
+                          srcSet={`
+                            ${photo.src.replace('w_1200', 'w_400')} 400w,
+                            ${photo.src.replace('w_1200', 'w_800')} 800w,
+                            ${photo.src.replace('w_1200', 'w_1200')} 1200w,
+                            ${photo.src.replace('w_1200', 'w_1600')} 1600w
+                          `}
+                          sizes="(max-width: 600px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                          alt={photo.alt}
+                          loading="lazy"
+                          className="portfolio-image"
+                        />
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Glassy Album Modal Overlay */}
       <AnimatePresence>
         {activeSession && (
           <motion.div
@@ -344,7 +538,7 @@ export default function Portfolio() {
                   Close &times;
                 </button>
               </div>
-              
+
               <div className="album-overlay-content container">
                 <div className="masonry-grid">
                   {activeSessionPhotos.map((photo) => (
