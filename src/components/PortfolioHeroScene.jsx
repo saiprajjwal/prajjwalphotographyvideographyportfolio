@@ -1,6 +1,6 @@
 import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { EffectComposer, Bloom, ChromaticAberration } from '@react-three/postprocessing';
+import { EffectComposer, ChromaticAberration } from '@react-three/postprocessing';
 import * as THREE from 'three';
 import { pickCategoryCover } from '../utils/categoryCover';
 
@@ -697,27 +697,14 @@ function PhotoBand({ textures, activeIndex, flatMode, onSnap, onHoverChange, onT
 }
 
 // ──────────────────────────────────────────────────────────────
-// Cinematic post-processing: a soft bloom on the brightest parts (glass
-// lettering, highlights in the photos) and a whisper of chromatic aberration
-// for a real-lens feel. Deliberately restrained — enough to read as "shot on
-// glass", not a filter. Skipped on low-end / mobile via the `quality` gate.
-//
-// Kept transparency-safe: no vignette/DoF, which would grey the white page
-// behind the band. mipmapBlur bloom composites cleanly over the alpha canvas.
+// Post-processing: a whisper of chromatic aberration for a real-lens edge —
+// and nothing that touches exposure. Bloom was removed: on photos with bright
+// backgrounds or lit skin it lifted the whole frame into a haze, and the
+// photography should read exactly as shot. Skipped on low-end/mobile.
 // ──────────────────────────────────────────────────────────────
 function HeroPostFX() {
   return (
     <EffectComposer enableNormalPass={false} multisampling={0}>
-      {/* Very restrained: a high threshold means only near-white highlights
-          (glass-text edges, speculars) pick up a faint glow — skin and the
-          general exposure of the photo stay true, not blown out. */}
-      <Bloom
-        mipmapBlur
-        intensity={0.18}
-        luminanceThreshold={0.9}
-        luminanceSmoothing={0.12}
-        radius={0.6}
-      />
       <ChromaticAberration offset={[0.0006, 0.0006]} radialModulation modulationOffset={0.4} />
     </EffectComposer>
   );
