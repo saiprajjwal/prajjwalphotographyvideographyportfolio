@@ -74,12 +74,13 @@ export default function Portfolio() {
 
   const finishIntro = useCallback(() => {
     setDoorsOpen(true);
-    setTimeout(() => setIntroDone(true), reducedMotion ? 250 : 1400);
+    setTimeout(() => setIntroDone(true), reducedMotion ? 150 : 700);
   }, [reducedMotion]);
 
   useEffect(() => {
     if (introDone || !photosLoaded) return;
-    const t = setTimeout(finishIntro, reducedMotion ? 900 : 3000);
+    // Short hold so the user sees the intro text, then doors open automatically
+    const t = setTimeout(finishIntro, reducedMotion ? 300 : 600);
     return () => clearTimeout(t);
   }, [introDone, photosLoaded, finishIntro, reducedMotion]);
 
@@ -247,7 +248,7 @@ export default function Portfolio() {
           <motion.div
             className="archive-intro"
             onClick={finishIntro}
-            exit={{ opacity: 0, transition: { duration: 0.9, ease: 'easeInOut' } }}
+            exit={{ opacity: 0, transition: { duration: 0.5, ease: 'easeInOut' } }}
           >
             <div className={`archive-door archive-door-left ${doorsOpen ? 'open' : ''}`} aria-hidden="true" />
             <div className={`archive-door archive-door-right ${doorsOpen ? 'open' : ''}`} aria-hidden="true" />
