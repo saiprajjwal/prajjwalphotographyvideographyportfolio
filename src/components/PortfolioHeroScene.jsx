@@ -125,7 +125,7 @@ function paintPanel(img, label) {
 
   // Blow the panel up slightly before blurring — that offset is what sells
   // the refraction, since the glass bends what's behind it outward.
-  gctx.filter = 'blur(7px) brightness(1.42) saturate(0.72)';
+  gctx.filter = 'blur(7px) brightness(1.0) saturate(0.85)';
   gctx.drawImage(canvas, -TEX_W * 0.035, -TEX_H * 0.045, TEX_W * 1.07, TEX_H * 1.09);
   gctx.filter = 'none';
 
@@ -240,10 +240,9 @@ const PANEL_FRAG = /* glsl */ `
     if (uHasMap < 0.5) discard;
     vec4 c = texture2D(uMap, vUv);
 
-    // Hovering lifts the panel out of its resting state: a little exposure
-    // plus a touch more contrast around the midpoint.
-    c.rgb = mix(c.rgb, (c.rgb - 0.5) * 1.06 + 0.5, uHover);
-    c.rgb *= 1.0 + uHover * 0.10;
+    // Hovering adds a subtle contrast lift only (no brightness boost — photo
+    // should always look true-to-life, exactly as the photographer shot it).
+    c.rgb = mix(c.rgb, (c.rgb - 0.5) * 1.04 + 0.5, uHover);
 
     // Reflections fade with distance from the band, which keeps the falloff
     // tied to the geometry instead of a viewport percentage.
