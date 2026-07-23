@@ -519,11 +519,6 @@ export default function Portfolio() {
 
             {/* Top controls */}
             <div className="cat-view__bar">
-              {overlayAlbum && (
-                <button className="cat-view__back" onClick={() => setOverlayAlbum(null)}>
-                  &larr; {openCategory}
-                </button>
-              )}
               <button className="cat-view__close" onClick={closeCategory} aria-label="Close collection">
                 Close &times;
               </button>
@@ -540,6 +535,13 @@ export default function Portfolio() {
               transition={{ delay: lightMotion ? 0 : 0.3, duration: lightMotion ? 0.25 : DUR.slow, ease: EASE.out }}
             >
               <div className="cat-view__sheet-inner container">
+                {overlayAlbum && (
+                  <div className="cat-view__grid-nav">
+                    <button className="cat-view__grid-back" onClick={() => setOverlayAlbum(null)}>
+                      &larr; Back to {openCategory}
+                    </button>
+                  </div>
+                )}
                 {overlayItems.length === 0 ? (
                   <p className="portfolio-empty-message">
                     No photos in &ldquo;{openCategory}&rdquo; yet.
