@@ -657,7 +657,7 @@ export default function PortfolioHeroScene({
       gl={{ alpha: true, antialias: true, powerPreference: 'high-performance' }}
       camera={{ position: [0, 0, CAMERA_Z], fov: 28.5 }}
       style={{ width: '100%', height: '100%' }}
-      dpr={[1, 2]}
+      dpr={[1, 1.5]}
     >
       <ResponsiveCamera rectRef={rectRef} />
       <PhotoBand

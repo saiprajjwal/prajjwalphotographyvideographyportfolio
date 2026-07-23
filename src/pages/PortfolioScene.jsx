@@ -59,6 +59,7 @@ export default function PortfolioScene({ onReady }) {
   return (
     <Canvas
       gl={{ alpha: true }}
+      dpr={[1, 1.5]}
       camera={{ position: [0, 0, 10], fov: 45 }}
       style={{ pointerEvents: 'none' }}
       onCreated={() => {
