@@ -1,6 +1,5 @@
 import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { EffectComposer, ChromaticAberration } from '@react-three/postprocessing';
 import * as THREE from 'three';
 import { pickCategoryCover } from '../utils/categoryCover';
 
@@ -696,20 +695,6 @@ function PhotoBand({ textures, activeIndex, flatMode, onSnap, onHoverChange, onT
   );
 }
 
-// ──────────────────────────────────────────────────────────────
-// Post-processing: a whisper of chromatic aberration for a real-lens edge —
-// and nothing that touches exposure. Bloom was removed: on photos with bright
-// backgrounds or lit skin it lifted the whole frame into a haze, and the
-// photography should read exactly as shot. Skipped on low-end/mobile.
-// ──────────────────────────────────────────────────────────────
-function HeroPostFX() {
-  return (
-    <EffectComposer enableNormalPass={false} multisampling={0}>
-      <ChromaticAberration offset={[0.0006, 0.0006]} radialModulation modulationOffset={0.4} />
-    </EffectComposer>
-  );
-}
-
 export default function PortfolioHeroScene({
   categories,
   activeIndex,
@@ -720,14 +705,6 @@ export default function PortfolioHeroScene({
   onHoverChange,
   onTap,
 }) {
-  // Postprocessing is GPU-heavy; only run it where there's headroom.
-  const postFX = useMemo(() => {
-    if (typeof window === 'undefined') return false;
-    const mobile = window.matchMedia('(max-width: 768px)').matches;
-    const cores = navigator.hardwareConcurrency || 8;
-    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    return !mobile && !reduce && cores > 4;
-  }, []);
   const items = useMemo(
     () => {
       // Hold the band blank until real photos arrive. Otherwise the Unsplash
@@ -768,7 +745,6 @@ export default function PortfolioHeroScene({
         onTap={onTap}
         rectRef={rectRef}
       />
-      {postFX && <HeroPostFX />}
     </Canvas>
   );
 }
