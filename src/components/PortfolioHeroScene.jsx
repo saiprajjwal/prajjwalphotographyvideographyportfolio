@@ -630,23 +630,30 @@ export default function PortfolioHeroScene({
   categories,
   activeIndex,
   photos,
+  photosLoaded = true,
   flatMode,
   onCategoryChange,
   onHoverChange,
   onTap,
 }) {
   const items = useMemo(
-    () =>
-      categories.map((cat) => {
+    () => {
+      // Hold the band blank until real photos arrive. Otherwise the Unsplash
+      // FALLBACK_IMAGES paint instantly (they're a warm CDN) and flash a stock
+      // stranger for a beat before the real Cloudinary cover swaps in.
+      if (!photosLoaded) return [];
+      return categories.map((cat) => {
         const catPhotos = photos.filter(
           (p) => (p.category || '').toLowerCase() === cat.toLowerCase()
         );
         return {
           key: cat,
+          // Fallback only for a category that genuinely has no photo yet.
           src: pickCategoryCover(catPhotos)?.src || FALLBACK_IMAGES[cat] || FALLBACK_IMAGES.Portraits,
         };
-      }),
-    [categories, photos]
+      });
+    },
+    [categories, photos, photosLoaded]
   );
 
   const textures = useCategoryTextures(items);

@@ -42,6 +42,7 @@ export default function CylindricalHeroRing({
   activeCategory = '',
   onSelectCategory,
   photos = [],
+  photosLoaded = true,
   flatMode = false,
   onOpenCategory,
 }) {
@@ -183,6 +184,7 @@ export default function CylindricalHeroRing({
             categories={categories}
             activeIndex={activeIndex >= 0 ? activeIndex : 0}
             photos={photos}
+            photosLoaded={photosLoaded}
             flatMode={flatMode}
             onCategoryChange={handleCategoryChange}
             onHoverChange={handleHoverChange}
