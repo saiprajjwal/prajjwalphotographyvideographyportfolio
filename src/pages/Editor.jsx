@@ -279,7 +279,23 @@ function getOutputSize(image, aspect) {
   return { w, h };
 }
 
+// The three display faces only this tool's text picker offers. Loaded on
+// demand here rather than globally, so no other visitor pays for them.
+const EDITOR_ONLY_FONTS =
+  'https://fonts.googleapis.com/css2?family=Cinzel:wght@400..900&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap';
+
 export default function Editor() {
+  // Add the picker-only faces when the editor opens; harmless if a prior mount
+  // already injected them (guarded by id).
+  useEffect(() => {
+    if (document.getElementById('editor-fonts')) return;
+    const link = document.createElement('link');
+    link.id = 'editor-fonts';
+    link.rel = 'stylesheet';
+    link.href = EDITOR_ONLY_FONTS;
+    document.head.appendChild(link);
+  }, []);
+
   const [image, setImage] = useState(null);
   const [sourceName, setSourceName] = useState('photo');
   const [adj, setAdj] = useState({ ...DEFAULT_ADJ });

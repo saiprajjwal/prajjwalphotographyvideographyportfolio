@@ -611,7 +611,7 @@
   
   .pe-section-body {
     padding: 0 0 1rem !important;
-    animation: pe-slide-up 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    animation: pe-slide-up 0.25s var(--ease-out);
   }
 
   /* Mobile Sliders: Full width for granular control */

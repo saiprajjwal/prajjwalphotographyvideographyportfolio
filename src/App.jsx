@@ -7,6 +7,7 @@ import Navigation from './components/Navigation';
 import Footer from './components/Footer';
 import Preloader from './components/Preloader';
 import FilmGrain from './components/FilmGrain';
+import { EASE, DUR } from './utils/motion';
 import './App.css';
 
 // Lazy load route pages to enable code splitting
@@ -36,7 +37,7 @@ function PageTransition({ children }) {
       initial={{ clipPath: 'circle(0% at 50% 50%)', opacity: 0 }}
       animate={{ clipPath: 'circle(150% at 50% 50%)', opacity: 1 }}
       exit={{ clipPath: 'circle(0% at 50% 50%)', opacity: 0 }}
-      transition={{ duration: 0.7, ease: [0.64, 0, 0.13, 1] }} // Cinematic ease-in-out
+      transition={{ duration: DUR.slow, ease: EASE.inOut }} // shared shutter easing
       style={{ width: '100%', minHeight: '100vh', position: 'relative' }}
     >
       {children}

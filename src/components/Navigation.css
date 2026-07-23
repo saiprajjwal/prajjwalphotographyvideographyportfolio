@@ -144,7 +144,7 @@
   z-index: 90; /* Just below the nav header */
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity 0.5s var(--ease-out);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -171,7 +171,7 @@
   text-decoration: none;
   opacity: 0;
   transform: translateY(30px);
-  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.5s var(--ease-out);
 }
 
 .mobile-overlay.open .mobile-nav-link {

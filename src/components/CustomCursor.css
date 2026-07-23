@@ -43,8 +43,8 @@
   pointer-events: none;
   z-index: 10001;
   will-change: transform;
-  transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1),
-              height 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+  transition: width 0.35s var(--ease-out),
+              height 0.35s var(--ease-out),
               border-color 0.25s ease,
               opacity 0.25s ease;
   mix-blend-mode: difference;

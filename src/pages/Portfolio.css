@@ -116,7 +116,7 @@
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.6s var(--ease-out), box-shadow 0.6s var(--ease-out);
   aspect-ratio: 3 / 4; /* Uniform size for all containers */
   padding: 0.8rem; /* THIS creates the visible glass frame! */
 }
@@ -152,7 +152,7 @@
   object-fit: cover; /* Ensure image fills the fixed aspect ratio */
   display: block;
   border-radius: 10px; /* Inner curve to match the glass frame */
-  transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.8s var(--ease-out);
 }
 
 /* Glass gloss shimmer sweep on hover */
@@ -179,7 +179,7 @@
 
 .masonry-item:hover::after {
   left: 150%;
-  transition: left 0.8s cubic-bezier(0.16, 1, 0.3, 1); /* Slow smooth sweep forward on hover enter */
+  transition: left 0.8s var(--ease-out); /* Slow smooth sweep forward on hover enter */
 }
 
 /* Floating category pill badge */
@@ -203,7 +203,7 @@
   pointer-events: none;
   opacity: 0;
   transform: translateY(15px);
-  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.5s var(--ease-out);
 }
 
 .masonry-item:hover .card-badge {
@@ -308,7 +308,7 @@
   z-index: 2;
   text-align: center;
   padding: 0 6%;
-  transition: opacity 0.9s ease, transform 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity 0.9s ease, transform 1.2s var(--ease-out);
 }
 
 .archive-intro-text.leaving {
@@ -552,7 +552,7 @@
   width: 34px;
   height: 1px;
   background: currentColor;
-  transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: width 0.35s var(--ease-out);
 }
 
 .portfolio-scroll-cue:hover .portfolio-scroll-cue__rule {
