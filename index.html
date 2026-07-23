@@ -6,10 +6,88 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Prajjwal Pandey — Photographer & Storyteller</title>
     
-    <!-- Google Fonts for Luxury Editor Typography -->
+    <!-- Warm up the two origins the first paint depends on -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..900;1,6..96,400..900&family=Cinzel:wght@400..900&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://res.cloudinary.com" crossorigin>
+
+    <!-- The LCP image. Preloading it at high priority means it's already in
+         cache the instant the boot splash below references it, so first paint
+         shows the hero rather than a blank screen. -->
+    <link rel="preload" as="image" href="/Home/heroimage.png" fetchpriority="high" />
+
+    <!-- Google Fonts, loaded async so they never block first paint. The hero
+         and boot splash use system fonts, so nothing above the fold waits on
+         this; editorial faces swap in a beat later. -->
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..900;1,6..96,400..900&family=Cinzel:wght@400..900&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap"
+      media="print"
+      onload="this.media='all'"
+    />
+    <noscript>
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..900;1,6..96,400..900&family=Cinzel:wght@400..900&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap" />
+    </noscript>
+
+    <!-- Critical CSS for the instant boot splash (below). Inlined so it paints
+         on HTML parse, with zero dependency on the JS bundle or external CSS. -->
+    <style>
+      #boot-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 2147483000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background:
+          radial-gradient(circle at center, rgba(255,255,255,0.05) 0%, rgba(0,0,0,0) 70%),
+          #060606 url('/Home/heroimage.png') center / cover no-repeat;
+        opacity: 1;
+        transition: opacity 0.65s ease;
+      }
+      #boot-splash::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(180deg, rgba(0,0,0,0.38) 0%, rgba(0,0,0,0.12) 42%, rgba(0,0,0,0.58) 100%);
+      }
+      #boot-splash .bs-inner { position: relative; z-index: 1; text-align: center; padding: 0 6vw; }
+      #boot-splash h1 {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif;
+        font-weight: 700;
+        letter-spacing: -0.04em;
+        font-size: clamp(1.8rem, 6vw, 5rem);
+        white-space: nowrap;
+        color: #fff;
+        text-shadow: 0 10px 50px rgba(0,0,0,0.9);
+      }
+      #boot-splash p {
+        margin: 1rem 0 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+        font-weight: 300;
+        font-size: 0.8rem;
+        letter-spacing: 0.5em;
+        text-transform: uppercase;
+        color: #e6e6e6;
+        text-shadow: 0 4px 10px rgba(0,0,0,0.8);
+      }
+      #boot-splash .bs-dot {
+        margin: 2.4rem auto 0;
+        width: 26px;
+        height: 26px;
+        border: 2px solid rgba(255,255,255,0.25);
+        border-top-color: rgba(255,255,255,0.85);
+        border-radius: 50%;
+        animation: bs-spin 0.8s linear infinite;
+      }
+      @keyframes bs-spin { to { transform: rotate(360deg); } }
+      html.app-ready #boot-splash { opacity: 0; pointer-events: none; }
+      @media (prefers-reduced-motion: reduce) {
+        #boot-splash .bs-dot { animation: none; }
+        #boot-splash { transition: none; }
+      }
+    </style>
 
     <!-- SEO Meta Tags -->
     <meta name="description" content="Prajjwal Pandey is a photographer and filmmaker specializing in cinematic storytelling. Capturing moments, telling stories, and bringing ideas to life through the lens." />
@@ -31,6 +109,36 @@
   </head>
   <body>
     <div id="root"></div>
+
+    <!-- Instant boot splash. Paints on HTML parse — before the JS bundle even
+         downloads — so the first frame is a branded hero, not a black
+         "Loading…" screen. The app fires an `app-ready` event once real route
+         content mounts, which fades this out; the underlying Home hero uses the
+         same image, so the handoff is seamless. A safety timeout guarantees it
+         can never trap the visitor. -->
+    <div id="boot-splash" aria-hidden="true">
+      <div class="bs-inner">
+        <h1>Prajjwal Pandey</h1>
+        <p>Photographer · Storyteller</p>
+        <div class="bs-dot"></div>
+      </div>
+    </div>
+    <script>
+      (function () {
+        var removed = false;
+        function dismiss() {
+          if (removed) return;
+          removed = true;
+          document.documentElement.classList.add('app-ready');
+          var el = document.getElementById('boot-splash');
+          if (el) setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 700);
+        }
+        window.addEventListener('app-ready', dismiss);
+        // Never let the splash outstay its welcome if the app is slow to mount
+        setTimeout(dismiss, 6000);
+      })();
+    </script>
+
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

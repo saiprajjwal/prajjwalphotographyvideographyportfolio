@@ -22,6 +22,15 @@ const Store = lazy(() => import('./pages/Store'));
 
 // Lens Shutter Transition Wrapper
 function PageTransition({ children }) {
+  // A lazy route has resolved and its content is mounting — tell the static
+  // boot splash (index.html) it can hand off. rAF waits one frame so the
+  // route's own first paint is on screen before the splash fades. Idempotent
+  // on the listener side, so firing again on each route change is harmless.
+  useEffect(() => {
+    const id = requestAnimationFrame(() => window.dispatchEvent(new Event('app-ready')));
+    return () => cancelAnimationFrame(id);
+  }, []);
+
   return (
     <motion.div
       initial={{ clipPath: 'circle(0% at 50% 50%)', opacity: 0 }}
