@@ -106,3 +106,72 @@ export const playShutterClick = () => {
     console.warn("Audio Context error:", e);
   }
 };
+
+// A firm mechanical "detent" — the click of a camera dial landing on a stop.
+// Played when the cylinder snaps to a new category.
+export const playDetentTick = () => {
+  if (!soundEnabled) return;
+  try {
+    initAudio();
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime;
+
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(540, now);
+    osc.frequency.exponentialRampToValueAtTime(190, now + 0.03);
+
+    gain.gain.setValueAtTime(0.02, now);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.038);
+
+    osc.start(now);
+    osc.stop(now + 0.04);
+  } catch (e) {
+    console.warn("Audio Context error:", e);
+  }
+};
+
+// A soft filtered-noise swell — air moving as the cover flies open. Played
+// under the category-view reveal, just ahead of the shutter.
+export const playWhoosh = () => {
+  if (!soundEnabled) return;
+  try {
+    initAudio();
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime;
+    const dur = 0.55;
+
+    const bufferSize = Math.floor(audioCtx.sampleRate * dur);
+    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+
+    const noise = audioCtx.createBufferSource();
+    noise.buffer = buffer;
+
+    const bp = audioCtx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.Q.value = 0.7;
+    bp.frequency.setValueAtTime(320, now);
+    bp.frequency.exponentialRampToValueAtTime(2300, now + dur * 0.6);
+    bp.frequency.exponentialRampToValueAtTime(520, now + dur);
+
+    const gain = audioCtx.createGain();
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.018, now + dur * 0.35);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+
+    noise.connect(bp);
+    bp.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    noise.start(now);
+    noise.stop(now + dur);
+  } catch (e) {
+    console.warn("Audio Context error:", e);
+  }
+};

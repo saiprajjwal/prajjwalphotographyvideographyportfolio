@@ -7,6 +7,7 @@ import CylindricalHeroRing from '../components/CylindricalHeroRing';
 import FloatingNavPill from '../components/FloatingNavPill';
 import { pickCategoryCover } from '../utils/categoryCover';
 import { EASE, DUR } from '../utils/motion';
+import { playDetentTick, playShutterClick, playWhoosh } from '../utils/audio';
 import './Portfolio.css';
 
 // Loaded on demand: keeps three.js/@react-three/drei out of this route's critical chunk.
@@ -40,6 +41,17 @@ export default function Portfolio() {
       },
       { replace: true }
     );
+
+  // Mechanical detent click whenever the category changes — from the band
+  // snapping, the dock stepper, or the filter pills. Silent on first mount,
+  // and no-ops entirely unless the visitor has enabled sound.
+  const prevFilter = useRef(filter);
+  useEffect(() => {
+    if (prevFilter.current !== filter) {
+      playDetentTick();
+      prevFilter.current = filter;
+    }
+  }, [filter]);
 
   const [activeSession, setActiveSession] = useState(null);
   // Hero band layout: curved arc (default) or flattened plane
@@ -320,6 +332,10 @@ export default function Portfolio() {
             setOverlayAlbum(null);
             setOriginRect(rect);
             setOpenCategory(cat);
+            // Air swelling as the cover flies open, with the shutter landing
+            // just after — matches the ~0.5s reveal.
+            playWhoosh();
+            setTimeout(playShutterClick, 140);
           }}
         />
 
