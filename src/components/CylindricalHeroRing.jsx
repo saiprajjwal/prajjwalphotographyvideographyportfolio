@@ -42,6 +42,7 @@ export default function CylindricalHeroRing({
   activeCategory = '',
   onSelectCategory,
   photos = [],
+  photosLoaded = false,
   flatMode = false,
   onOpenCategory,
 }) {
@@ -169,27 +170,33 @@ export default function CylindricalHeroRing({
 
       {/* 3D canvas: curved photo band + reflection */}
       <div className="aikawa-canvas-container">
-        <Suspense
-          fallback={
-            <div className="aikawa-canvas-loading">
-              <div className="aikawa-loading-spinner" />
-            </div>
-          }
-        >
-          <PortfolioHeroScene
-            categories={categories}
-            activeIndex={activeIndex >= 0 ? activeIndex : 0}
-            photos={photos}
-            flatMode={flatMode}
-            onCategoryChange={handleCategoryChange}
-            onHoverChange={handleHoverChange}
-            onTap={handleTap}
-          />
-        </Suspense>
+        {photos.length > 0 || photosLoaded ? (
+          <Suspense
+            fallback={
+              <div className="aikawa-canvas-loading">
+                <div className="aikawa-loading-spinner" />
+              </div>
+            }
+          >
+            <PortfolioHeroScene
+              categories={categories}
+              activeIndex={activeIndex >= 0 ? activeIndex : 0}
+              photos={photos}
+              flatMode={flatMode}
+              onCategoryChange={handleCategoryChange}
+              onHoverChange={handleHoverChange}
+              onTap={handleTap}
+            />
+          </Suspense>
+        ) : (
+          <div className="aikawa-canvas-loading">
+            <div className="aikawa-loading-spinner" />
+          </div>
+        )}
 
         <span
           ref={chipRef}
-          className={`aikawa-view-chip ${bandHover ? 'is-visible' : ''}`}
+          className={`aikawa-view-chip ${bandHover && (photos.length > 0 || photosLoaded) ? 'is-visible' : ''}`}
           aria-hidden="true"
         >
           View
