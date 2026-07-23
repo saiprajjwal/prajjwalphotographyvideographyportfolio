@@ -535,13 +535,17 @@ export default function Portfolio() {
               transition={{ delay: lightMotion ? 0 : 0.3, duration: lightMotion ? 0.25 : DUR.slow, ease: EASE.out }}
             >
               <div className="cat-view__sheet-inner container">
-                {overlayAlbum && (
-                  <div className="cat-view__grid-nav">
+                <div className="cat-view__grid-nav">
+                  {overlayAlbum ? (
                     <button className="cat-view__grid-back" onClick={() => setOverlayAlbum(null)}>
                       &larr; Back to {openCategory}
                     </button>
-                  </div>
-                )}
+                  ) : (
+                    <button className="cat-view__grid-back" onClick={closeCategory}>
+                      &larr; Back to Portfolio
+                    </button>
+                  )}
+                </div>
                 {overlayItems.length === 0 ? (
                   <p className="portfolio-empty-message">
                     No photos in &ldquo;{openCategory}&rdquo; yet.
