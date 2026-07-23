@@ -151,8 +151,8 @@ export default function CylindricalHeroRing({
     }
   }, []);
 
-  const handleTap = useCallback(() => {
-    if (activeCategory) onOpenCategory?.(activeCategory);
+  const handleTap = useCallback((originRect) => {
+    if (activeCategory) onOpenCategory?.(activeCategory, originRect);
   }, [activeCategory, onOpenCategory]);
 
   return (

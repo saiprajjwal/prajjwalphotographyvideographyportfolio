@@ -478,6 +478,166 @@
 }
 
 /* --------------------------------------------------------------------------
+   Cinematic category view (signature moment)
+   Clicked cover flies from the band into a pinned full-bleed hero; the
+   collection sheet then rises up over it.
+   -------------------------------------------------------------------------- */
+.cat-view {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.cat-view__scrim {
+  position: fixed;
+  inset: 0;
+  background: #08080b;
+  z-index: 0;
+}
+
+/* Pinned hero. Size/position are driven inline by framer during the flight,
+   then hold; position:fixed keeps it viewport-anchored as the sheet scrolls. */
+.cat-view__cover {
+  position: fixed;
+  z-index: 1;
+  overflow: hidden;
+  will-change: left, top, width, height;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5);
+}
+
+.cat-view__cover-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  will-change: transform;
+}
+
+.cat-view__cover-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.28) 0%,
+    rgba(0, 0, 0, 0) 30%,
+    rgba(8, 8, 11, 0.35) 66%,
+    rgba(8, 8, 11, 0.95) 100%
+  );
+}
+
+.cat-view__cover-caption {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: clamp(2.2rem, 7svh, 5.5rem);
+  z-index: 2;
+  text-align: center;
+  padding: 0 6vw;
+}
+
+.cat-view__eyebrow {
+  display: block;
+  font-family: var(--font-sans);
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.72);
+  margin-bottom: 0.9rem;
+}
+
+.cat-view__title {
+  margin: 0;
+  font-family: 'Bodoni Moda', 'Playfair Display', Didot, serif;
+  font-weight: 400;
+  font-size: clamp(2.6rem, 8vw, 6.5rem);
+  line-height: 0.95;
+  letter-spacing: -0.01em;
+  color: #ffffff;
+  text-shadow: 0 12px 60px rgba(0, 0, 0, 0.55);
+}
+
+.cat-view__count {
+  display: block;
+  margin-top: 1rem;
+  font-family: var(--font-sans);
+  font-size: 0.78rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.cat-view__bar {
+  position: fixed;
+  top: 1.4rem;
+  left: 1.6rem;
+  right: 1.6rem;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.cat-view__bar > * { pointer-events: auto; }
+
+.cat-view__back,
+.cat-view__close {
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  padding: 0.6rem 1.3rem;
+  border-radius: 100px;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+
+/* When no back button, the close button still hugs the right */
+.cat-view__close { margin-left: auto; }
+
+.cat-view__back:hover,
+.cat-view__close:hover {
+  background: rgba(255, 255, 255, 0.22);
+  transform: translateY(-1px);
+}
+
+.cat-view__sheet {
+  position: relative;
+  z-index: 2;
+  min-height: 54svh;
+  background: #08080b;
+  border-radius: 28px 28px 0 0;
+  box-shadow: 0 -30px 80px rgba(0, 0, 0, 0.55);
+  padding-top: 2.6rem;
+}
+
+.cat-view__sheet-inner {
+  padding-bottom: 6rem;
+}
+
+@media (max-width: 600px) {
+  .cat-view__bar {
+    top: 1rem;
+    left: 1rem;
+    right: 1rem;
+  }
+  .cat-view__sheet {
+    border-radius: 22px 22px 0 0;
+  }
+}
+
+/* --------------------------------------------------------------------------
    Portfolio Hero Section (aikawakenichi.com layout)
    -------------------------------------------------------------------------- */
 .portfolio-hero-section {

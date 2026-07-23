@@ -5,6 +5,8 @@ import portfolioData from '../data/portfolio.json';
 import { lenisInstance } from '../utils/lenisInstance';
 import CylindricalHeroRing from '../components/CylindricalHeroRing';
 import FloatingNavPill from '../components/FloatingNavPill';
+import { pickCategoryCover } from '../utils/categoryCover';
+import { EASE, DUR } from '../utils/motion';
 import './Portfolio.css';
 
 // Loaded on demand: keeps three.js/@react-three/drei out of this route's critical chunk.
@@ -46,6 +48,9 @@ export default function Portfolio() {
   // album drilled into from within it
   const [openCategory, setOpenCategory] = useState(null);
   const [overlayAlbum, setOverlayAlbum] = useState(null);
+  // Viewport rect of the band panel that was clicked — the cinematic category
+  // view flies its cover out of exactly this spot (shared-element open).
+  const [originRect, setOriginRect] = useState(null);
   const [canvasReady, setCanvasReady] = useState(false);
   const [photos, setPhotos] = useState([]);
   const [photosLoaded, setPhotosLoaded] = useState(false);
@@ -157,9 +162,21 @@ export default function Portfolio() {
     return [...covers, ...loose];
   })();
 
+  // The cover that flies out of the band and anchors the category hero.
+  // Same helper the band uses, so the image matches what was clicked.
+  const overlayCover = pickCategoryCover(overlayPhotos);
+
+  // Resting rect of the pinned hero, in pixels. Keeping the flight in one unit
+  // (px) lets framer interpolate cleanly from the band's rect; mixing px with
+  // vw/svh would snap. Recomputed only while the view is open.
+  const heroRect = openCategory
+    ? { left: 0, top: 0, width: window.innerWidth, height: Math.round(window.innerHeight * 0.52) }
+    : null;
+
   const closeCategory = useCallback(() => {
     setOpenCategory(null);
     setOverlayAlbum(null);
+    // Keep originRect until the exit animation has run its course
   }, []);
 
   // Lock scroll while either overlay is open
@@ -297,8 +314,9 @@ export default function Portfolio() {
           }}
           photos={photos}
           flatMode={flatMode}
-          onOpenCategory={(cat) => {
+          onOpenCategory={(cat, rect) => {
             setOverlayAlbum(null);
+            setOriginRect(rect);
             setOpenCategory(cat);
           }}
         />
@@ -423,61 +441,121 @@ export default function Portfolio() {
         </div>
       </main>
 
-      {/* Category view, opened by clicking the hero band */}
-      <AnimatePresence>
+      {/* Signature moment — the clicked cover flies out of the band into a
+          full-bleed category hero, then the collection rises over it. */}
+      <AnimatePresence onExitComplete={() => setOriginRect(null)}>
         {openCategory && (
-          <motion.div
-            className="album-modal-backdrop"
-            initial={{ opacity: 0, backdropFilter: lightMotion ? undefined : 'blur(0px)' }}
-            animate={{ opacity: 1, backdropFilter: lightMotion ? undefined : 'blur(6px)' }}
-            exit={{ opacity: 0, backdropFilter: lightMotion ? undefined : 'blur(0px)' }}
-            transition={{ duration: lightMotion ? 0.25 : 0.4 }}
-            onClick={closeCategory}
-          >
+          <div className="cat-view" data-lenis-prevent role="dialog" aria-modal="true" aria-label={`${openCategory} collection`}>
+            {/* Dark base */}
             <motion.div
-              className="album-overlay"
-              data-lenis-prevent
-              initial={{ y: lightMotion ? 0 : 48, opacity: 0, scale: lightMotion ? 1 : 0.97 }}
-              animate={{ y: 0, opacity: 1, scale: 1 }}
-              exit={{ y: lightMotion ? 0 : 24, opacity: 0, scale: lightMotion ? 1 : 0.97 }}
-              transition={{ duration: lightMotion ? 0.3 : 0.55, ease: [0.16, 1, 0.3, 1] }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="album-overlay-header container">
-                <div className="category-overlay-heading">
-                  {overlayAlbum && (
-                    <button
-                      className="category-overlay-back"
-                      onClick={() => setOverlayAlbum(null)}
-                    >
-                      &larr; {openCategory}
-                    </button>
-                  )}
-                  <h2>{overlayAlbum || openCategory}</h2>
-                  <span className="category-overlay-count">
-                    {overlayAlbum
-                      ? `${overlayItems.length} photo${overlayItems.length === 1 ? '' : 's'}`
-                      : `${overlayItems.length} item${overlayItems.length === 1 ? '' : 's'}`}
-                  </span>
-                </div>
-                <button className="album-overlay-close" onClick={closeCategory}>
-                  Close &times;
-                </button>
-              </div>
+              className="cat-view__scrim"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: DUR.base }}
+              onClick={closeCategory}
+            />
 
-              <div className="album-overlay-content container">
+            {/* Flying cover: animates from the band's exact viewport rect to a
+                pinned full-width hero. Falls back to a plain fade if we never
+                got a rect (e.g. opened by means other than a band tap). */}
+            <motion.div
+              className="cat-view__cover"
+              initial={
+                lightMotion
+                  ? { ...heroRect, borderRadius: 0, opacity: 0 }
+                  : originRect
+                    ? { ...originRect, borderRadius: 14, opacity: 1 }
+                    : { ...heroRect, borderRadius: 0, opacity: 0 }
+              }
+              animate={{ ...heroRect, borderRadius: 0, opacity: 1 }}
+              exit={
+                lightMotion || !originRect
+                  ? { ...heroRect, borderRadius: 0, opacity: 0 }
+                  : { ...originRect, borderRadius: 14, opacity: 0 }
+              }
+              transition={{ duration: lightMotion ? 0.3 : DUR.slow, ease: EASE.out }}
+            >
+              {overlayCover && (
+                <motion.img
+                  className="cat-view__cover-img"
+                  src={overlayCover.src}
+                  alt={overlayCover.alt || `${openCategory} cover`}
+                  initial={{ scale: 1.12 }}
+                  animate={{ scale: 1 }}
+                  transition={{ duration: 8, ease: 'linear' }}
+                />
+              )}
+              <div className="cat-view__cover-scrim" />
+              <div className="cat-view__cover-caption">
+                <motion.span
+                  className="cat-view__eyebrow"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.45, duration: DUR.base, ease: EASE.out }}
+                >
+                  {overlayAlbum ? openCategory : 'The Archive'}
+                </motion.span>
+                <motion.h2
+                  className="cat-view__title"
+                  initial={{ opacity: 0, y: 18 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5, duration: DUR.slow, ease: EASE.out }}
+                >
+                  {overlayAlbum || openCategory}
+                </motion.h2>
+                <motion.span
+                  className="cat-view__count"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.6, duration: DUR.base }}
+                >
+                  {overlayAlbum
+                    ? `${overlayItems.length} photograph${overlayItems.length === 1 ? '' : 's'}`
+                    : `${overlayItems.length} album${overlayItems.length === 1 ? '' : 's'}`}
+                </motion.span>
+              </div>
+            </motion.div>
+
+            {/* Top controls */}
+            <div className="cat-view__bar">
+              {overlayAlbum && (
+                <button className="cat-view__back" onClick={() => setOverlayAlbum(null)}>
+                  &larr; {openCategory}
+                </button>
+              )}
+              <button className="cat-view__close" onClick={closeCategory} aria-label="Close collection">
+                Close &times;
+              </button>
+            </div>
+
+            {/* The collection sheet slides up over the hero */}
+            <motion.div
+              className="cat-view__sheet"
+              data-lenis-prevent
+              style={{ marginTop: heroRect ? heroRect.height - 26 : '48svh' }}
+              initial={{ opacity: 0, y: lightMotion ? 0 : 60 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: lightMotion ? 0 : 40 }}
+              transition={{ delay: lightMotion ? 0 : 0.3, duration: lightMotion ? 0.25 : DUR.slow, ease: EASE.out }}
+            >
+              <div className="cat-view__sheet-inner container">
                 {overlayItems.length === 0 ? (
                   <p className="portfolio-empty-message">
                     No photos in &ldquo;{openCategory}&rdquo; yet.
                   </p>
                 ) : (
                   <div className="masonry-grid">
-                    {overlayItems.map((photo) => (
+                    {overlayItems.map((photo, i) => (
                       <motion.div
                         key={photo.id}
-                        initial={{ opacity: 0, y: 24 }}
+                        initial={{ opacity: 0, y: 34 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                        transition={{
+                          delay: lightMotion ? 0 : 0.42 + Math.min(i, 10) * 0.045,
+                          duration: DUR.base,
+                          ease: EASE.out,
+                        }}
                         className="masonry-item"
                         onMouseMove={handleMouseMove}
                         onMouseLeave={handleMouseLeave}
@@ -510,7 +588,7 @@ export default function Portfolio() {
                 )}
               </div>
             </motion.div>
-          </motion.div>
+          </div>
         )}
       </AnimatePresence>
 

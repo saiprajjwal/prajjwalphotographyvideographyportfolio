@@ -561,7 +561,19 @@ function PhotoBand({ textures, activeIndex, flatMode, onSnap, onHoverChange, onT
         // A press that never moved is a click on the front panel. Don't
         // re-snap here: settling mid-transition would round to whichever
         // panel happens to be passing and change category behind the click.
-        onTap?.();
+        // Hand up the band's viewport rect so the category view can fly the
+        // cover out of exactly where the 3D panel sits (shared-element open).
+        const r = rectRef.current;
+        const box = el.getBoundingClientRect();
+        const originRect = r
+          ? {
+              left: box.left + r.left,
+              top: box.top + r.top,
+              width: r.right - r.left,
+              height: r.bottom - r.top,
+            }
+          : null;
+        onTap?.(originRect);
       }
     };
 
