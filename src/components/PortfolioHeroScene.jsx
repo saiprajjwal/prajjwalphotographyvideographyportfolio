@@ -224,7 +224,6 @@ const PANEL_FRAG = /* glsl */ `
   uniform float uFlat;
   uniform float uHover;
   uniform float uSide;
-  uniform float uFlyDistort;
   varying vec2 vUv;
 
   const float PW = ${PANEL_WIDTH.toFixed(5)};
@@ -238,20 +237,7 @@ const PANEL_FRAG = /* glsl */ `
 
   void main() {
     if (uHasMap < 0.5) discard;
-
-    // ── Chromatic aberration during fly-through ──
-    // Offset R and B channels radially from the panel centre.
-    // uFlyDistort ramps 0 → 1 as the camera rushes forward.
-    vec2 dir = (vUv - 0.5) * uFlyDistort * 0.08;
-    vec4 c;
-    if (uFlyDistort > 0.001) {
-      c.r = texture2D(uMap, vUv + dir).r;
-      c.g = texture2D(uMap, vUv).g;
-      c.b = texture2D(uMap, vUv - dir).b;
-      c.a = texture2D(uMap, vUv).a;
-    } else {
-      c = texture2D(uMap, vUv);
-    }
+    vec4 c = texture2D(uMap, vUv);
 
     // Hovering lifts the panel out of its resting state: a little exposure
     // plus a touch more contrast around the midpoint.
@@ -290,7 +276,6 @@ function makePanelMaterial(isReflection) {
       uHasMap: { value: 0 },
       uHover: { value: 0 },
       uSide: { value: 0 },
-      uFlyDistort: { value: 0 },
     },
     transparent: true,
     depthWrite: !isReflection,
@@ -413,7 +398,6 @@ function ResponsiveCamera({ rectRef }) {
 function PhotoBand({ textures, activeIndex, flatMode, onSnap, onHoverChange, onTap, rectRef }) {
   const total = textures.length;
   const { gl } = useThree();
-  const fovBase = useRef(28.5);
 
   // One ref per collection, filled by callback refs — keeps the hook list flat
   const slots = useRef([]);
@@ -427,9 +411,6 @@ function PhotoBand({ textures, activeIndex, flatMode, onSnap, onHoverChange, onT
   const dragged = useRef(false);
   const dragStartX = useRef(0);
   const dragStartTarget = useRef(0);
-
-  const flying = useRef(false);
-  const flyProgress = useRef(0);
 
   // Eased 0 → 1 arc-to-flat morph, and the hover lift
   const flat = useRef(0);
@@ -464,48 +445,8 @@ function PhotoBand({ textures, activeIndex, flatMode, onSnap, onHoverChange, onT
     target.current = current + delta;
   }, [activeIndex, total]);
 
-  useFrame(({ camera }, delta) => {
+  useFrame(() => {
     if (total === 0) return;
-
-    if (flying.current) {
-      flyProgress.current += delta * 1.25; // ~0.8s total — slow enough to see the rush
-      const t = Math.min(1, flyProgress.current);
-      // Ease-in-out: slow start, fast through the glass, gentle finish
-      const ease = t < 0.5
-        ? 2 * t * t
-        : 1 - Math.pow(-2 * t + 2, 3) / 2;
-
-      // Camera rushes from CAMERA_Z forward, past the panel (RADIUS) and beyond
-      camera.position.z = THREE.MathUtils.lerp(CAMERA_Z, -3.0, ease);
-
-      // FOV warps outward for a tunnel-vision stretch
-      camera.fov = fovBase.current + ease * 18;
-      camera.updateProjectionMatrix();
-
-      // At 90% through, fire the category open — user has seen the full
-      // camera rush + chromatic aberration before the category overlay lands
-      if (t >= 0.90 && !flying.tapped) {
-        flying.tapped = true;
-        onTap?.(null);
-      }
-
-      if (t >= 1.0) {
-        flying.current = false;
-        flying.tapped = false;
-      }
-    } else {
-      // Gently return camera + FOV to rest when the fly ends / modal closes
-      const zOff = Math.abs(camera.position.z - CAMERA_Z);
-      const fOff = Math.abs(camera.fov - fovBase.current);
-      if (zOff > 0.01 || fOff > 0.05) {
-        camera.position.z = THREE.MathUtils.lerp(camera.position.z, CAMERA_Z, delta * 4.0);
-        camera.fov = THREE.MathUtils.lerp(camera.fov, fovBase.current, delta * 4.0);
-        camera.updateProjectionMatrix();
-      }
-      if (flyProgress.current > 0) {
-        flyProgress.current = 0;
-      }
-    }
 
     // Ease position, mode morph and hover lift
     const diff = target.current - pos.current;
@@ -552,9 +493,6 @@ function PhotoBand({ textures, activeIndex, flatMode, onSnap, onHoverChange, onT
         mat.uniforms.uHover.value = hoverLift.current;
         // Continuous, so the neighbours fade up as they slide into focus
         mat.uniforms.uSide.value = Math.min(Math.abs(offset), 1);
-        // Fly-through distortion: only the front-facing panel (offset ≈ 0)
-        const isFront = Math.abs(offset) < 0.5;
-        mat.uniforms.uFlyDistort.value = isFront ? flyProgress.current : 0;
       }
       band.uniforms.uOpacity.value = 1;
       reflection.uniforms.uOpacity.value = 1;
@@ -591,7 +529,7 @@ function PhotoBand({ textures, activeIndex, flatMode, onSnap, onHoverChange, onT
     };
 
     const onDown = (e) => {
-      if (flying.current || !inBand(e)) return;
+      if (!inBand(e)) return;
       dragging.current = true;
       dragged.current = false;
       dragStartX.current = pointFrom(e);
@@ -600,8 +538,8 @@ function PhotoBand({ textures, activeIndex, flatMode, onSnap, onHoverChange, onT
     };
 
     const onMove = (e) => {
-      if (!dragging.current || flying.current) {
-        setHover(inBand(e) && !flying.current);
+      if (!dragging.current) {
+        setHover(inBand(e));
         onHoverChange?.(hovering.current, e.clientX, e.clientY);
         return;
       }
@@ -620,9 +558,22 @@ function PhotoBand({ textures, activeIndex, flatMode, onSnap, onHoverChange, onT
       if (dragged.current) {
         settle();
       } else if (inBand(e)) {
-        // Fly-through effect
-        flying.current = true;
-        flyProgress.current = 0;
+        // A press that never moved is a click on the front panel. Don't
+        // re-snap here: settling mid-transition would round to whichever
+        // panel happens to be passing and change category behind the click.
+        // Hand up the band's viewport rect so the category view can fly the
+        // cover out of exactly where the 3D panel sits (shared-element open).
+        const r = rectRef.current;
+        const box = el.getBoundingClientRect();
+        const originRect = r
+          ? {
+              left: box.left + r.left,
+              top: box.top + r.top,
+              width: r.right - r.left,
+              height: r.bottom - r.top,
+            }
+          : null;
+        onTap?.(originRect);
       }
     };
 

@@ -313,7 +313,6 @@ export default function Portfolio() {
             setActiveSession(null);
           }}
           photos={photos}
-          photosLoaded={photosLoaded}
           flatMode={flatMode}
           onOpenCategory={(cat, rect) => {
             setOverlayAlbum(null);
