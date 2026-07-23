@@ -1,5 +1,6 @@
 import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { EffectComposer, Bloom, ChromaticAberration } from '@react-three/postprocessing';
 import * as THREE from 'three';
 import { pickCategoryCover } from '../utils/categoryCover';
 
@@ -696,6 +697,30 @@ function PhotoBand({ textures, activeIndex, flatMode, onSnap, onHoverChange, onT
   );
 }
 
+// ──────────────────────────────────────────────────────────────
+// Cinematic post-processing: a soft bloom on the brightest parts (glass
+// lettering, highlights in the photos) and a whisper of chromatic aberration
+// for a real-lens feel. Deliberately restrained — enough to read as "shot on
+// glass", not a filter. Skipped on low-end / mobile via the `quality` gate.
+//
+// Kept transparency-safe: no vignette/DoF, which would grey the white page
+// behind the band. mipmapBlur bloom composites cleanly over the alpha canvas.
+// ──────────────────────────────────────────────────────────────
+function HeroPostFX() {
+  return (
+    <EffectComposer enableNormalPass={false} multisampling={0}>
+      <Bloom
+        mipmapBlur
+        intensity={0.55}
+        luminanceThreshold={0.72}
+        luminanceSmoothing={0.28}
+        radius={0.7}
+      />
+      <ChromaticAberration offset={[0.0007, 0.0007]} radialModulation modulationOffset={0.35} />
+    </EffectComposer>
+  );
+}
+
 export default function PortfolioHeroScene({
   categories,
   activeIndex,
@@ -706,6 +731,14 @@ export default function PortfolioHeroScene({
   onHoverChange,
   onTap,
 }) {
+  // Postprocessing is GPU-heavy; only run it where there's headroom.
+  const postFX = useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    const mobile = window.matchMedia('(max-width: 768px)').matches;
+    const cores = navigator.hardwareConcurrency || 8;
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    return !mobile && !reduce && cores > 4;
+  }, []);
   const items = useMemo(
     () => {
       // Hold the band blank until real photos arrive. Otherwise the Unsplash
@@ -746,6 +779,7 @@ export default function PortfolioHeroScene({
         onTap={onTap}
         rectRef={rectRef}
       />
+      {postFX && <HeroPostFX />}
     </Canvas>
   );
 }
