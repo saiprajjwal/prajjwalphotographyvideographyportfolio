@@ -168,7 +168,13 @@ export default function CylindricalHeroRing({
       </div>
 
       {/* 3D canvas: curved photo band + reflection */}
-      <div className="aikawa-canvas-container">
+      <div
+        className="aikawa-canvas-container"
+        style={{
+          opacity: ready ? 1 : 0,
+          transition: 'opacity 0.6s ease-out',
+        }}
+      >
         <Suspense
           fallback={
             <div className="aikawa-canvas-loading">
