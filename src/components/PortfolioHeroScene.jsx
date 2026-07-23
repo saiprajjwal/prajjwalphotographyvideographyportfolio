@@ -708,14 +708,17 @@ function PhotoBand({ textures, activeIndex, flatMode, onSnap, onHoverChange, onT
 function HeroPostFX() {
   return (
     <EffectComposer enableNormalPass={false} multisampling={0}>
+      {/* Very restrained: a high threshold means only near-white highlights
+          (glass-text edges, speculars) pick up a faint glow — skin and the
+          general exposure of the photo stay true, not blown out. */}
       <Bloom
         mipmapBlur
-        intensity={0.55}
-        luminanceThreshold={0.72}
-        luminanceSmoothing={0.28}
-        radius={0.7}
+        intensity={0.18}
+        luminanceThreshold={0.9}
+        luminanceSmoothing={0.12}
+        radius={0.6}
       />
-      <ChromaticAberration offset={[0.0007, 0.0007]} radialModulation modulationOffset={0.35} />
+      <ChromaticAberration offset={[0.0006, 0.0006]} radialModulation modulationOffset={0.4} />
     </EffectComposer>
   );
 }
