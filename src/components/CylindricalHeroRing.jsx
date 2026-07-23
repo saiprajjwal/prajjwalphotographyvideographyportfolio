@@ -167,14 +167,11 @@ export default function CylindricalHeroRing({
         ))}
       </div>
 
-      {/* 3D canvas: curved photo band + reflection */}
-      <div
-        className="aikawa-canvas-container"
-        style={{
-          opacity: ready ? 1 : 0,
-          transition: 'opacity 0.6s ease-out',
-        }}
-      >
+      {/* 3D canvas: curved photo band + reflection. The Suspense fallback
+          below covers the load, so the container itself is simply visible —
+          an earlier `ready` flag was removed but a reference lingered, which
+          threw on render and blanked the whole Portfolio route. */}
+      <div className="aikawa-canvas-container">
         <Suspense
           fallback={
             <div className="aikawa-canvas-loading">
