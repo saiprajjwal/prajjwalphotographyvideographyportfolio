@@ -417,6 +417,21 @@ function PhotoBand({ textures, activeIndex, flatMode, onSnap, onHoverChange, onT
   const hoverLift = useRef(0);
   const hovering = useRef(false);
 
+  // ── Living cylinder ──
+  // Momentum: a flick keeps the ring spinning and eases to the nearest panel.
+  const velocity = useRef(0);          // target units carried per frame
+  const flinging = useRef(false);
+  const lastDragTarget = useRef(0);
+  // Parallax: the whole band leans toward the cursor and drifts when idle.
+  const pointer = useRef({ x: 0, y: 0 }); // -1..1 within the canvas
+  const tiltX = useRef(0);
+  const tiltZ = useRef(0);
+  // Respect the OS setting — no idle drift or tilt for reduced-motion users.
+  const calm = useRef(
+    typeof window !== 'undefined' &&
+      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+  ).current;
+
   const geometry = useMemo(() => new THREE.PlaneGeometry(1, 1, 96, 1), []);
   useEffect(() => () => geometry.dispose(), [geometry]);
 
@@ -436,7 +451,7 @@ function PhotoBand({ textures, activeIndex, flatMode, onSnap, onHoverChange, onT
   // Follow the category chosen elsewhere (filter pills, nav arrows) by the
   // shortest way round the ring
   useEffect(() => {
-    if (dragging.current || total === 0) return;
+    if (dragging.current || flinging.current || total === 0) return;
     const current = target.current;
     const currentIdx = ((Math.round(current) % total) + total) % total;
     let delta = activeIndex - currentIdx;
@@ -445,8 +460,21 @@ function PhotoBand({ textures, activeIndex, flatMode, onSnap, onHoverChange, onT
     target.current = current + delta;
   }, [activeIndex, total]);
 
-  useFrame(() => {
+  useFrame((state) => {
     if (total === 0) return;
+
+    // Momentum: after a flick, keep the ring turning and ease to a stop, then
+    // snap to the nearest panel and commit the category.
+    if (flinging.current) {
+      target.current += velocity.current;
+      velocity.current *= 0.925;
+      if (Math.abs(velocity.current) < 0.008) {
+        flinging.current = false;
+        const nearest = Math.round(target.current);
+        target.current = nearest;
+        if (onSnap) onSnap(((nearest % total) + total) % total);
+      }
+    }
 
     // Ease position, mode morph and hover lift
     const diff = target.current - pos.current;
@@ -455,7 +483,22 @@ function PhotoBand({ textures, activeIndex, flatMode, onSnap, onHoverChange, onT
     hoverLift.current += ((hovering.current ? 1 : 0) - hoverLift.current) * 0.12;
 
     if (bandGroup.current) {
-      bandGroup.current.scale.setScalar(1 + hoverLift.current * 0.055);
+      const t = state.clock.elapsedTime;
+      const active = dragging.current || flinging.current;
+
+      // Parallax lean toward the cursor; eases back to neutral when idle.
+      const targetTiltX = calm ? 0 : pointer.current.y * 0.09;
+      const targetTiltZ = calm ? 0 : -pointer.current.x * 0.06;
+      tiltX.current += (targetTiltX - tiltX.current) * 0.05;
+      tiltZ.current += (targetTiltZ - tiltZ.current) * 0.05;
+
+      // Idle breath: a slow sway + scale pulse, stilled while interacting.
+      const breathe = calm || active ? 0 : Math.sin(t * 0.6) * 0.01;
+      const sway = calm ? 0 : Math.sin(t * 0.4) * 0.012 * (active ? 0.3 : 1);
+
+      bandGroup.current.rotation.x = tiltX.current;
+      bandGroup.current.rotation.z = tiltZ.current + sway;
+      bandGroup.current.scale.setScalar(1 + hoverLift.current * 0.055 + breathe);
     }
 
     const base = Math.round(pos.current);
@@ -528,16 +571,29 @@ function PhotoBand({ textures, activeIndex, flatMode, onSnap, onHoverChange, onT
       onHoverChange?.(on);
     };
 
+    // Cursor position within the canvas, normalised to -1..1 for parallax.
+    const trackPointer = (e) => {
+      const box = el.getBoundingClientRect();
+      const cx = e.clientX ?? e.touches?.[0]?.clientX ?? box.left + box.width / 2;
+      const cy = e.clientY ?? e.touches?.[0]?.clientY ?? box.top + box.height / 2;
+      pointer.current.x = Math.max(-1, Math.min(1, ((cx - box.left) / box.width) * 2 - 1));
+      pointer.current.y = Math.max(-1, Math.min(1, ((cy - box.top) / box.height) * 2 - 1));
+    };
+
     const onDown = (e) => {
       if (!inBand(e)) return;
       dragging.current = true;
       dragged.current = false;
+      flinging.current = false;
+      velocity.current = 0;
       dragStartX.current = pointFrom(e);
       dragStartTarget.current = target.current;
+      lastDragTarget.current = target.current;
       el.style.cursor = 'grabbing';
     };
 
     const onMove = (e) => {
+      trackPointer(e);
       if (!dragging.current) {
         setHover(inBand(e));
         onHoverChange?.(hovering.current, e.clientX, e.clientY);
@@ -546,7 +602,11 @@ function PhotoBand({ textures, activeIndex, flatMode, onSnap, onHoverChange, onT
       const dx = pointFrom(e) - dragStartX.current;
       if (Math.abs(dx) > 4) dragged.current = true;
       // Drag right → bring the previous panel forward
-      target.current = dragStartTarget.current - dx / 260;
+      const next = dragStartTarget.current - dx / 260;
+      // Track instantaneous velocity so a flick can carry momentum on release.
+      velocity.current = next - lastDragTarget.current;
+      lastDragTarget.current = next;
+      target.current = next;
       onHoverChange?.(true, e.clientX, e.clientY);
     };
 
@@ -556,7 +616,12 @@ function PhotoBand({ textures, activeIndex, flatMode, onSnap, onHoverChange, onT
       el.style.cursor = hovering.current ? 'grab' : 'default';
 
       if (dragged.current) {
-        settle();
+        // A real flick keeps spinning; a gentle release just settles.
+        if (Math.abs(velocity.current) > 0.02) {
+          flinging.current = true;
+        } else {
+          settle();
+        }
       } else if (inBand(e)) {
         // A press that never moved is a click on the front panel. Don't
         // re-snap here: settling mid-transition would round to whichever
@@ -577,7 +642,12 @@ function PhotoBand({ textures, activeIndex, flatMode, onSnap, onHoverChange, onT
       }
     };
 
-    const onLeave = () => setHover(false);
+    const onLeave = () => {
+      setHover(false);
+      // Recentre the parallax so the band returns to rest when the cursor goes
+      pointer.current.x = 0;
+      pointer.current.y = 0;
+    };
 
     el.addEventListener('pointerdown', onDown);
     window.addEventListener('pointermove', onMove);
