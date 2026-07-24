@@ -43,7 +43,7 @@ export const playFocusTick = () => {
     filter.type = 'highpass';
     filter.frequency.setValueAtTime(800, audioCtx.currentTime);
 
-    gain.gain.setValueAtTime(0.008, audioCtx.currentTime); // ultra subtle volume
+    gain.gain.setValueAtTime(0.02, audioCtx.currentTime); // increased volume
     gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.012);
 
     osc.start();
@@ -71,7 +71,7 @@ export const playShutterClick = () => {
     osc.frequency.setValueAtTime(800, now);
     osc.frequency.exponentialRampToValueAtTime(120, now + 0.07);
 
-    oscGain.gain.setValueAtTime(0.018, now);
+    oscGain.gain.setValueAtTime(0.04, now); // increased
     oscGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.07);
 
     osc.start(now);
@@ -94,7 +94,7 @@ export const playShutterClick = () => {
     noiseFilter.Q.value = 2.5;
 
     const noiseGain = audioCtx.createGain();
-    noiseGain.gain.setValueAtTime(0.012, now);
+    noiseGain.gain.setValueAtTime(0.03, now); // increased
     noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.05);
 
     noise.connect(noiseFilter);
@@ -126,11 +126,38 @@ export const playDetentTick = () => {
     osc.frequency.setValueAtTime(540, now);
     osc.frequency.exponentialRampToValueAtTime(190, now + 0.03);
 
-    gain.gain.setValueAtTime(0.15, now); // Increased volume for stronger haptic feel
+    gain.gain.setValueAtTime(0.2, now); // Increased volume for stronger haptic feel
     gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.038);
 
     osc.start(now);
     osc.stop(now + 0.04);
+  } catch (e) {
+    console.warn("Audio Context error:", e);
+  }
+};
+
+// A very fast, subtle zip tick for scrolling elements (like a zipper or ratchet)
+export const playZipTick = () => {
+  if (!soundEnabled) return;
+  try {
+    initAudio();
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime;
+
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(800, now);
+    osc.frequency.exponentialRampToValueAtTime(400, now + 0.015);
+
+    gain.gain.setValueAtTime(0.03, now);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.015);
+
+    osc.start(now);
+    osc.stop(now + 0.02);
   } catch (e) {
     console.warn("Audio Context error:", e);
   }
@@ -163,7 +190,7 @@ export const playWhoosh = () => {
 
     const gain = audioCtx.createGain();
     gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.exponentialRampToValueAtTime(0.018, now + dur * 0.35);
+    gain.gain.exponentialRampToValueAtTime(0.04, now + dur * 0.35); // increased
     gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
 
     noise.connect(bp);
