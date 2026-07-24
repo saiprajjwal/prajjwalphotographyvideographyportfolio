@@ -124,6 +124,28 @@ export default function GlassShatterIntro({ onDone, onSkip }) {
       >
         Every frame has a story waiting to be discovered.
       </motion.p>
+
+      {/* ── Skip hint — the whole overlay is already click-to-skip, but
+          without this nothing tells a visitor that ─────────────────── */}
+      <motion.p
+        initial={{ opacity: 0 }}
+        animate={phase === 'in' ? { opacity: 1 } : { opacity: 0 }}
+        transition={phase === 'in'
+          ? { duration: 0.6, delay: 1.5, ease: 'easeOut' }
+          : { duration: 0.2 }}
+        style={{
+          position: 'absolute',
+          bottom: 'clamp(1.5rem, 4vh, 3rem)',
+          fontFamily: 'var(--font-sans)',
+          fontWeight: 400,
+          fontSize: 'clamp(0.62rem, 0.9vw, 0.72rem)',
+          color: 'rgba(160,210,255,0.32)',
+          letterSpacing: '0.28em',
+          textTransform: 'uppercase',
+        }}
+      >
+        Tap to skip
+      </motion.p>
     </div>
   );
 }
