@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import { InstagramIcon, YoutubeIcon, TiktokIcon, PinterestIcon } from '../components/Icons';
 import Magnetic from '../components/Magnetic';
 import CircularCarousel from '../components/CircularCarousel';
+import JournalTeaser from '../components/JournalTeaser';
 import { EASE } from '../utils/motion';
 import Footer from '../components/Footer';
 import '../components/Footer.css';
@@ -179,6 +180,25 @@ export default function Home() {
     typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
   ).current;
 
+  // Home has zero discovery path to the Journal otherwise — fetched here
+  // (not shared with the Journal pages) since this is the only 3D route and
+  // stays independent of route-level data loading.
+  const [journalEntries, setJournalEntries] = useState([]);
+  const [journalPhotos, setJournalPhotos] = useState([]);
+
+  useEffect(() => {
+    fetch('/api/photos')
+      .then((res) => (res.ok ? res.json() : Promise.reject()))
+      .then((data) => {
+        setJournalEntries(data.journal || []);
+        setJournalPhotos(data.photos || []);
+      })
+      .catch(() => {
+        setJournalEntries([]);
+        setJournalPhotos([]);
+      });
+  }, []);
+
   const socialLinks = [
     { name: 'Instagram', url: 'https://www.instagram.com/saiprajjwal', icon: <InstagramIcon /> },
     { name: 'YouTube', url: 'https://www.youtube.com/@Prajjwalpandey9', icon: <YoutubeIcon /> },
@@ -262,7 +282,7 @@ export default function Home() {
     
 
       {/* 550vh Scroll Container — 3D overlays are fixed; this just creates the scroll room */}
-      <div className="home-scroll-content" style={{ height: '550vh', position: 'relative' }}>
+      <div className="home-scroll-content" style={{ height: '640vh', position: 'relative' }}>
 
         {/* Initial Hero Text - Flies forward and blurs on scroll */}
         <motion.div
@@ -355,8 +375,11 @@ export default function Home() {
           <CircularCarousel />
         </motion.div>
 
-        {/* Footer — absolute, lives at the very bottom of the scroll flow */}
+        {/* Journal teaser + Footer — absolute, live at the very bottom of the
+            scroll flow, revealed in normal document order as the fixed
+            carousel overlay fades out approaching the end of scroll. */}
         <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, width: '100%', zIndex: 10 }}>
+          <JournalTeaser entries={journalEntries} photos={journalPhotos} />
           <Footer />
         </div>
 
