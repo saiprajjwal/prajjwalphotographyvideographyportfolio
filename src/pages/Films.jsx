@@ -335,9 +335,6 @@ export default function Films() {
                 <p className="info-synopsis">
                   A breathtaking cinematic journey capturing the raw essence of motion and light — pushing the boundaries of modern visual storytelling.
                 </p>
-                <p className="info-gear">
-                  <span>Camera & Gear: </span>{portfolioData.about.gear.flatMap((g) => g.items).join(' • ')}
-                </p>
               </div>
             </motion.div>
           </motion.div>
