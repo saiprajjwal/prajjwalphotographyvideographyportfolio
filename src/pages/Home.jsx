@@ -118,6 +118,12 @@ function GlassMonolith({ scrollYProgress, isShattering }) {
       meshRef.current.rotation.y = THREE.MathUtils.lerp(meshRef.current.rotation.y, 0, 0.05);
       meshRef.current.rotation.x = THREE.MathUtils.lerp(meshRef.current.rotation.x, 0, 0.05);
       
+      // Force it to be fully visible so we can see the explosion even if we scrolled down!
+      if (meshRef.current.material) {
+        meshRef.current.material.opacity = 1;
+        meshRef.current.visible = true;
+      }
+      
     } else {
       // Smooth continuous majestic rotation
       const baseRotY = t * 0.15;
