@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, useMotionValue, animate } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import DepthParallaxImage from './DepthParallaxImage';
 import './CircularCarousel.css';
 
 let audioCtx = null;
@@ -221,10 +220,11 @@ export default function CircularCarousel() {
               >
                 {/* Photo fills the card */}
                 <div className="cc-card-img-wrap">
-                  <DepthParallaxImage
+                  <img
                     src={album.coverSrc}
                     alt={album.title}
                     loading="lazy"
+                    draggable={false}
                   />
                 </div>
                 {/* Glass label at bottom */}
