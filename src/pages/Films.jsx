@@ -17,7 +17,10 @@ export default function Films() {
   const [activeVideo, setActiveVideo] = useState(null);
   const [introDone, setIntroDone] = useState(() => sessionStorage.getItem('last_visited_page') === 'Films');
   const [doorsOpen, setDoorsOpen] = useState(() => sessionStorage.getItem('last_visited_page') === 'Films');
-  const [showInfoModal, setShowInfoModal] = useState(false);
+  // Holds the video the modal is about, captured at click time — not just a
+  // boolean — so it can't drift to a different film if hover state changes
+  // while the modal is open.
+  const [infoVideo, setInfoVideo] = useState(null);
   const [hoveredVideo, setHoveredVideo] = useState(null);
   const [activeReelIndex, setActiveReelIndex] = useState(null);
 
@@ -129,13 +132,13 @@ export default function Films() {
   // Handle Escape key for info modal
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === 'Escape' && showInfoModal) {
-        setShowInfoModal(false);
+      if (e.key === 'Escape' && infoVideo) {
+        setInfoVideo(null);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [showInfoModal]);
+  }, [infoVideo]);
 
   return (
     <motion.div
@@ -205,7 +208,7 @@ export default function Films() {
                 <Play size={24} fill="currentColor" />
                 <span>Play</span>
               </button>
-              <button className="btn-info" onClick={() => setShowInfoModal(true)}>
+              <button className="btn-info" onClick={() => setInfoVideo(hoveredVideo || heroVideo)}>
                 <Info size={24} />
                 <span>More Info</span>
               </button>
@@ -294,13 +297,13 @@ export default function Films() {
 
       {/* Showcase 'More Info' Modal */}
       <AnimatePresence>
-        {showInfoModal && (
+        {infoVideo && (
           <motion.div
             className="info-modal-overlay"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={() => setShowInfoModal(false)}
+            onClick={() => setInfoVideo(null)}
           >
             <motion.div
               className="info-modal-content"
@@ -310,17 +313,17 @@ export default function Films() {
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
               onClick={(e) => e.stopPropagation()}
             >
-              <button className="info-modal-close" onClick={() => setShowInfoModal(false)}>
+              <button className="info-modal-close" onClick={() => setInfoVideo(null)}>
                 <X size={20} />
               </button>
 
               <div className="info-modal-header">
                 <img
-                  src={`https://img.youtube.com/vi/${heroVideo.id}/maxresdefault.jpg`}
-                  alt={heroVideo.title}
+                  src={`https://img.youtube.com/vi/${infoVideo.id}/maxresdefault.jpg`}
+                  alt={infoVideo.title}
                 />
                 <div className="info-modal-header-fade"></div>
-                <h2 className="info-modal-title">{heroVideo.title}</h2>
+                <h2 className="info-modal-title">{infoVideo.title}</h2>
               </div>
 
               <div className="info-modal-body">
@@ -333,7 +336,7 @@ export default function Films() {
                   A breathtaking cinematic journey capturing the raw essence of motion and light — pushing the boundaries of modern visual storytelling.
                 </p>
                 <p className="info-gear">
-                  <span>Camera & Gear: </span>{portfolioData.about.gear.join(' • ')}
+                  <span>Camera & Gear: </span>{portfolioData.about.gear.flatMap((g) => g.items).join(' • ')}
                 </p>
               </div>
             </motion.div>
