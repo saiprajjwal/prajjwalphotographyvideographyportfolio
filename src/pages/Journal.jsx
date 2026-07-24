@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { EASE, DUR } from '../utils/motion';
 import { photosForEntry, heroForEntry, paragraphsOf } from '../utils/journal';
+import { playFocusTick, playShutterClick } from '../utils/audio';
 import './Journal.css';
 
 // Roman numerals for the frame count, echoing a contact sheet's roll number —
@@ -79,7 +80,12 @@ export default function Journal() {
                 viewport={{ once: true, margin: '-60px' }}
                 transition={{ duration: DUR.base, ease: EASE.out, delay: Math.min(i, 6) * 0.05 }}
               >
-                <Link to={`/journal/${entry.id}`} className="journal-frame">
+                <Link
+                  to={`/journal/${entry.id}`}
+                  className="journal-frame"
+                  onMouseEnter={playFocusTick}
+                  onClick={playShutterClick}
+                >
                   <span className="journal-frame-no mono">{roman(i + 1)}&nbsp;/&nbsp;{String(i + 1).padStart(3, '0')}</span>
                   <span className="journal-frame-swatch">
                     {hero ? (

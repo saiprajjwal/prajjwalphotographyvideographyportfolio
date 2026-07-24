@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { EASE, DUR } from '../utils/motion';
 import { photosForEntry, heroForEntry, paragraphsOf } from '../utils/journal';
+import { playFocusTick, playShutterClick } from '../utils/audio';
 import './Journal.css';
 
 export default function JournalEntry() {
@@ -56,23 +57,43 @@ export default function JournalEntry() {
       exit={{ opacity: 0, transition: { duration: 0.4 } }}
     >
       <div className="container">
-        <Link to="/journal" className="journal-back">&larr; The Journal</Link>
+        <Link
+          to="/journal"
+          className="journal-back"
+          onMouseEnter={playFocusTick}
+          onClick={playShutterClick}
+        >
+          &larr; The Journal
+        </Link>
 
         <article className="journal-entry">
-          <motion.div
-            className="journal-entry-hero"
-            initial={{ opacity: 0, scale: 1.03 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: DUR.slower, ease: EASE.out }}
-          >
+          <div className="journal-entry-hero">
             {hero ? (
-              <img src={hero.src} alt={hero.alt} />
+              // Slow, continuous settle — same Ken Burns feel as the Portfolio
+              // category reveal, so the reading page still feels like part of
+              // the same site rather than a static blog embed. Plain CSS
+              // (below), not framer-motion: this component mounts directly off
+              // a route change inside App.jsx's AnimatePresence, and a nested
+              // motion.img in that position never reliably picked up its
+              // `initial` value — a CSS animation has no such ambiguity.
+              <img className="journal-entry-hero-img" src={hero.src} alt={hero.alt} />
             ) : (
               <span className="journal-frame-swatch-empty" />
             )}
-            <div className="journal-entry-hero-scrim" />
-            <h1>{entry.title}</h1>
-          </motion.div>
+            <motion.div
+              className="journal-entry-hero-scrim"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: DUR.slow, ease: EASE.out }}
+            />
+            <motion.h1
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: DUR.slower, ease: EASE.out, delay: 0.1 }}
+            >
+              {entry.title}
+            </motion.h1>
+          </div>
 
           <div className="journal-entry-body">
             {entry.pullQuote && <p className="journal-pull">&ldquo;{entry.pullQuote}&rdquo;</p>}
@@ -99,6 +120,8 @@ export default function JournalEntry() {
               <Link
                 to={`/portfolio?category=${encodeURIComponent(entry.category)}`}
                 className="journal-cta"
+                onMouseEnter={playFocusTick}
+                onClick={playShutterClick}
               >
                 View the full {entry.session || entry.category} album <span aria-hidden="true">→</span>
               </Link>
