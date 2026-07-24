@@ -22,7 +22,7 @@
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 100px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-  position: relative; /* For mobile menu positioning */
+  position: relative; /* For overlay-trigger positioning */
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
 }
@@ -38,16 +38,17 @@
   flex-shrink: 0; /* Prevent it from being squished */
 }
 
+.magnetic-wrapper {
+  display: inline-block;
+}
+
+/* Flat inline links — desktop only */
 .nav-links {
   display: flex;
   gap: 1.5rem;
   flex-shrink: 1;
   min-width: 0;
   overflow: hidden;
-}
-
-.magnetic-wrapper {
-  display: inline-block;
 }
 
 .nav-link {
@@ -58,6 +59,8 @@
   border-radius: 100px;
   transition: color 0.3s ease, background 0.3s ease, transform 0.2s ease;
   position: relative;
+  text-decoration: none;
+  white-space: nowrap;
 }
 
 .nav-link:hover, .nav-link.active {
@@ -69,141 +72,18 @@
   transform: scale(0.95);
 }
 
-.nav-toggle {
-  display: none;
-  background: none;
-  border: none;
-  cursor: pointer;
-  z-index: 101;
-  padding: 0.5rem;
-  margin: -0.5rem;
-  width: 44px;
-  height: 44px;
-  position: relative;
-}
-
-/* Custom Hamburger Icon */
-.hamburger-line {
-  display: block;
-  position: absolute;
-  height: 2px;
-  width: 24px;
-  background: #ffffff;
-  border-radius: 2px;
-  opacity: 1;
-  left: 10px;
-  transition: all 0.3s ease-in-out;
-}
-
-.hamburger-line.top {
-  top: 14px;
-}
-
-.hamburger-line.middle {
-  top: 21px;
-}
-
-.hamburger-line.bottom {
-  top: 28px;
-}
-
-/* Hamburger Open State (Transforms into X) */
-.nav-toggle.open .hamburger-line.top {
-  top: 21px;
-  transform: rotate(45deg);
-}
-
-.nav-toggle.open .hamburger-line.middle {
-  opacity: 0;
-  transform: translateX(-10px);
-}
-
-.nav-toggle.open .hamburger-line.bottom {
-  top: 21px;
-  transform: rotate(-45deg);
-}
-
-/* Desktop Only class to hide normal links on mobile */
+/* Below this, the flat row would start clipping — hand off to the glass
+   menu instead of shrinking type to force-fit more links. */
 @media (max-width: 1024px) {
   .desktop-only {
     display: none !important;
   }
 }
 
-/* Mobile Full-Screen Overlay */
-.mobile-overlay {
-  display: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(5, 5, 5, 0.95);
-  backdrop-filter: blur(40px);
-  -webkit-backdrop-filter: blur(40px);
-  z-index: 90; /* Just below the nav header */
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.5s var(--ease-out);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.mobile-overlay.open {
-  opacity: 1;
-  pointer-events: all;
-}
-
-.mobile-overlay-links {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2rem;
-  width: 100%;
-}
-
-.mobile-nav-link {
-  font-family: var(--font-display);
-  font-size: 2.5rem;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.5);
-  text-decoration: none;
-  opacity: 0;
-  transform: translateY(30px);
-  transition: all 0.5s var(--ease-out);
-}
-
-.mobile-overlay.open .mobile-nav-link {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.mobile-nav-link.active, .mobile-nav-link:hover {
-  color: #ffffff;
-}
-
-/* Mobile Redesign & Tablets */
-@media (max-width: 1024px) {
-  .nav-header {
-    top: 1rem;
-    width: 95%;
-  }
-  
-  .nav-container {
-    padding: 1.2rem 1.8rem;
-    min-height: 4.5rem;
-  }
-  
-  .nav-toggle {
-    display: block;
-  }
-}
-
 .nav-controls {
   display: flex;
   align-items: center;
-  gap: 0.8rem;
+  gap: 0.6rem;
   z-index: 101;
 }
 
@@ -233,6 +113,294 @@
 
 .sound-toggle-btn:active {
   transform: scale(0.92);
+}
+
+/* ── Menu trigger — opens the full-screen glass menu. Hidden on desktop,
+   where the flat link row above already covers navigation; shown once
+   that row would clip, and always on for the Editor's minimal capsule
+   (see the .is-editor-page override at the bottom of this file). ── */
+.nav-menu-btn {
+  display: none;
+  align-items: center;
+  gap: 0.7rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+  padding: 0.5rem 0.5rem 0.5rem 1.1rem;
+  border-radius: 100px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+}
+
+@media (max-width: 1024px) {
+  .nav-menu-btn {
+    display: flex;
+  }
+}
+
+.nav-menu-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.nav-menu-btn__label {
+  font-family: var(--font-sans);
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  min-width: 3.4em; /* "Menu" and "Close" share a baseline, no width jump */
+  text-align: left;
+}
+
+/* Icon well, sized to match the sound button beside it */
+.nav-toggle {
+  display: block;
+  position: relative;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
+}
+
+/* Custom Hamburger Icon */
+.hamburger-line {
+  display: block;
+  position: absolute;
+  height: 2px;
+  width: 16px;
+  background: #ffffff;
+  border-radius: 2px;
+  opacity: 1;
+  left: 11px;
+  transition: all 0.3s ease-in-out;
+}
+
+.hamburger-line.top {
+  top: 15px;
+}
+
+.hamburger-line.middle {
+  top: 19px;
+}
+
+.hamburger-line.bottom {
+  top: 23px;
+}
+
+/* Hamburger Open State (Transforms into X) */
+.nav-menu-btn.open .hamburger-line.top {
+  top: 19px;
+  transform: rotate(45deg);
+}
+
+.nav-menu-btn.open .hamburger-line.middle {
+  opacity: 0;
+  transform: translateX(-10px);
+}
+
+.nav-menu-btn.open .hamburger-line.bottom {
+  top: 19px;
+  transform: rotate(-45deg);
+}
+
+/* ── Full-screen cinematic menu ──────────────────────────────
+   Deep glass over whatever page sits behind it — dark and heavily blurred
+   works over both the site's dark pages (Home) and white ones
+   (Portfolio/Journal), so the menu reads the same everywhere. ── */
+.nav-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 90; /* just below the header */
+  background: rgba(6, 6, 8, 0.92);
+  backdrop-filter: blur(30px) saturate(1.3);
+  -webkit-backdrop-filter: blur(30px) saturate(1.3);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.55s var(--ease-out);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6rem 6vw 3rem;
+  /* With 8 links + footer, the menu can run taller than a short viewport
+     (measured: content ~995px vs. an ~964px window) — scroll rather than
+     silently cut the footer off. */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.nav-overlay.open {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.nav-overlay-inner {
+  width: 100%;
+  max-width: 640px;
+  display: flex;
+  flex-direction: column;
+  gap: 3.5rem;
+}
+
+.nav-overlay-links {
+  display: flex;
+  flex-direction: column;
+}
+
+.nav-overlay-link {
+  display: flex;
+  align-items: baseline;
+  gap: 1.4rem;
+  padding: 0.85rem 0.25rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  text-decoration: none;
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.55s var(--ease-out), transform 0.55s var(--ease-out),
+    padding-left 0.35s var(--ease-out);
+}
+
+.nav-overlay-links .nav-overlay-link:first-child {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.nav-overlay.open .nav-overlay-link {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.nav-overlay-link__no {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.35);
+  min-width: 1.6em;
+}
+
+.nav-overlay-link__label {
+  flex: 1;
+  font-family: 'Bodoni Moda', 'Playfair Display', Didot, serif;
+  font-weight: 500;
+  font-size: clamp(2rem, 6vw, 3.2rem);
+  letter-spacing: -0.01em;
+  color: rgba(255, 255, 255, 0.55);
+  transition: color 0.3s ease;
+}
+
+.nav-overlay-link__arrow {
+  color: #e0776a;
+  opacity: 0;
+  transform: translate(-8px, 8px) rotate(-20deg);
+  transition: opacity 0.3s ease, transform 0.35s var(--ease-out);
+  flex-shrink: 0;
+}
+
+.nav-overlay-link:hover {
+  padding-left: 1rem;
+}
+
+.nav-overlay-link:hover .nav-overlay-link__label,
+.nav-overlay-link.active .nav-overlay-link__label {
+  color: #ffffff;
+}
+
+.nav-overlay-link.active .nav-overlay-link__no {
+  color: #e0776a;
+}
+
+.nav-overlay-link:hover .nav-overlay-link__arrow {
+  opacity: 1;
+  transform: translate(0, 0) rotate(0deg);
+}
+
+.nav-overlay-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  padding-top: 1.5rem;
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 0.6s var(--ease-out) 0.35s, transform 0.6s var(--ease-out) 0.35s;
+}
+
+.nav-overlay.open .nav-overlay-footer {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.nav-overlay-email {
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.55);
+  text-decoration: none;
+  transition: color 0.25s ease;
+}
+
+.nav-overlay-email:hover {
+  color: #ffffff;
+}
+
+.nav-overlay-social {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.nav-overlay-social a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.6);
+  transition: color 0.25s ease, border-color 0.25s ease, background 0.25s ease;
+}
+
+.nav-overlay-social a:hover {
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+@media (max-width: 640px) {
+  .nav-overlay {
+    padding: 6rem 6vw 2.5rem;
+  }
+  .nav-overlay-inner {
+    gap: 2.25rem;
+  }
+  .nav-overlay-link {
+    padding: 0.6rem 0;
+  }
+  .nav-overlay-link__label {
+    font-size: 2.1rem;
+  }
+  .nav-overlay-footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  .nav-menu-btn__label {
+    display: none; /* icon-only trigger on small screens — keeps the bar tight */
+  }
+  .nav-menu-btn {
+    padding: 0.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-overlay,
+  .nav-overlay-link,
+  .nav-overlay-footer {
+    transition-duration: 0.15s;
+  }
+  .nav-overlay-link {
+    transform: none;
+  }
 }
 
 /* --------------------------------------------------------------------------
@@ -269,16 +437,23 @@
   gap: 0.6rem;
 }
 
-/* Show toggle (hamburger) button on desktop inside the editor */
-.nav-header.is-editor-page .nav-toggle {
-  display: block;
-}
-
 /* Adjust sound button size slightly for the editor capsule */
 .nav-header.is-editor-page .sound-toggle-btn {
   width: 34px;
   height: 34px;
   border-color: rgba(255, 255, 255, 0.08);
+}
+
+.nav-header.is-editor-page .nav-menu-btn__label {
+  display: none; /* icon-only trigger in the compact editor capsule */
+}
+
+/* Editor never shows the flat link row (it's a distraction-free tool page),
+   so its capsule keeps the glass-menu toggle visible at every width, not
+   just <1024px. */
+.nav-header.is-editor-page .nav-menu-btn {
+  display: flex;
+  padding: 0.5rem;
 }
 
 /* On mobile, float it slightly differently to not cover main editor back buttons */
@@ -288,4 +463,3 @@
     right: 1rem;
   }
 }
-
