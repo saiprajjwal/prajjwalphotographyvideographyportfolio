@@ -5,6 +5,7 @@ import portfolioData from '../data/portfolio.json';
 import { lenisInstance } from '../utils/lenisInstance';
 import CylindricalHeroRing from '../components/CylindricalHeroRing';
 import FloatingNavPill from '../components/FloatingNavPill';
+import DepthParallaxImage from '../components/DepthParallaxImage';
 import { pickCategoryCover } from '../utils/categoryCover';
 import { EASE, DUR } from '../utils/motion';
 import { playDetentTick, playShutterClick, playWhoosh } from '../utils/audio';
@@ -219,31 +220,6 @@ export default function Portfolio() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [activeSession, overlayAlbum, openCategory, closeCategory]);
 
-  const handleMouseMove = (e) => {
-    const card = e.currentTarget;
-    const rect = card.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
-    const pctX = x / rect.width - 0.5;
-    const pctY = y / rect.height - 0.5;
-
-    const moveX = pctX * 16;
-    const moveY = pctY * 16;
-
-    const img = card.querySelector('.portfolio-image');
-    if (img) {
-      img.style.transform = `scale(1.08) translate(${moveX}px, ${moveY}px)`;
-    }
-  };
-
-  const handleMouseLeave = (e) => {
-    const img = e.currentTarget.querySelector('.portfolio-image');
-    if (img) {
-      img.style.transform = '';
-    }
-  };
-
   // Find cover for current category to pass to floating nav pill
   const activeCategoryPhoto = categoryPhotos.find((p) => p.isCover) || categoryPhotos[0];
 
@@ -431,15 +407,13 @@ export default function Portfolio() {
                     layout: { duration: lightMotion ? 0 : 0.5, ease: [0.16, 1, 0.3, 1] },
                   }}
                   className="masonry-item"
-                  onMouseMove={handleMouseMove}
-                  onMouseLeave={handleMouseLeave}
                   onClick={photo.isSessionCover ? () => setActiveSession(photo.sessionName) : undefined}
                   style={photo.isSessionCover ? { cursor: 'pointer' } : {}}
                 >
                   <div className="card-badge">
                     {photo.isSessionCover ? photo.sessionName : photo.category}
                   </div>
-                  <img
+                  <DepthParallaxImage
                     src={photo.src}
                     srcSet={`
                       ${photo.src.replace('w_1200', 'w_400')} 400w,
@@ -581,8 +555,6 @@ export default function Portfolio() {
                           ease: EASE.out,
                         }}
                         className="masonry-item"
-                        onMouseMove={handleMouseMove}
-                        onMouseLeave={handleMouseLeave}
                         onClick={
                           photo.isSessionCover
                             ? () => setOverlayAlbum(photo.sessionName)
@@ -593,7 +565,7 @@ export default function Portfolio() {
                         {photo.isSessionCover && (
                           <div className="card-badge">{photo.sessionName}</div>
                         )}
-                        <img
+                        <DepthParallaxImage
                           src={photo.src}
                           srcSet={`
                             ${photo.src.replace('w_1200', 'w_400')} 400w,
@@ -652,10 +624,8 @@ export default function Portfolio() {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
                       className="masonry-item"
-                      onMouseMove={handleMouseMove}
-                      onMouseLeave={handleMouseLeave}
                     >
-                      <img
+                      <DepthParallaxImage
                         src={photo.src}
                         srcSet={`
                           ${photo.src.replace('w_1200', 'w_400')} 400w,

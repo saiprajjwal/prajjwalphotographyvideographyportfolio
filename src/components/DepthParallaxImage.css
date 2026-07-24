@@ -1,0 +1,38 @@
+.depth-parallax-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: inherit; /* inherit from masonry-item or cc-card */
+  display: block;
+}
+
+.depth-parallax-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: opacity 0.4s ease;
+}
+
+.depth-parallax-canvas-wrapper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s ease;
+  z-index: 2;
+}
+
+.depth-parallax-canvas-wrapper.active {
+  opacity: 1;
+}
+
+/* Optional: Slightly dim the base image when the canvas is fully active 
+   This helps the WebGL render "pop" more without doubling the brightness */
+.depth-parallax-container:hover .depth-parallax-img {
+  opacity: 0.1;
+}
