@@ -16,17 +16,22 @@ import {
   Trash2,
   ChevronUp,
   ChevronDown,
+  NotebookText,
+  Pencil,
+  X,
 } from 'lucide-react';
 import portfolioData from '../data/portfolio.json';
 import defaultStoreData from '../data/store.json';
 import ArrangePanel from '../components/ArrangePanel';
 import { pickCategoryCover } from '../utils/categoryCover';
+import { slugify, uniqueSlug, photosForEntry, heroForEntry } from '../utils/journal';
 import './Admin.css';
 
 const NAV = [
   { id: 'overview', label: 'Overview', Icon: LayoutDashboard, subtitle: 'At a glance' },
   { id: 'upload', label: 'Upload', Icon: UploadIcon, subtitle: 'Add new photos to your portfolio' },
   { id: 'covers', label: 'Portfolio Covers', Icon: GalleryHorizontalEnd, subtitle: 'The photo each category shows on the spinning portfolio band' },
+  { id: 'journal', label: 'Journal', Icon: NotebookText, subtitle: 'Short stories tied to an album you already have' },
   { id: 'library', label: 'Library', Icon: Images, subtitle: 'Manage every photo' },
   { id: 'arrange', label: 'Arrange', Icon: LayoutGrid, subtitle: 'Set album & photo order' },
   { id: 'store', label: 'Store', Icon: ShoppingBag, subtitle: 'Manage presets and LUTs' },
@@ -134,6 +139,17 @@ export default function Admin() {
   const [newCategory, setNewCategory] = useState('');
   // Which category's cover picker is open, if any
   const [pickingCoverFor, setPickingCoverFor] = useState(null);
+
+  // Journal: entries list, plus the currently open create/edit form (null =
+  // closed, 'new' = creating, or an existing entry's id)
+  const [journalEntries, setJournalEntries] = useState([]);
+  const [editingEntryId, setEditingEntryId] = useState(null);
+  const [jrTitle, setJrTitle] = useState('');
+  const [jrCategory, setJrCategory] = useState('');
+  const [jrSession, setJrSession] = useState('');
+  const [jrPullQuote, setJrPullQuote] = useState('');
+  const [jrBody, setJrBody] = useState('');
+  const [savingEntry, setSavingEntry] = useState(false);
   const [libFilter, setLibFilter] = useState('All');
   const [libSearch, setLibSearch] = useState('');
   
@@ -214,6 +230,8 @@ export default function Admin() {
       if (Array.isArray(data.categories) && data.categories.length) {
         setCategories(data.categories);
       }
+      // [] until the first entry is written — that's the correct empty state
+      setJournalEntries(Array.isArray(data.journal) ? data.journal : []);
     } catch (err) {
       console.error(err);
     } finally {
@@ -222,7 +240,7 @@ export default function Admin() {
   };
 
   useEffect(() => {
-    if (token && (activeTab === 'library' || activeTab === 'overview' || activeTab === 'covers')) {
+    if (token && (activeTab === 'library' || activeTab === 'overview' || activeTab === 'covers' || activeTab === 'journal')) {
       fetchLibrary();
     }
   }, [token, activeTab]);
@@ -276,6 +294,110 @@ export default function Admin() {
     const next = [...categories];
     [next[index], next[target]] = [next[target], next[index]];
     await saveCategories(next);
+  };
+
+  // ── Journal ──────────────────────────────────────────────────
+  // Same shape as saveCategories: optimistic update, roll back on failure.
+  const saveJournal = async (next) => {
+    const previous = journalEntries;
+    setJournalEntries(next);
+    try {
+      const res = await fetch('/api/photos', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ journal: next })
+      });
+      if (!res.ok) throw new Error((await res.json()).error || 'Failed to save the Journal');
+    } catch (err) {
+      setJournalEntries(previous);
+      alert(err.message);
+    }
+  };
+
+  const resetJournalForm = () => {
+    setEditingEntryId(null);
+    setJrTitle('');
+    setJrCategory(categories[0] || '');
+    setJrSession('');
+    setJrPullQuote('');
+    setJrBody('');
+  };
+
+  const startNewEntry = () => {
+    setEditingEntryId('new');
+    setJrTitle('');
+    setJrCategory(categories[0] || '');
+    setJrSession('');
+    setJrPullQuote('');
+    setJrBody('');
+  };
+
+  const startEditEntry = (entry) => {
+    setEditingEntryId(entry.id);
+    setJrTitle(entry.title);
+    setJrCategory(entry.category);
+    setJrSession(entry.session || '');
+    setJrPullQuote(entry.pullQuote || '');
+    setJrBody(entry.body || '');
+  };
+
+  // Sessions actually available under the chosen category — an entry can
+  // only point at an album that already has photos in it.
+  const sessionsForCategory = (cat) =>
+    [...new Set(libraryPhotos.filter((p) => p.category === cat && p.session).map((p) => p.session))];
+
+  const handleSaveEntry = async (e) => {
+    e.preventDefault();
+    const title = jrTitle.trim();
+    if (!title || !jrCategory) {
+      alert('Give the entry a title and a category.');
+      return;
+    }
+
+    setSavingEntry(true);
+    try {
+      const isNew = editingEntryId === 'new';
+      const id = isNew
+        ? uniqueSlug(slugify(title), journalEntries.map((en) => en.id))
+        : editingEntryId;
+
+      const entry = {
+        id,
+        title,
+        category: jrCategory,
+        session: jrSession || null,
+        pullQuote: jrPullQuote.trim() || null,
+        body: jrBody.trim() || null,
+        publishedAt: journalEntries.find((en) => en.id === id)?.publishedAt
+          || new Date().toISOString().slice(0, 10),
+      };
+
+      const next = isNew
+        ? [entry, ...journalEntries]
+        : journalEntries.map((en) => (en.id === id ? entry : en));
+
+      await saveJournal(next);
+      resetJournalForm();
+    } finally {
+      setSavingEntry(false);
+    }
+  };
+
+  const handleDeleteEntry = async (id) => {
+    if (!confirm('Delete this Journal entry? The album and its photos are unaffected.')) return;
+    await saveJournal(journalEntries.filter((en) => en.id !== id));
+    if (editingEntryId === id) resetJournalForm();
+  };
+
+  const moveEntry = async (index, delta) => {
+    const target = index + delta;
+    if (target < 0 || target >= journalEntries.length) return;
+    const next = [...journalEntries];
+    [next[index], next[target]] = [next[target], next[index]];
+    await saveJournal(next);
   };
 
   // Live stats for the Overview view, derived from the fetched library.
@@ -1089,6 +1211,181 @@ export default function Admin() {
                               ))}
                             </div>
                           )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'journal' && (
+            <div className="jr">
+              <p className="jr-intro">
+                A short story per shoot, published at <code>/journal</code>. Each entry points at a
+                category and album you already have — it reuses those photos, no separate upload.
+              </p>
+
+              {editingEntryId ? (
+                <form className="jr-form" onSubmit={handleSaveEntry}>
+                  <div className="jr-form-row">
+                    <label>
+                      Title
+                      <input
+                        type="text"
+                        value={jrTitle}
+                        onChange={(e) => setJrTitle(e.target.value)}
+                        placeholder="The light before the light"
+                        required
+                      />
+                    </label>
+                  </div>
+
+                  <div className="jr-form-row jr-form-row--split">
+                    <label>
+                      Category
+                      <select
+                        value={jrCategory}
+                        onChange={(e) => { setJrCategory(e.target.value); setJrSession(''); }}
+                      >
+                        {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    </label>
+                    <label>
+                      Album
+                      <select value={jrSession} onChange={(e) => setJrSession(e.target.value)}>
+                        <option value="">No album — whole category</option>
+                        {sessionsForCategory(jrCategory).map((s) => (
+                          <option key={s} value={s}>{s}</option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+
+                  {sessionsForCategory(jrCategory).length === 0 && (
+                    <p className="jr-hint">
+                      "{jrCategory}" has no albums yet — the entry will draw from every photo in that category instead.
+                    </p>
+                  )}
+
+                  <div className="jr-form-row">
+                    <label>
+                      Pull quote <span className="jr-optional">(optional, shown large)</span>
+                      <textarea
+                        value={jrPullQuote}
+                        onChange={(e) => setJrPullQuote(e.target.value)}
+                        rows={2}
+                        placeholder="We didn't chase the golden hour..."
+                      />
+                    </label>
+                  </div>
+
+                  <div className="jr-form-row">
+                    <label>
+                      Story <span className="jr-optional">(leave a blank line between paragraphs)</span>
+                      <textarea
+                        value={jrBody}
+                        onChange={(e) => setJrBody(e.target.value)}
+                        rows={6}
+                        placeholder="Ivory started as a test..."
+                      />
+                    </label>
+                  </div>
+
+                  {(() => {
+                    const preview = photosForEntry(
+                      { category: jrCategory, session: jrSession || null },
+                      libraryPhotos
+                    );
+                    const cover = heroForEntry({ category: jrCategory }, preview);
+                    return (
+                      <p className="jr-hint">
+                        {preview.length} photo{preview.length === 1 ? '' : 's'} will be pulled in
+                        {cover ? ' — cover shown below.' : '.'}
+                        {cover && (
+                          <img className="jr-preview-thumb" src={cover.src} alt="" />
+                        )}
+                      </p>
+                    );
+                  })()}
+
+                  <div className="jr-form-actions">
+                    <button type="submit" className="jr-save-btn" disabled={savingEntry}>
+                      {savingEntry ? 'Saving…' : editingEntryId === 'new' ? 'Publish entry' : 'Save changes'}
+                    </button>
+                    <button type="button" className="jr-cancel-btn" onClick={resetJournalForm}>
+                      <X size={15} strokeWidth={2} />
+                      <span>Cancel</span>
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <button type="button" className="cov-add-btn jr-new-btn" onClick={startNewEntry}>
+                  <Plus size={15} strokeWidth={2} />
+                  <span>New entry</span>
+                </button>
+              )}
+
+              {loadingLibrary ? (
+                <p className="cov-loading">Loading…</p>
+              ) : journalEntries.length === 0 ? (
+                <p className="jr-empty">No entries yet — the first one you publish appears here.</p>
+              ) : (
+                <div className="jr-list">
+                  {journalEntries.map((entry, index) => {
+                    const entryPhotos = photosForEntry(entry, libraryPhotos);
+                    const cover = heroForEntry(entry, entryPhotos);
+                    return (
+                      <div className="cov-card" key={entry.id}>
+                        <div className="cov-thumb">
+                          {cover ? (
+                            <img src={cover.src} alt="" />
+                          ) : (
+                            <span className="cov-thumb-empty">No photos</span>
+                          )}
+                        </div>
+                        <div className="cov-body">
+                          <div className="cov-head">
+                            <h3>{entry.title}</h3>
+                            <span className="cov-meta">
+                              {entry.category}{entry.session ? ` · ${entry.session}` : ''}
+                              {' · '}
+                              {entryPhotos.length} photo{entryPhotos.length === 1 ? '' : 's'}
+                            </span>
+                          </div>
+                          <div className="cov-actions">
+                            <button type="button" onClick={() => startEditEntry(entry)}>
+                              <Pencil size={13} strokeWidth={2} style={{ marginRight: '0.35rem' }} />
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              className="cov-icon-btn"
+                              onClick={() => moveEntry(index, -1)}
+                              disabled={index === 0}
+                              aria-label={`Move ${entry.title} up`}
+                            >
+                              <ChevronUp size={15} strokeWidth={2} />
+                            </button>
+                            <button
+                              type="button"
+                              className="cov-icon-btn"
+                              onClick={() => moveEntry(index, 1)}
+                              disabled={index === journalEntries.length - 1}
+                              aria-label={`Move ${entry.title} down`}
+                            >
+                              <ChevronDown size={15} strokeWidth={2} />
+                            </button>
+                            <button
+                              type="button"
+                              className="cov-icon-btn cov-danger"
+                              onClick={() => handleDeleteEntry(entry.id)}
+                              aria-label={`Delete ${entry.title}`}
+                            >
+                              <Trash2 size={15} strokeWidth={2} />
+                            </button>
+                          </div>
                         </div>
                       </div>
                     );

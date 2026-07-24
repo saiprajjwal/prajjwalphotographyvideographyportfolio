@@ -13,6 +13,8 @@ import './App.css';
 // Lazy load route pages to enable code splitting
 const Home = lazy(() => import('./pages/Home'));
 const Portfolio = lazy(() => import('./pages/Portfolio'));
+const Journal = lazy(() => import('./pages/Journal'));
+const JournalEntry = lazy(() => import('./pages/JournalEntry'));
 const Films = lazy(() => import('./pages/Films'));
 const About = lazy(() => import('./pages/About'));
 const Contact = lazy(() => import('./pages/Contact'));
@@ -151,6 +153,8 @@ function App() {
           <Routes location={location} key={location.pathname}>
             <Route path="/" element={<PageTransition><Home /></PageTransition>} />
             <Route path="/portfolio" element={<PageTransition><Portfolio /></PageTransition>} />
+            <Route path="/journal" element={<PageTransition><Journal /></PageTransition>} />
+            <Route path="/journal/:slug" element={<PageTransition><JournalEntry /></PageTransition>} />
             <Route path="/films" element={<PageTransition><Films /></PageTransition>} />
             <Route path="/about" element={<PageTransition><About /></PageTransition>} />
             <Route path="/contact" element={<PageTransition><Contact /></PageTransition>} />

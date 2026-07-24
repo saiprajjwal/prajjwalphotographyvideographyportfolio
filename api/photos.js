@@ -7,27 +7,68 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// The editable category list, kept as a raw JSON file on Cloudinary — the
+// Editable, admin-written data kept as raw JSON files on Cloudinary — the
 // same trick update-about.js uses. src/data/portfolio.json still ships a
-// default, but it's baked into the bundle at build time, so it can't be the
-// source of truth for something the admin edits.
+// default categories list, but it's baked into the bundle at build time, so
+// it can't be the source of truth for anything the admin edits.
 const CATEGORIES_FILE = 'portfolio_categories.json';
+const JOURNAL_FILE = 'portfolio_journal.json';
 
-async function readCategories() {
-  const url = `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/raw/upload/${CATEGORIES_FILE}`;
+async function readRawJson(publicId) {
+  const url = `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/raw/upload/${publicId}`;
   try {
     // Cache-bust so an edit is visible immediately rather than after the CDN TTL
     const response = await fetch(`${url}?t=${Date.now()}`);
     if (!response.ok) return null;           // never saved yet
-    const data = await response.json();
-    return Array.isArray(data?.categories) ? data.categories : null;
+    return await response.json();
   } catch {
-    return null;                              // fall back to the bundled list
+    return null;                              // fall back to the bundled default
   }
 }
 
-// GET  → { photos, categories }
-// POST → save the category list (admin only)
+const readCategories = async () => {
+  const data = await readRawJson(CATEGORIES_FILE);
+  return Array.isArray(data?.categories) ? data.categories : null;
+};
+
+// [] (not null) when nothing has been saved yet — unlike categories, the
+// Journal has no bundled fallback list, so an empty array is the correct
+// "nothing written" state rather than "use the default".
+const readJournal = async () => {
+  const data = await readRawJson(JOURNAL_FILE);
+  return Array.isArray(data?.entries) ? data.entries : [];
+};
+
+async function saveRawJson(publicId, payload) {
+  const base64 = Buffer.from(JSON.stringify(payload)).toString('base64');
+  await cloudinary.uploader.upload(`data:application/json;base64,${base64}`, {
+    resource_type: 'raw',
+    public_id: publicId,
+    overwrite: true,
+    invalidate: true,
+  });
+}
+
+// One Journal entry, as written by the admin form. Kept intentionally thin —
+// it only ever points at photos that already exist (by category + session),
+// so an entry never needs its own image upload.
+function validateJournalEntry(e) {
+  return (
+    e && typeof e === 'object' &&
+    typeof e.id === 'string' && e.id.trim() &&
+    typeof e.title === 'string' && e.title.trim() &&
+    typeof e.category === 'string' && e.category.trim() &&
+    (e.session == null || typeof e.session === 'string') &&
+    (e.pullQuote == null || typeof e.pullQuote === 'string') &&
+    (e.body == null || typeof e.body === 'string') &&
+    (e.publishedAt == null || typeof e.publishedAt === 'string')
+  );
+}
+
+// GET  → { photos, categories, journal }
+// POST → save the category list OR the journal entry list (admin only;
+//        the two share this endpoint rather than each costing a Serverless
+//        Function slot — see set-cover.js for the same reasoning)
 export default async function handler(req, res) {
   if (req.method === 'POST') {
     const token = (req.headers.authorization || '').replace('Bearer ', '');
@@ -36,7 +77,26 @@ export default async function handler(req, res) {
       return;
     }
 
-    const { categories } = req.body || {};
+    const body = req.body || {};
+
+    if ('journal' in body) {
+      const { journal } = body;
+      if (!Array.isArray(journal) || !journal.every(validateJournalEntry)) {
+        res.status(400).json({
+          error: 'journal must be an array of entries with id, title and category set',
+        });
+        return;
+      }
+      try {
+        await saveRawJson(JOURNAL_FILE, { entries: journal });
+        res.status(200).json({ success: true, journal });
+      } catch (error) {
+        res.status(500).json({ error: 'Server error saving journal', message: error.message });
+      }
+      return;
+    }
+
+    const { categories } = body;
     if (!Array.isArray(categories) || categories.some(c => typeof c !== 'string' || !c.trim())) {
       res.status(400).json({ error: 'categories must be an array of non-empty strings' });
       return;
@@ -44,13 +104,7 @@ export default async function handler(req, res) {
 
     try {
       const cleaned = [...new Set(categories.map(c => c.trim()))];
-      const base64 = Buffer.from(JSON.stringify({ categories: cleaned })).toString('base64');
-      await cloudinary.uploader.upload(`data:application/json;base64,${base64}`, {
-        resource_type: 'raw',
-        public_id: CATEGORIES_FILE,
-        overwrite: true,
-        invalidate: true,
-      });
+      await saveRawJson(CATEGORIES_FILE, { categories: cleaned });
       res.status(200).json({ success: true, categories: cleaned });
     } catch (error) {
       res.status(500).json({ error: 'Server error saving categories', message: error.message });
@@ -112,16 +166,18 @@ export default async function handler(req, res) {
       };
     });
 
-    // null when nothing has been saved yet — the client then falls back to the
-    // list bundled in src/data/portfolio.json
-    const categories = await readCategories();
+    // categories: null when nothing has been saved yet — the client then
+    // falls back to the list bundled in src/data/portfolio.json.
+    // journal: [] when nothing has been written yet — there's no bundled
+    // fallback for it, so empty is the correct default.
+    const [categories, journal] = await Promise.all([readCategories(), readJournal()]);
 
     // Short edge cache: the Admin API is rate-limited (500/hr on the free
     // plan), so serving every visitor from origin is risky under traffic.
     // 30s at the edge caps origin hits while keeping admin edits near-live;
     // stale-while-revalidate serves instantly and refreshes in the background.
     res.setHeader('Cache-Control', 'public, s-maxage=30, stale-while-revalidate=300');
-    res.status(200).json({ photos, categories });
+    res.status(200).json({ photos, categories, journal });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

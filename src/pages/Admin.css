@@ -810,6 +810,116 @@
   .cov-thumb { flex-basis: auto; width: 100%; }
 }
 
+/* ── Journal ─────────────────────────────────────────────── */
+.jr-intro {
+  max-width: 62ch;
+  margin: 0 0 1.5rem;
+  color: var(--muted);
+  line-height: 1.6;
+  font-size: 0.9rem;
+}
+
+.jr-new-btn { margin-bottom: 1.75rem; }
+
+.jr-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.25rem;
+  margin-bottom: 1.75rem;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.jr-form-row { display: flex; flex-direction: column; }
+
+.jr-form-row--split {
+  flex-direction: row;
+  gap: 1rem;
+}
+.jr-form-row--split label { flex: 1; }
+
+.jr-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.jr-optional { font-weight: 400; opacity: 0.75; }
+
+.jr-form input,
+.jr-form select,
+.jr-form textarea {
+  padding: 0.65rem 0.8rem;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: inherit;
+  font-size: 0.9rem;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.jr-hint {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.jr-preview-thumb {
+  width: 44px;
+  height: 44px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+.jr-form-actions {
+  display: flex;
+  gap: 0.6rem;
+  margin-top: 0.25rem;
+}
+
+.jr-save-btn {
+  padding: 0.7rem 1.2rem;
+  border-radius: 8px;
+  border: 1px solid var(--acc-line, #2f4470);
+  background: var(--acc-soft, #1d2a44);
+  color: var(--acc, #7fd6ff);
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.jr-save-btn:hover:not(:disabled) { filter: brightness(1.15); }
+.jr-save-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.jr-cancel-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.7rem 1.1rem;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: inherit;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+.jr-cancel-btn:hover { border-color: var(--acc-line, #2f4470); }
+
+.jr-empty { color: var(--muted); font-size: 0.9rem; }
+
+.jr-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
 /* Inline edit */
 .admin-library-edit-form {
   padding: 1rem;

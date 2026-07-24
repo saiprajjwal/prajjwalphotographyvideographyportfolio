@@ -54,6 +54,7 @@ export default function Navigation() {
   const links = [
     { path: '/', label: 'Home' },
     { path: '/portfolio', label: 'Portfolio' },
+    { path: '/journal', label: 'Journal' },
     { path: '/films', label: 'Films' },
     { path: '/editor', label: 'Editor' },
     { path: '/store', label: 'Store' },
@@ -62,6 +63,10 @@ export default function Navigation() {
   ];
 
   const isEditor = location.pathname === '/editor';
+  // Journal has a /journal/:slug detail route — the nav item should stay lit
+  // while reading an entry, not just on the index.
+  const isLinkActive = (path) =>
+    location.pathname === path || (path === '/journal' && location.pathname.startsWith('/journal/'));
 
   return (
     <>
@@ -88,7 +93,7 @@ export default function Navigation() {
                 <Magnetic key={link.path} tolerance={25}>
                   <Link
                     to={link.path}
-                    className={`nav-link ${location.pathname === link.path ? 'active' : ''}`}
+                    className={`nav-link ${isLinkActive(link.path) ? 'active' : ''}`}
                     onClick={() => {
                       setIsOpen(false);
                       playShutterClick();
@@ -139,7 +144,7 @@ export default function Navigation() {
             <Link
               key={link.path}
               to={link.path}
-              className={`mobile-nav-link ${location.pathname === link.path ? 'active' : ''}`}
+              className={`mobile-nav-link ${isLinkActive(link.path) ? 'active' : ''}`}
               style={{ transitionDelay: `${index * 0.05}s` }}
               onClick={() => {
                 setIsOpen(false);
