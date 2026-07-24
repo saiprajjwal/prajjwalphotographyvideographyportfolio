@@ -1,5 +1,5 @@
-import { useRef, Suspense, useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useRef, Suspense, useState, useEffect, useMemo } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion, useScroll, useTransform, useVelocity } from 'framer-motion';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Environment, MeshTransmissionMaterial, Sparkles, Image, Float } from '@react-three/drei';
@@ -26,7 +26,7 @@ function CanvasLoader({ onLoad }) {
 }
 
 // The Massive Glass Monolith (Reacts to scroll as a single majestic piece)
-function GlassMonolith({ scrollYProgress }) {
+function GlassMonolith({ scrollYProgress, isShattering }) {
   const meshRef = useRef();
   const { viewport } = useThree();
 
@@ -36,43 +36,122 @@ function GlassMonolith({ scrollYProgress }) {
   const glassHeight = isMobile ? 4.5 : 6.5;
   const glassDepth = isMobile ? 0.5 : 0.8;
 
-  useFrame((state) => {
+  const { geometry, shardData, origPositions } = useMemo(() => {
+    // Subdivide the box into many pieces
+    const box = new THREE.BoxGeometry(glassWidth, glassHeight, glassDepth, 8, 10, 2);
+    const nonIndexed = box.toNonIndexed();
+    
+    const count = nonIndexed.attributes.position.count;
+    const numTriangles = count / 3;
+    
+    const shardData = [];
+    const pos = nonIndexed.attributes.position.array;
+    const origPositions = new Float32Array(pos);
+    
+    for (let i = 0; i < numTriangles; i++) {
+      const i9 = i * 9;
+      const center = new THREE.Vector3(
+        (pos[i9] + pos[i9+3] + pos[i9+6]) / 3,
+        (pos[i9+1] + pos[i9+4] + pos[i9+7]) / 3,
+        (pos[i9+2] + pos[i9+5] + pos[i9+8]) / 3
+      );
+      
+      // Explosion velocity: push outward from center
+      const velocity = center.clone().normalize().multiplyScalar(Math.random() * 6 + 2);
+      // Add general forward/upward motion toward camera (z is forward)
+      velocity.z += Math.random() * 8 + 4; 
+      velocity.y += Math.random() * 6 - 3;
+      
+      // Rotation axis and speed
+      const rotAxis = new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize();
+      const rotSpeed = Math.random() * 10 + 2;
+      
+      shardData.push({ center, velocity, rotAxis, rotSpeed });
+    }
+    
+    return { geometry: nonIndexed, shardData, origPositions };
+  }, [glassWidth, glassHeight, glassDepth]);
+
+  const shatterTime = useRef(0);
+  const v3 = useMemo(() => new THREE.Vector3(), []);
+  const q = useMemo(() => new THREE.Quaternion(), []);
+
+  useFrame((state, delta) => {
     const t = state.clock.elapsedTime;
     const offset = scrollYProgress.get(); // 0 to 1
 
-    // Smooth continuous majestic rotation
-    const baseRotY = t * 0.15;
-    const baseRotX = Math.sin(t * 0.5) * 0.1;
+    if (isShattering) {
+      shatterTime.current += delta;
+      const st = shatterTime.current;
+      const positions = geometry.attributes.position.array;
+      
+      for (let i = 0; i < shardData.length; i++) {
+        const shard = shardData[i];
+        const i9 = i * 9;
+        
+        // Calculate displacement
+        const dispX = shard.velocity.x * st;
+        const dispY = shard.velocity.y * st - (4.9 * st * st); // Gravity
+        const dispZ = shard.velocity.z * st;
+        
+        q.setFromAxisAngle(shard.rotAxis, shard.rotSpeed * st);
+        
+        for (let v = 0; v < 3; v++) {
+          const iv = i9 + v * 3;
+          v3.set(
+            origPositions[iv] - shard.center.x,
+            origPositions[iv+1] - shard.center.y,
+            origPositions[iv+2] - shard.center.z
+          );
+          
+          v3.applyQuaternion(q);
+          
+          positions[iv] = v3.x + shard.center.x + dispX;
+          positions[iv+1] = v3.y + shard.center.y + dispY;
+          positions[iv+2] = v3.z + shard.center.z + dispZ;
+        }
+      }
+      geometry.attributes.position.needsUpdate = true;
+      geometry.computeVertexNormals();
+      
+      // Keep it centered but let the shards expand
+      meshRef.current.rotation.y = THREE.MathUtils.lerp(meshRef.current.rotation.y, 0, 0.05);
+      meshRef.current.rotation.x = THREE.MathUtils.lerp(meshRef.current.rotation.x, 0, 0.05);
+      
+    } else {
+      // Smooth continuous majestic rotation
+      const baseRotY = t * 0.15;
+      const baseRotX = Math.sin(t * 0.5) * 0.1;
 
-    // Highly responsive mouse parallax
-    const mouseX = (state.mouse.x * Math.PI) / 4;
-    const mouseY = (state.mouse.y * Math.PI) / 4;
+      // Highly responsive mouse parallax
+      const mouseX = (state.mouse.x * Math.PI) / 4;
+      const mouseY = (state.mouse.y * Math.PI) / 4;
 
-    // SCROLL INTERACTION: Dramatic spin and tilt
-    const scrollSpinY = offset * Math.PI * 2; // Full 360 spin on scroll
-    const scrollTiltX = offset * Math.PI * 0.5; // Tilt heavily
+      // SCROLL INTERACTION: Dramatic spin and tilt
+      const scrollSpinY = offset * Math.PI * 2; // Full 360 spin on scroll
+      const scrollTiltX = offset * Math.PI * 0.5; // Tilt heavily
 
-    meshRef.current.rotation.y = THREE.MathUtils.lerp(meshRef.current.rotation.y, baseRotY + mouseX + scrollSpinY, 0.1);
-    meshRef.current.rotation.x = THREE.MathUtils.lerp(meshRef.current.rotation.x, baseRotX - mouseY + scrollTiltX, 0.1);
+      meshRef.current.rotation.y = THREE.MathUtils.lerp(meshRef.current.rotation.y, baseRotY + mouseX + scrollSpinY, 0.1);
+      meshRef.current.rotation.x = THREE.MathUtils.lerp(meshRef.current.rotation.x, baseRotX - mouseY + scrollTiltX, 0.1);
 
-    // Restore the smooth, slow progression of the monolith
-    const targetZ = 2 + (offset * 10);
-    meshRef.current.position.z = THREE.MathUtils.lerp(meshRef.current.position.z, targetZ, 0.1);
+      // Restore the smooth, slow progression of the monolith
+      const targetZ = 2 + (offset * 10);
+      meshRef.current.position.z = THREE.MathUtils.lerp(meshRef.current.position.z, targetZ, 0.1);
 
-    // Fade out slowly so it feels cinematic
-    if (meshRef.current.material) {
-      // Fade out between 35% and 65% scroll
-      const opacity = 1 - THREE.MathUtils.clamp((offset - 0.35) / (0.65 - 0.35), 0, 1);
-      meshRef.current.material.transparent = true;
-      meshRef.current.material.opacity = opacity;
-      meshRef.current.visible = opacity > 0;
+      // Fade out slowly so it feels cinematic
+      if (meshRef.current.material) {
+        // Fade out between 35% and 65% scroll
+        const opacity = 1 - THREE.MathUtils.clamp((offset - 0.35) / (0.65 - 0.35), 0, 1);
+        meshRef.current.material.transparent = true;
+        meshRef.current.material.opacity = opacity;
+        meshRef.current.visible = opacity > 0;
+      }
     }
   });
 
   return (
-    <Float speed={1.5} rotationIntensity={0} floatIntensity={0.5}>
-      <mesh ref={meshRef} position={[0, 0, 2]} scale={1}>
-        <boxGeometry args={[glassWidth, glassHeight, glassDepth]} />
+    <Float speed={1.5} rotationIntensity={isShattering ? 0 : 0} floatIntensity={isShattering ? 0 : 0.5}>
+      <mesh ref={meshRef} position={[0, 0, 2]} scale={1} geometry={geometry}>
         <MeshTransmissionMaterial
           transparent={true}
           backside={true}
@@ -135,6 +214,16 @@ function BackgroundGallery({ scrollYProgress }) {
 
 export default function Home() {
   const [canvasReady, setCanvasReady] = useState(false);
+  const [isShattering, setIsShattering] = useState(false);
+  const navigate = useNavigate();
+
+  const handleEnterGallery = (e) => {
+    e.preventDefault();
+    setIsShattering(true);
+    setTimeout(() => {
+      navigate('/portfolio');
+    }, 1500); // 1.5s shatter duration before navigating
+  };
 
   const socialLinks = [
     { name: 'Instagram', url: 'https://www.instagram.com/saiprajjwal', icon: <InstagramIcon /> },
@@ -211,7 +300,7 @@ export default function Home() {
             <Environment files="/hdri/studio_small_03_256.hdr" />
             <Sparkles count={800} scale={20} size={1.5} speed={0.4} opacity={0.3} color="#ffffff" />
             <BackgroundGallery scrollYProgress={scrollYProgress} />
-            <GlassMonolith scrollYProgress={scrollYProgress} />
+            <GlassMonolith scrollYProgress={scrollYProgress} isShattering={isShattering} />
             <CanvasLoader onLoad={() => setCanvasReady(true)} />
           </Suspense>
         </Canvas>
@@ -250,9 +339,9 @@ export default function Home() {
         <motion.div className="monolith-content-overlay" style={{ opacity: enterOpacity, scale: enterScale, pointerEvents: enterPointer }}>
           <div className="monolith-text-container">
             <h2 className="section-heading">The Vision is Clear.</h2>
-            <Link to="/portfolio" className="btn-monolith mt-8">
+            <a href="/portfolio" onClick={handleEnterGallery} className="btn-monolith mt-8">
               Enter Gallery
-            </Link>
+            </a>
             
             <div className="social-icons-glass" style={{ marginTop: '3rem' }}>
               {socialLinks.map((link) => (
