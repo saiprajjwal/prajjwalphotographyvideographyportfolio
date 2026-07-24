@@ -43,7 +43,7 @@ export const playFocusTick = () => {
     filter.type = 'highpass';
     filter.frequency.setValueAtTime(800, audioCtx.currentTime);
 
-    gain.gain.setValueAtTime(0.008, audioCtx.currentTime); // ultra subtle volume
+    gain.gain.setValueAtTime(0.02, audioCtx.currentTime); // ultra subtle volume
     gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.012);
 
     osc.start();
@@ -71,7 +71,7 @@ export const playShutterClick = () => {
     osc.frequency.setValueAtTime(800, now);
     osc.frequency.exponentialRampToValueAtTime(120, now + 0.07);
 
-    oscGain.gain.setValueAtTime(0.018, now);
+    oscGain.gain.setValueAtTime(0.04, now);
     oscGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.07);
 
     osc.start(now);
@@ -94,7 +94,7 @@ export const playShutterClick = () => {
     noiseFilter.Q.value = 2.5;
 
     const noiseGain = audioCtx.createGain();
-    noiseGain.gain.setValueAtTime(0.012, now);
+    noiseGain.gain.setValueAtTime(0.03, now);
     noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.05);
 
     noise.connect(noiseFilter);
@@ -136,6 +136,34 @@ export const playDetentTick = () => {
   }
 };
 
+// Apple-style haptic tick imported from CircularCarousel
+export const playCarouselTick = () => {
+  if (!soundEnabled) return;
+  try {
+    initAudio();
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime;
+
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(800, now);
+    osc.frequency.exponentialRampToValueAtTime(100, now + 0.03);
+    
+    gain.gain.setValueAtTime(0.12, now); // Increased from 0.08
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
+    
+    osc.start(now);
+    osc.stop(now + 0.03);
+  } catch (e) {
+    console.warn("Audio Context error:", e);
+  }
+};
+
 // A soft filtered-noise swell — air moving as the cover flies open. Played
 // under the category-view reveal, just ahead of the shutter.
 export const playWhoosh = () => {
@@ -163,7 +191,7 @@ export const playWhoosh = () => {
 
     const gain = audioCtx.createGain();
     gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.exponentialRampToValueAtTime(0.018, now + dur * 0.35);
+    gain.gain.exponentialRampToValueAtTime(0.04, now + dur * 0.35);
     gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
 
     noise.connect(bp);

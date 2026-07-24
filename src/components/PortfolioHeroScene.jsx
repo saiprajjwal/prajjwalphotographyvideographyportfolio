@@ -2,6 +2,7 @@ import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { pickCategoryCover } from '../utils/categoryCover';
+import { playCarouselTick } from '../utils/audio';
 
 // ──────────────────────────────────────────────────────────────
 // Geometry constants
@@ -416,6 +417,8 @@ function PhotoBand({ textures, activeIndex, flatMode, onSnap, onHoverChange, onT
   const hoverLift = useRef(0);
   const hovering = useRef(false);
 
+  const lastTickIndex = useRef(0);
+
   // ── Living cylinder ──
   // Momentum: a flick keeps the ring spinning and eases to the nearest panel.
   const velocity = useRef(0);          // target units carried per frame
@@ -501,6 +504,15 @@ function PhotoBand({ textures, activeIndex, flatMode, onSnap, onHoverChange, onT
     }
 
     const base = Math.round(pos.current);
+    
+    // Play the haptic tick when crossing halfway over a panel
+    if (base !== lastTickIndex.current) {
+      lastTickIndex.current = base;
+      if (dragging.current || flinging.current) {
+        playCarouselTick();
+      }
+    }
+
     const frac = pos.current - base;
     const f = flat.current;
 
