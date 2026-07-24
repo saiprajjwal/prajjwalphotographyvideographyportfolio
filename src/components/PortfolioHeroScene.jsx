@@ -2,7 +2,6 @@ import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { pickCategoryCover } from '../utils/categoryCover';
-import { playZipTick } from '../utils/audio';
 
 // ──────────────────────────────────────────────────────────────
 // Geometry constants
@@ -416,9 +415,6 @@ function PhotoBand({ textures, activeIndex, flatMode, onSnap, onHoverChange, onT
   const flat = useRef(0);
   const hoverLift = useRef(0);
   const hovering = useRef(false);
-  
-  // Audio ratchet tracking
-  const lastZipPos = useRef(0);
 
   // ── Living cylinder ──
   // Momentum: a flick keeps the ring spinning and eases to the nearest panel.
@@ -484,12 +480,6 @@ function PhotoBand({ textures, activeIndex, flatMode, onSnap, onHoverChange, onT
     pos.current = Math.abs(diff) > 0.0002 ? pos.current + diff * 0.11 : target.current;
     flat.current += ((flatMode ? 1 : 0) - flat.current) * 0.08;
     hoverLift.current += ((hovering.current ? 1 : 0) - hoverLift.current) * 0.12;
-
-    // Trigger ratchet zip sound as cylinder rotates
-    if (Math.abs(pos.current - lastZipPos.current) > 0.05) {
-      playZipTick();
-      lastZipPos.current = pos.current;
-    }
 
     if (bandGroup.current) {
       const t = state.clock.elapsedTime;
