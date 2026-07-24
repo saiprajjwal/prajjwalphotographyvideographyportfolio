@@ -1,5 +1,6 @@
 let audioCtx = null;
-let soundEnabled = localStorage.getItem('sound_enabled') === 'true';
+// Default to true so sound plays out of the box unless explicitly disabled
+let soundEnabled = localStorage.getItem('sound_enabled') !== 'false';
 
 const initAudio = () => {
   if (!audioCtx) {
@@ -125,7 +126,7 @@ export const playDetentTick = () => {
     osc.frequency.setValueAtTime(540, now);
     osc.frequency.exponentialRampToValueAtTime(190, now + 0.03);
 
-    gain.gain.setValueAtTime(0.02, now);
+    gain.gain.setValueAtTime(0.15, now); // Increased volume for stronger haptic feel
     gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.038);
 
     osc.start(now);
