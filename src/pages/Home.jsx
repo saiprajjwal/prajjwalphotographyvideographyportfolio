@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import { InstagramIcon, YoutubeIcon, TiktokIcon, PinterestIcon } from '../components/Icons';
 import Magnetic from '../components/Magnetic';
 import CircularCarousel from '../components/CircularCarousel';
+import { EASE } from '../utils/motion';
 import Footer from '../components/Footer';
 import '../components/Footer.css';
 import './Home.css';
@@ -25,10 +26,32 @@ function CanvasLoader({ onLoad }) {
   return null;
 }
 
+// Ease used for the entry settle — same expo-out as the rest of the site
+// (--ease-out / EASE.out in utils/motion.js), hand-applied here since this
+// runs inside useFrame rather than framer-motion.
+function easeOutExpo(x) {
+  return x >= 1 ? 1 : 1 - Math.pow(2, -10 * x);
+}
+
 // The Massive Glass Monolith (Reacts to scroll as a single majestic piece)
-function GlassMonolith({ scrollYProgress }) {
+//
+// `ready` marks the moment the canvas becomes visible (see canvasReady in
+// Home()). Before that the glass sits at its most unsettled pose — rotated
+// off-axis, pulled back, slightly smaller — so the instant it fades in, the
+// first thing a visitor sees is it actively arriving, not already at rest.
+function GlassMonolith({ scrollYProgress, ready }) {
   const meshRef = useRef();
   const { viewport } = useThree();
+  const entryStart = useRef(null);
+  // Skip the dramatic off-axis arrival for reduced-motion users — they get
+  // the glass at its resting pose immediately instead of a 2s settle.
+  const reduceMotion = useRef(
+    typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+  ).current;
+
+  useEffect(() => {
+    if (ready) entryStart.current = reduceMotion ? -Infinity : performance.now();
+  }, [ready, reduceMotion]);
 
   // If the viewport is narrow (mobile phone), scale the glass down
   const isMobile = viewport.width < 6;
@@ -39,6 +62,14 @@ function GlassMonolith({ scrollYProgress }) {
   useFrame((state) => {
     const t = state.clock.elapsedTime;
     const offset = scrollYProgress.get(); // 0 to 1
+
+    // 0 the instant `ready` flips, eases to 1 over ~2s — the entry settle.
+    // Held at 0 (fully unsettled) until then, since the canvas is invisible
+    // anyway and there's no reason to burn the arrival while unseen.
+    const entrySettle = entryStart.current
+      ? easeOutExpo(Math.min((performance.now() - entryStart.current) / 2000, 1))
+      : 0;
+    const entryRemaining = 1 - entrySettle;
 
     // Smooth continuous majestic rotation
     const baseRotY = t * 0.15;
@@ -52,12 +83,21 @@ function GlassMonolith({ scrollYProgress }) {
     const scrollSpinY = offset * Math.PI * 2; // Full 360 spin on scroll
     const scrollTiltX = offset * Math.PI * 0.5; // Tilt heavily
 
-    meshRef.current.rotation.y = THREE.MathUtils.lerp(meshRef.current.rotation.y, baseRotY + mouseX + scrollSpinY, 0.1);
-    meshRef.current.rotation.x = THREE.MathUtils.lerp(meshRef.current.rotation.x, baseRotX - mouseY + scrollTiltX, 0.1);
+    // Entry offset: arrives from an off-axis spin/tilt that unwinds to 0
+    const entrySpinY = entryRemaining * -Math.PI * 0.65;
+    const entryTiltX = entryRemaining * Math.PI * 0.22;
 
-    // Restore the smooth, slow progression of the monolith
-    const targetZ = 2 + (offset * 10);
+    meshRef.current.rotation.y = THREE.MathUtils.lerp(meshRef.current.rotation.y, baseRotY + mouseX + scrollSpinY + entrySpinY, 0.1);
+    meshRef.current.rotation.x = THREE.MathUtils.lerp(meshRef.current.rotation.x, baseRotX - mouseY + scrollTiltX + entryTiltX, 0.1);
+
+    // Restore the smooth, slow progression of the monolith, plus a touch of
+    // extra depth on entry — it settles forward into its resting position.
+    const targetZ = 2 + (offset * 10) + entryRemaining * 1.6;
     meshRef.current.position.z = THREE.MathUtils.lerp(meshRef.current.position.z, targetZ, 0.1);
+
+    // Arrives very slightly undersized and grows into full scale
+    const entryScale = 0.9 + entrySettle * 0.1;
+    meshRef.current.scale.setScalar(entryScale);
 
     // Fade out slowly so it feels cinematic
     if (meshRef.current.material) {
@@ -135,6 +175,9 @@ function BackgroundGallery({ scrollYProgress }) {
 
 export default function Home() {
   const [canvasReady, setCanvasReady] = useState(false);
+  const reduceMotion = useRef(
+    typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+  ).current;
 
   const socialLinks = [
     { name: 'Instagram', url: 'https://www.instagram.com/saiprajjwal', icon: <InstagramIcon /> },
@@ -211,7 +254,7 @@ export default function Home() {
             <Environment files="/hdri/studio_small_03_256.hdr" />
             <Sparkles count={800} scale={20} size={1.5} speed={0.4} opacity={0.3} color="#ffffff" />
             <BackgroundGallery scrollYProgress={scrollYProgress} />
-            <GlassMonolith scrollYProgress={scrollYProgress} />
+            <GlassMonolith scrollYProgress={scrollYProgress} ready={canvasReady} />
             <CanvasLoader onLoad={() => setCanvasReady(true)} />
           </Suspense>
         </Canvas>
@@ -232,13 +275,41 @@ export default function Home() {
           }}
         >
           <div className="monolith-text-container">
-            <h1 className="hero-title">Prajjwal Pandey</h1>
-            <p className="hero-subtitle">Photographer | Storyteller</p>
-            <div style={{ marginTop: '2.5rem' }}>
+            {/* The name resolves in the same ~2s window the glass takes to
+                settle (see GlassMonolith's entrySettle) — starting heavily
+                blurred and oversized, as if being seen through the glass
+                before it clears, rather than just fading in beside it.
+                Reduced-motion users get a plain, quick fade instead. */}
+            <motion.h1
+              className="hero-title"
+              initial={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 1.16, filter: 'blur(24px)' }}
+              animate={
+                canvasReady
+                  ? (reduceMotion ? { opacity: 1 } : { opacity: 1, scale: 1, filter: 'blur(0px)' })
+                  : (reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 1.16, filter: 'blur(24px)' })
+              }
+              transition={{ duration: reduceMotion ? 0.4 : 2, ease: EASE.out }}
+            >
+              Prajjwal Pandey
+            </motion.h1>
+            <motion.p
+              className="hero-subtitle"
+              initial={{ opacity: 0, y: reduceMotion ? 0 : 14 }}
+              animate={canvasReady ? { opacity: 1, y: 0 } : { opacity: 0, y: reduceMotion ? 0 : 14 }}
+              transition={{ duration: reduceMotion ? 0.3 : 0.9, ease: EASE.out, delay: canvasReady ? (reduceMotion ? 0.15 : 0.9) : 0 }}
+            >
+              Photographer | Storyteller
+            </motion.p>
+            <motion.div
+              style={{ marginTop: '2.5rem' }}
+              initial={{ opacity: 0, y: reduceMotion ? 0 : 14 }}
+              animate={canvasReady ? { opacity: 1, y: 0 } : { opacity: 0, y: reduceMotion ? 0 : 14 }}
+              transition={{ duration: reduceMotion ? 0.3 : 0.9, ease: EASE.out, delay: canvasReady ? (reduceMotion ? 0.25 : 1.05) : 0 }}
+            >
               <Link to="/portfolio" className="btn-glass">
                 My Work
               </Link>
-            </div>
+            </motion.div>
           </div>
 
           <div className="scroll-indicator">
