@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Upload, Download, RotateCw, RefreshCw, Undo, Redo, Save, Eye, Type, Crosshair, ChevronDown, SlidersHorizontal, Crop, LayoutTemplate, Palette, Sparkles, Droplet, Frame, Brush, Settings, Smile, PenTool, Trash2, Wand2, Loader2 } from 'lucide-react';
+import { readBasicExif, writeBasicExif } from '../utils/exif';
 import './Editor.css';
 
 // Fully client-side basic photo editor for social posts. Nothing is uploaded to
@@ -298,6 +299,11 @@ export default function Editor() {
 
   const [image, setImage] = useState(null);
   const [sourceName, setSourceName] = useState('photo');
+  // Safe (non-GPS) EXIF pulled from the uploaded file, re-embedded on export —
+  // canvas exports otherwise carry no metadata at all. exifLoadToken guards
+  // against a slow read from a previous photo overwriting a newer one's.
+  const [exifData, setExifData] = useState(null);
+  const exifLoadToken = useRef(0);
   const [adj, setAdj] = useState({ ...DEFAULT_ADJ });
   const [preset, setPreset] = useState('None');
   const [aspect, setAspect] = useState('original');
@@ -500,6 +506,10 @@ export default function Editor() {
       idbLoad('pe-current-image').then((blob) => {
         if (blob) {
           if (blob.name) setSourceName(blob.name.replace(/\.[^.]+$/, ''));
+          const myExifToken = ++exifLoadToken.current;
+          readBasicExif(blob).then((data) => {
+            if (exifLoadToken.current === myExifToken) setExifData(data);
+          });
           const url = URL.createObjectURL(blob);
           const img = new Image();
           img.onload = () => {
@@ -1211,6 +1221,11 @@ export default function Editor() {
     }
     // Keep the original basename so exports are traceable to their source
     setSourceName((file.name || 'photo').replace(/\.[^.]+$/, ''));
+    const myExifToken = ++exifLoadToken.current;
+    setExifData(null);
+    readBasicExif(file).then((data) => {
+      if (exifLoadToken.current === myExifToken) setExifData(data);
+    });
     const url = URL.createObjectURL(file);
     const img = new Image();
     img.onload = () => {
@@ -1470,9 +1485,14 @@ export default function Editor() {
     const quality = exportFormat === 'png' ? undefined : exportQuality / 100;
     const ext = exportFormat === 'png' ? 'png' : 'jpg';
 
-    canvas.toBlob((blob) => {
+    canvas.toBlob(async (blob) => {
       if (!blob) return;
-      const url = URL.createObjectURL(blob);
+      // Re-embed the safe (non-location) EXIF fields from the original file —
+      // the canvas export above has none. Never let this block the download.
+      const finalBlob = mimeType === 'image/jpeg' && exifData
+        ? await writeBasicExif(blob, exifData)
+        : blob;
+      const url = URL.createObjectURL(finalBlob);
       const a = document.createElement('a');
       a.href = url;
       a.download = `${sourceName}_edited.${ext}`;
@@ -2106,7 +2126,11 @@ export default function Editor() {
               <p className="pe-export-info">
                 {(() => { const { w, h } = getOutputSize(image, aspect); return `Exports at ${w} × ${h}px`; })()}
                 <br />
-                Exports are re-rendered — camera &amp; location metadata (EXIF) are not included.
+                {exportFormat === 'jpeg'
+                  ? (exifData
+                      ? 'Camera, lens & date info from the original carry over — location never does.'
+                      : 'No camera metadata was found in the original to carry over. Location is never included.')
+                  : 'PNG exports don’t carry camera metadata.'}
               </p>
             )}
             <div className="pe-actions" style={{ marginTop: '1rem' }}>
