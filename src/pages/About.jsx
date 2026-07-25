@@ -76,7 +76,7 @@ export default function About() {
               >
                 About {name.split(' ')[0]}
               </motion.h1>
-              <motion.p 
+              <motion.p
                 className="bio-text glass-panel-padded"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -84,12 +84,58 @@ export default function About() {
               >
                 {bio}
               </motion.p>
-              
-              <motion.div 
+
+              <motion.div
+                className="timeline-section glass-panel-padded"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.45 }}
+              >
+                <h2>Journey</h2>
+                <div className="timeline">
+                  <div className="timeline-item">
+                    <div className="timeline-marker">2018</div>
+                    <div className="timeline-content">
+                      <h3>Started Photography</h3>
+                      <p>Picked up a camera and fell in love with capturing moments</p>
+                    </div>
+                  </div>
+                  <div className="timeline-item">
+                    <div className="timeline-marker">2019</div>
+                    <div className="timeline-content">
+                      <h3>First Professional Work</h3>
+                      <p>Landed first commercial projects and portfolio shoots</p>
+                    </div>
+                  </div>
+                  <div className="timeline-item">
+                    <div className="timeline-marker">2021</div>
+                    <div className="timeline-content">
+                      <h3>Cinematic Filmmaking</h3>
+                      <p>Transitioned into video production and narrative filmmaking</p>
+                    </div>
+                  </div>
+                  <div className="timeline-item">
+                    <div className="timeline-marker">2023</div>
+                    <div className="timeline-content">
+                      <h3>Full Creative Stack</h3>
+                      <p>Integrated UI/UX design and photography into a complete creative practice</p>
+                    </div>
+                  </div>
+                  <div className="timeline-item">
+                    <div className="timeline-marker">2025</div>
+                    <div className="timeline-content">
+                      <h3>Premium Production</h3>
+                      <p>Specialized in high-end commercial and editorial work</p>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+
+              <motion.div
                 className="gear-section glass-panel-padded"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 }}
+                transition={{ delay: 0.55 }}
               >
                 <h2>Creative Toolkit</h2>
                 {Array.isArray(gear) && gear.length > 0 && typeof gear[0] === 'string' ? (

@@ -86,8 +86,8 @@ export default function Journal() {
                   onMouseEnter={playFocusTick}
                   onClick={playShutterClick}
                 >
-                  <span className="journal-frame-no mono">{roman(i + 1)}&nbsp;/&nbsp;{String(i + 1).padStart(3, '0')}</span>
                   <span className="journal-frame-swatch">
+                    <span className="journal-frame-no mono">{roman(i + 1)}&nbsp;/&nbsp;{String(i + 1).padStart(3, '0')}</span>
                     {hero ? (
                       <img src={hero.src} alt="" loading="lazy" />
                     ) : (
@@ -95,8 +95,10 @@ export default function Journal() {
                     )}
                   </span>
                   <span className="journal-frame-meta">
-                    <h3>{entry.title}</h3>
-                    <p>{dek}</p>
+                    <div>
+                      <h3>{entry.title}</h3>
+                      <p>{dek}</p>
+                    </div>
                   </span>
                   <span className="journal-frame-arrow" aria-hidden="true">→</span>
                 </Link>

@@ -1414,11 +1414,21 @@ export default function Editor() {
   const saveCustomPreset = () => {
     const name = prompt('Name your preset:', `Custom ${customPresets.length + 1}`);
     if (!name) return;
+    // Prevent duplicate preset names by removing any existing preset with same name
+    const updated = customPresets.filter(p => p.id !== name);
     const newPreset = { id: name, adj: { ...adj } };
-    const updated = [...customPresets, newPreset];
+    updated.push(newPreset);
     setCustomPresets(updated);
     localStorage.setItem('pe-custom-presets', JSON.stringify(updated));
     setPreset(name);
+  };
+
+  const deleteCustomPreset = (presetId) => {
+    if (!confirm(`Delete preset "${presetId}"?`)) return;
+    const updated = customPresets.filter(p => p.id !== presetId);
+    setCustomPresets(updated);
+    localStorage.setItem('pe-custom-presets', JSON.stringify(updated));
+    if (preset === presetId) setPreset('None');
   };
 
   const resetAll = () => {
@@ -1731,13 +1741,22 @@ export default function Editor() {
                 <span className="pe-preset-group-label">My Presets</span>
                 <div className="pe-chips">
                   {customPresets.map((p) => (
-                    <button
-                      key={p.id}
-                      className={`pe-chip ${preset === p.id ? 'is-active' : ''}`}
-                      onClick={() => applyPreset(p)}
-                    >
-                      {p.id}
-                    </button>
+                    <div key={p.id} className="pe-chip-with-delete">
+                      <button
+                        className={`pe-chip ${preset === p.id ? 'is-active' : ''}`}
+                        onClick={() => applyPreset(p)}
+                      >
+                        {p.id}
+                      </button>
+                      <button
+                        className="pe-chip-delete"
+                        onClick={() => deleteCustomPreset(p.id)}
+                        title="Delete preset"
+                        aria-label={`Delete preset ${p.id}`}
+                      >
+                        ×
+                      </button>
+                    </div>
                   ))}
                 </div>
               </div>

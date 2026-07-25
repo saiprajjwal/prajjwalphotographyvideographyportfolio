@@ -161,3 +161,116 @@
   border-bottom: 1px solid rgba(255, 255, 255, 0.15);
   padding-bottom: 0.5rem;
 }
+
+/* Timeline Section ──────────────────────────────────────────────────── */
+.timeline-section h2 {
+  font-size: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.timeline {
+  position: relative;
+  padding: 0.5rem 0;
+}
+
+/* Vertical line connecting timeline items */
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 19px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: linear-gradient(to bottom,
+    rgba(0, 240, 255, 0.8),
+    rgba(0, 240, 255, 0.4),
+    transparent);
+}
+
+.timeline-item {
+  display: flex;
+  gap: 2rem;
+  margin-bottom: 2.5rem;
+  position: relative;
+}
+
+.timeline-item:last-child {
+  margin-bottom: 0;
+}
+
+/* Timeline marker (year circle) */
+.timeline-marker {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  min-width: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(0, 240, 255, 0.1);
+  border: 2px solid rgba(0, 240, 255, 0.5);
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #00f0ff;
+  font-family: var(--font-sans);
+  transition: all 0.3s var(--ease-out);
+  z-index: 1;
+}
+
+.timeline-item:hover .timeline-marker {
+  background: rgba(0, 240, 255, 0.2);
+  border-color: #00f0ff;
+  box-shadow: 0 0 16px rgba(0, 240, 255, 0.6);
+  transform: scale(1.1);
+}
+
+/* Timeline content */
+.timeline-content {
+  flex: 1;
+  padding-top: 0.5rem;
+}
+
+.timeline-content h3 {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  color: #ffffff;
+  margin: 0 0 0.5rem;
+  transition: color 0.3s var(--ease-out);
+}
+
+.timeline-content p {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.timeline-item:hover .timeline-content h3 {
+  color: #00f0ff;
+}
+
+.timeline-section {
+  margin-bottom: 3rem;
+}
+
+@media (max-width: 600px) {
+  .timeline::before {
+    left: 11px;
+  }
+
+  .timeline-marker {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    font-size: 0.75rem;
+  }
+
+  .timeline-item {
+    gap: 1.2rem;
+  }
+
+  .timeline-content h3 {
+    font-size: 1rem;
+  }
+}

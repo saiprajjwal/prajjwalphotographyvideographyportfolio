@@ -317,16 +317,19 @@ export default function Films() {
                 <X size={20} />
               </button>
 
-              <div className="info-modal-header">
-                <img
-                  src={`https://img.youtube.com/vi/${infoVideo.id}/maxresdefault.jpg`}
-                  alt={infoVideo.title}
+              <div className="info-modal-video-container">
+                <iframe
+                  width="100%"
+                  height="100%"
+                  src={`https://www.youtube.com/embed/${infoVideo.id}?autoplay=1&rel=0`}
+                  title={infoVideo.title}
+                  allow="autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
                 />
-                <div className="info-modal-header-fade"></div>
-                <h2 className="info-modal-title">{infoVideo.title}</h2>
               </div>
 
               <div className="info-modal-body">
+                <h2 className="info-modal-title">{infoVideo.title}</h2>
                 <div className="info-meta">
                   <span className="match-score">Featured</span>
                   <span>2026</span>

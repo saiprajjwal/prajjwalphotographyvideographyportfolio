@@ -340,13 +340,15 @@
 .info-modal-content {
   position: relative;
   width: 100%;
-  max-width: 520px;           /* Smaller than before */
+  max-width: 760px;
   background: rgba(20, 20, 20, 0.92);
   backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 30px 60px rgba(0, 0, 0, 0.8);
+  display: flex;
+  flex-direction: column;
 }
 
 .info-modal-close {
@@ -371,38 +373,48 @@
   background: rgba(255, 255, 255, 0.2);
 }
 
-.info-modal-header {
+/* Video container — 16:9 aspect ratio for YouTube embeds */
+.info-modal-video-container {
   position: relative;
   width: 100%;
-  height: 200px;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: #000;
+  flex-shrink: 0;
+}
+
+.info-modal-video-container iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+.info-modal-header {
+  display: none;
 }
 
 .info-modal-header img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+  display: none;
 }
 
 .info-modal-header-fade {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(to top, rgba(20,20,20,0.95) 0%, transparent 60%);
+  display: none;
 }
 
 .info-modal-title {
-  position: absolute;
-  bottom: 1rem;
-  left: 1.5rem;
+  margin: 0 0 1rem;
   font-family: var(--font-display);
-  font-size: 1.6rem;
+  font-size: 1.4rem;
   color: white;
-  margin: 0;
-  text-shadow: 1px 1px 3px rgba(0,0,0,0.7);
+  line-height: 1.3;
 }
 
 .info-modal-body {
-  padding: 1rem 1.5rem 1.5rem;
+  padding: 1.5rem 1.5rem;
   color: white;
+  overflow-y: auto;
+  max-height: 280px;
+  flex: 1;
 }
 
 .info-meta {
