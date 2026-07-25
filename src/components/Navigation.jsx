@@ -81,8 +81,9 @@ export default function Navigation() {
     { path: '/editor', label: 'Editor' },
     { path: '/store', label: 'Store' },
     { path: '/about', label: 'About' },
-    { path: '/contact', label: 'Contact' },
   ];
+
+  const cta = { path: '/contact', label: 'Inquire', highlight: true };
 
   const { social, email } = portfolioData.about;
 
@@ -128,6 +129,16 @@ export default function Navigation() {
                   </Link>
                 </Magnetic>
               ))}
+              <Magnetic tolerance={25}>
+                <Link
+                  to={cta.path}
+                  className={`nav-link nav-cta ${isLinkActive(cta.path) ? 'active' : ''}`}
+                  onClick={closeAndClick}
+                  onMouseEnter={playFocusTick}
+                >
+                  {cta.label}
+                </Link>
+              </Magnetic>
             </nav>
           )}
 
@@ -182,6 +193,18 @@ export default function Navigation() {
                 <ArrowUpRight className="nav-overlay-link__arrow" size={22} strokeWidth={1.6} aria-hidden="true" />
               </Link>
             ))}
+            <Link
+              to={cta.path}
+              className={`nav-overlay-link nav-overlay-link--cta ${isLinkActive(cta.path) ? 'active' : ''}`}
+              style={{ transitionDelay: `${links.length * 0.045}s` }}
+              onClick={closeAndClick}
+              onMouseEnter={playFocusTick}
+              tabIndex={isOpen ? 0 : -1}
+            >
+              <span className="nav-overlay-link__no">{String(links.length + 1).padStart(2, '0')}</span>
+              <span className="nav-overlay-link__label">{cta.label}</span>
+              <ArrowUpRight className="nav-overlay-link__arrow" size={22} strokeWidth={1.6} aria-hidden="true" />
+            </Link>
           </div>
 
           <div className="nav-overlay-footer">

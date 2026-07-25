@@ -72,6 +72,18 @@
   transform: scale(0.95);
 }
 
+.nav-cta {
+  color: #00f0ff !important;
+  background: rgba(0, 240, 255, 0.1) !important;
+  border: 1px solid rgba(0, 240, 255, 0.3);
+}
+
+.nav-cta:hover {
+  background: rgba(0, 240, 255, 0.2) !important;
+  border-color: rgba(0, 240, 255, 0.6);
+  box-shadow: 0 0 12px rgba(0, 240, 255, 0.4);
+}
+
 /* Below this, the flat row would start clipping — hand off to the glass
    menu instead of shrinking type to force-fit more links. */
 @media (max-width: 1024px) {
@@ -312,6 +324,23 @@
 .nav-overlay-link:hover .nav-overlay-link__arrow {
   opacity: 1;
   transform: translate(0, 0) rotate(0deg);
+}
+
+.nav-overlay-link--cta .nav-overlay-link__no {
+  color: #00f0ff;
+}
+
+.nav-overlay-link--cta .nav-overlay-link__label {
+  color: #00f0ff;
+}
+
+.nav-overlay-link--cta .nav-overlay-link__arrow {
+  color: #00f0ff;
+}
+
+.nav-overlay-link--cta:hover .nav-overlay-link__label {
+  color: #ffffff;
+  text-shadow: 0 0 16px rgba(0, 240, 255, 0.6);
 }
 
 .nav-overlay-footer {
