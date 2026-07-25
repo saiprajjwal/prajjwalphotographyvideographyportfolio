@@ -165,7 +165,9 @@ function App() {
           </Routes>
         </Suspense>
       </AnimatePresence>
-      {!isChromelessRoute && !isLanding && <Footer />}
+      {/* Editor keeps its own fixed bottom tab bar on mobile/narrow widths —
+          the marketing footer has nowhere to live there and overlaps it. */}
+      {!isChromelessRoute && !isLanding && !isEditorRoute && <Footer />}
 
       {/* Dynamic expanding glass ripples */}
       {ripples.map((ripple) => (

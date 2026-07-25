@@ -340,13 +340,13 @@ export default function Editor() {
   // shows a result. (Masks as the default left mobile users staring at a
   // panel with no editing controls.)
   const [activeTab, setActiveTab] = useState('presets');
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 760);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 920);
   const [vpTick, setVpTick] = useState(0);
 
   useEffect(() => {
     let resizeT;
     const handleResize = () => {
-      setIsMobile(window.innerWidth <= 760);
+      setIsMobile(window.innerWidth <= 920);
       // Debounced tick so the preview canvas re-fits to the new viewport
       clearTimeout(resizeT);
       resizeT = setTimeout(() => setVpTick((t) => t + 1), 150);
@@ -1140,7 +1140,7 @@ export default function Editor() {
     // Fit the preview to the viewport, never distort. On phones the wrapper
     // spans the screen so we can measure it; on desktop the wrapper wraps the
     // canvas (measuring it would feed back), so use the fixed stage width.
-    const smallScreen = window.innerWidth <= 760;
+    const smallScreen = window.innerWidth <= 920;
     const availW = smallScreen
       ? (canvas.parentElement?.clientWidth || window.innerWidth - 16)
       : 520;

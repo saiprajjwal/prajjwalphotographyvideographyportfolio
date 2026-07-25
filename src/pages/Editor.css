@@ -530,8 +530,13 @@
 /* Mobile App Styles */
 .pe-tab-bar { display: none; }
 
-@media (max-width: 760px) {
-  /* Natural scrolling with padding for the fixed tab bar */
+@media (max-width: 920px) {
+  /* Natural scrolling with padding for the fixed tab bar. Covers phones and
+     the narrow-desktop/split-screen range (761-920px) too — that range used
+     to fall between the mobile tab bar and the desktop sticky sidebar,
+     getting neither: a long stacked scroll where the photo disappeared off
+     the top. The tab bar solves that just as well as it does on phones, so
+     it now covers this range instead of a separate degraded layout. */
   .pe-page {
     padding: 0 0 5rem 0; /* Clear space for tab bar */
     display: block;
@@ -792,24 +797,6 @@
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.35);
-}
-
-/* Narrow desktop / split-screen (761–920px): the controls column can no longer
-   fit beside the stage, so stack them and turn off the sticky canvas —
-   otherwise it floats over the wrapped controls while scrolling. */
-@media (min-width: 761px) and (max-width: 920px) {
-  .pe-workspace {
-    flex-direction: column;
-    align-items: center;
-    flex-wrap: nowrap;
-  }
-  .pe-stage {
-    position: static;
-  }
-  .pe-controls {
-    max-width: 520px;
-    width: 100%;
-  }
 }
 
 @keyframes pe-spin {
