@@ -93,12 +93,12 @@
   transform: translateY(-3px);
 }
 
-/* Image container: full-width at top, 16:9 aspect ──────────────────────── */
+/* Image container: full-width at top, 4:5 aspect (portrait-friendly) ────── */
 .journal-frame-swatch,
 .journal-frame-swatch-empty {
   display: block;
   width: 100%;
-  aspect-ratio: 16 / 9;
+  aspect-ratio: 4 / 5;
   overflow: hidden;
   background: rgba(23, 21, 15, 0.06);
   flex-shrink: 0;
