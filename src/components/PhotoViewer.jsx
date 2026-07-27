@@ -82,6 +82,33 @@ export default function PhotoViewer({ album, onClose }) {
   // Rendered through a portal to <body> so it escapes the Portfolio page's
   // animated stacking context — otherwise the site nav would paint over it.
 
+  // Dynamic mesh deformation (cloth pull) effect based on scroll velocity.
+  // Instead of border-radius, we use an animated SVG clip-path with quadratic
+  // bezier curves to create perfect parabolic domes/U-shapes on the top and bottom edges.
+  const { scrollY } = useScroll({ container: scrollRef });
+  const rawVelocity = useVelocity(scrollY);
+  const velocity = useSpring(rawVelocity, { stiffness: 200, damping: 38, mass: 0.6 });
+
+  const pathString = useTransform(velocity, (v) => {
+    if (prefersReduced) return 'M 0,0 L 1,0 L 1,1 L 0,1 Z';
+    
+    // Clamp velocity and map to a bend amount (max 14% of the image height)
+    const clampedV = Math.max(-2500, Math.min(2500, v));
+    const c = (clampedV / 2500) * 0.14;
+
+    // Pulling UP (v > 0, c > 0): Top edge is a dome (center higher), Bottom is a U-shape (center higher).
+    // Pulling DOWN (v < 0, c < 0): Top edge is a U-shape (center lower), Bottom is a dome (center lower).
+    const topCorners = Math.max(0, c);
+    const topCenter = Math.max(0, -c);
+    const topCY = 2 * topCenter - topCorners;
+
+    const bottomCorners = 1 - Math.max(0, -c);
+    const bottomCenter = 1 - Math.max(0, c);
+    const bottomCY = 2 * bottomCenter - bottomCorners;
+
+    return `M 0,${topCorners} Q 0.5,${topCY} 1,${topCorners} L 1,${bottomCorners} Q 0.5,${bottomCY} 0,${bottomCorners} Z`;
+  });
+
   // Open scrolled to whichever photo was tapped, so it feels like that photo
   // opened (not always the first). Jump instantly before paint.
   useLayoutEffect(() => {
@@ -102,6 +129,13 @@ export default function PhotoViewer({ album, onClose }) {
       aria-modal="true"
       aria-label={`${album.name} photographs`}
     >
+      {/* SVG Clip Path Definitions for the Cloth Effect */}
+      <svg width="0" height="0" style={{ position: 'absolute', pointerEvents: 'none' }}>
+        <clipPath id="pv-cloth-clip" clipPathUnits="objectBoundingBox">
+          <motion.path d={pathString} />
+        </clipPath>
+      </svg>
+
       <div
         className={`pv-scroll pv-scroll--${view}`}
         ref={scrollRef}
