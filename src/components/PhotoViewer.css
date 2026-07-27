@@ -36,8 +36,7 @@
 .pv-frame {
   width: 100%;
   overflow: hidden;
-  clip-path: url(#pv-cloth-clip);
-  -webkit-clip-path: url(#pv-cloth-clip);
+  box-shadow: 0 40px 90px rgba(0, 0, 0, 0.6);
 }
 
 .pv-frame img {

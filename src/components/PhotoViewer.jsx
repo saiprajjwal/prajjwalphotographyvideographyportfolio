@@ -30,27 +30,38 @@ function ModeGlyph({ flat }) {
   );
 }
 
-// One frame in the flow view. The effect is the "slithes" or drape effect
-// from aikawakenichi.com/journey: while you SCROLL, the image inside moves
-// slower than its container, creating a parallax slit reveal.
-function FlowFrame({ photo }) {
+// One frame in the flow view. Combines the cloth curl (border-radius) 
+// and the parallax slit reveal.
+function FlowFrame({ photo, arch }) {
   const ref = useRef(null);
   
-  // Track this specific frame's position in the viewport
+  // Track this specific frame's position in the viewport for the parallax effect
   const { scrollYProgress } = useScroll({
     target: ref,
     offset: ['start end', 'end start'],
   });
 
-  // Image shifts vertically by 15% as it scrolls past, creating the slit effect
+  // Image shifts vertically by 15% as it scrolls past
   const y = useTransform(scrollYProgress, [0, 1], ['-15%', '15%']);
 
-  const style = prefersReduced
+  // Dynamic border-radius for the cloth effect
+  const radius = useMotionTemplate`50% ${arch}px`;
+
+  const frameStyle = prefersReduced
+    ? undefined
+    : {
+        borderTopLeftRadius: radius,
+        borderTopRightRadius: radius,
+        borderBottomLeftRadius: radius,
+        borderBottomRightRadius: radius,
+      };
+
+  const imgStyle = prefersReduced
     ? undefined
     : { y, scale: 1.15 };
 
   return (
-    <div className="pv-frame" ref={ref} data-pv-id={photo.id}>
+    <motion.div className="pv-frame" ref={ref} data-pv-id={photo.id} style={frameStyle}>
       <motion.img
         src={photo.src}
         srcSet={`
@@ -63,9 +74,9 @@ function FlowFrame({ photo }) {
         alt={photo.alt}
         loading="lazy"
         draggable="false"
-        style={style}
+        style={imgStyle}
       />
-    </div>
+    </motion.div>
   );
 }
 
@@ -79,35 +90,15 @@ export default function PhotoViewer({ album, onClose }) {
 
   const thumb = album.photos[0]?.src;
 
-  // Rendered through a portal to <body> so it escapes the Portfolio page's
-  // animated stacking context — otherwise the site nav would paint over it.
-
-  // Dynamic mesh deformation (cloth pull) effect based on scroll velocity.
-  // Instead of border-radius, we use an animated SVG clip-path with quadratic
-  // bezier curves to create perfect parabolic domes/U-shapes on the top and bottom edges.
+  // Scroll velocity -> drape depth. 
+  // Increased the max clamp from 58 to 120 for a much stronger cloth curve.
   const { scrollY } = useScroll({ container: scrollRef });
   const rawVelocity = useVelocity(scrollY);
   const velocity = useSpring(rawVelocity, { stiffness: 200, damping: 38, mass: 0.6 });
+  const arch = useTransform(velocity, [-2000, 0, 2000], [120, 0, 120], { clamp: true });
 
-  const pathString = useTransform(velocity, (v) => {
-    if (prefersReduced) return 'M 0,0 L 1,0 L 1,1 L 0,1 Z';
-    
-    // Clamp velocity and map to a bend amount (max 14% of the image height)
-    const clampedV = Math.max(-2500, Math.min(2500, v));
-    const c = (clampedV / 2500) * 0.14;
-
-    // Pulling UP (v > 0, c > 0): Top edge is a dome (center higher), Bottom is a U-shape (center higher).
-    // Pulling DOWN (v < 0, c < 0): Top edge is a U-shape (center lower), Bottom is a dome (center lower).
-    const topCorners = Math.max(0, c);
-    const topCenter = Math.max(0, -c);
-    const topCY = 2 * topCenter - topCorners;
-
-    const bottomCorners = 1 - Math.max(0, -c);
-    const bottomCenter = 1 - Math.max(0, c);
-    const bottomCY = 2 * bottomCenter - bottomCorners;
-
-    return `M 0,${topCorners} Q 0.5,${topCY} 1,${topCorners} L 1,${bottomCorners} Q 0.5,${bottomCY} 0,${bottomCorners} Z`;
-  });
+  // Rendered through a portal to <body> so it escapes the Portfolio page's
+  // animated stacking context — otherwise the site nav would paint over it.
 
   // Open scrolled to whichever photo was tapped, so it feels like that photo
   // opened (not always the first). Jump instantly before paint.
@@ -129,13 +120,6 @@ export default function PhotoViewer({ album, onClose }) {
       aria-modal="true"
       aria-label={`${album.name} photographs`}
     >
-      {/* SVG Clip Path Definitions for the Cloth Effect */}
-      <svg width="0" height="0" style={{ position: 'absolute', pointerEvents: 'none' }}>
-        <clipPath id="pv-cloth-clip" clipPathUnits="objectBoundingBox">
-          <motion.path d={pathString} />
-        </clipPath>
-      </svg>
-
       <div
         className={`pv-scroll pv-scroll--${view}`}
         ref={scrollRef}
@@ -144,7 +128,7 @@ export default function PhotoViewer({ album, onClose }) {
         <div className="pv-inner">
           {view === 'flow'
             ? album.photos.map((p) => (
-                <FlowFrame key={p.id} photo={p} />
+                <FlowFrame key={p.id} photo={p} arch={arch} />
               ))
             : album.photos.map((p) => (
                 <div className="pv-grid-item" key={p.id}>
