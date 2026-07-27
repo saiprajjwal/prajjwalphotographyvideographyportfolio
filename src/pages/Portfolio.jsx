@@ -5,6 +5,7 @@ import portfolioData from '../data/portfolio.json';
 import { lenisInstance } from '../utils/lenisInstance';
 import CylindricalHeroRing from '../components/CylindricalHeroRing';
 import FloatingNavPill from '../components/FloatingNavPill';
+import PhotoViewer from '../components/PhotoViewer';
 import { pickCategoryCover } from '../utils/categoryCover';
 import { EASE, DUR } from '../utils/motion';
 import { playDetentTick, playShutterClick, playWhoosh } from '../utils/audio';
@@ -54,6 +55,9 @@ export default function Portfolio() {
   }, [filter]);
 
   const [activeSession, setActiveSession] = useState(null);
+  // Full-screen single-photo-flow viewer, opened by clicking a photo inside an
+  // album. Holds { name, categoryLabel, photos } for the album being viewed.
+  const [viewer, setViewer] = useState(null);
   // Hero band layout: curved arc (default) or flattened plane
   const [flatMode, setFlatMode] = useState(false);
   // Full-screen category view opened by clicking the hero band, plus the
@@ -211,13 +215,14 @@ export default function Portfolio() {
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key !== 'Escape') return;
-      if (activeSession) setActiveSession(null);
+      if (viewer) setViewer(null);
+      else if (activeSession) setActiveSession(null);
       else if (overlayAlbum) setOverlayAlbum(null);
       else if (openCategory) closeCategory();
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeSession, overlayAlbum, openCategory, closeCategory]);
+  }, [viewer, activeSession, overlayAlbum, openCategory, closeCategory]);
 
   const handleMouseMove = (e) => {
     const card = e.currentTarget;
@@ -586,9 +591,15 @@ export default function Portfolio() {
                         onClick={
                           photo.isSessionCover
                             ? () => setOverlayAlbum(photo.sessionName)
-                            : undefined
+                            : () =>
+                                setViewer({
+                                  name: overlayAlbum || openCategory,
+                                  categoryLabel: openCategory,
+                                  photos: overlayItems.filter((p) => !p.isSessionCover),
+                                  startId: photo.id,
+                                })
                         }
-                        style={photo.isSessionCover ? { cursor: 'pointer' } : {}}
+                        style={{ cursor: 'pointer' }}
                       >
                         {photo.isSessionCover && (
                           <div className="card-badge">{photo.sessionName}</div>
@@ -654,6 +665,15 @@ export default function Portfolio() {
                       className="masonry-item"
                       onMouseMove={handleMouseMove}
                       onMouseLeave={handleMouseLeave}
+                      onClick={() =>
+                        setViewer({
+                          name: activeSession,
+                          categoryLabel: filter,
+                          photos: activeSessionPhotos,
+                          startId: photo.id,
+                        })
+                      }
+                      style={{ cursor: 'pointer' }}
                     >
                       <img
                         src={photo.src}
@@ -674,6 +694,13 @@ export default function Portfolio() {
               </div>
             </motion.div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Full-screen cloth-slide photo viewer, opened by tapping a photo in an album */}
+      <AnimatePresence>
+        {viewer && (
+          <PhotoViewer album={viewer} onClose={() => setViewer(null)} />
         )}
       </AnimatePresence>
     </motion.div>
