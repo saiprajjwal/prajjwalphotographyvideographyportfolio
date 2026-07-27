@@ -1091,6 +1091,20 @@
   text-align: center;
 }
 
+.up-card-error {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  font-size: 0.6rem;
+  line-height: 1.25;
+  color: #fff;
+  background: rgba(150, 20, 20, 0.92);
+  padding: 0.4rem 0.4rem;
+  text-align: center;
+  white-space: normal;
+  max-height: 100%;
+  overflow-y: auto;
+}
+
 .up-remove {
   position: absolute;
   top: 4px; right: 4px;

@@ -577,6 +577,16 @@ export default function Admin() {
     setToken('');
   };
 
+  // An expired/invalid token still renders the dashboard (the gate only checks
+  // that a token exists), so every request silently 401s. When we detect that,
+  // drop the dead token and bounce back to the login screen with an explanation
+  // rather than leaving the user stuck on a working-looking but broken session.
+  const handleSessionExpired = () => {
+    localStorage.removeItem('admin_token');
+    setToken('');
+    setLoginError('Your session expired. Please log in again.');
+  };
+
   // --- Upload queue management ---
   const addFiles = (fileList) => {
     const incoming = Array.from(fileList).filter((f) => f.type.startsWith('image/'));
@@ -629,7 +639,12 @@ export default function Admin() {
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({ category, session, altText }),
         });
-        const sigData = await sigRes.json();
+        const sigData = await sigRes.json().catch(() => ({}));
+        if (sigRes.status === 401) {
+          setItem(item.id, { status: 'error', message: 'Session expired — please log in again.' });
+          handleSessionExpired();
+          break;
+        }
         if (!sigRes.ok) throw new Error(sigData.error || 'Could not get an upload signature');
 
         const formData = new FormData();
@@ -1076,6 +1091,9 @@ export default function Admin() {
                       <span className="up-card-name">
                         {it.status === 'optimizing' ? 'Optimizing…' : it.status === 'uploading' ? 'Uploading…' : it.status === 'error' ? 'Failed' : it.file.name}
                       </span>
+                      {it.status === 'error' && it.message && (
+                        <span className="up-card-error">{it.message}</span>
+                      )}
                     </div>
                   ))}
                 </div>
