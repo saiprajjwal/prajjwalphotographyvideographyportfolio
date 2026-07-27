@@ -4,6 +4,9 @@ import {
   motion,
   useScroll,
   useTransform,
+  useMotionTemplate,
+  useVelocity,
+  useSpring,
 } from 'framer-motion';
 import { ArrowLeft } from 'lucide-react';
 import { EASE, DUR } from '../utils/motion';
