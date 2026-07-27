@@ -19,6 +19,7 @@ import {
   NotebookText,
   Pencil,
   X,
+  ExternalLink,
 } from 'lucide-react';
 import portfolioData from '../data/portfolio.json';
 import defaultStoreData from '../data/store.json';
@@ -944,10 +945,22 @@ export default function Admin() {
             <h1>{currentView.label}</h1>
             <p>{currentView.subtitle}</p>
           </div>
-          <button onClick={handleLogout} className="admin-logout-btn">
-            <LogOut size={16} strokeWidth={1.8} />
-            <span>Log Out</span>
-          </button>
+          <div className="admin-topbar-actions">
+            <a
+              href="/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="admin-viewsite-btn"
+              title="Open the live website in a new tab"
+            >
+              <ExternalLink size={16} strokeWidth={1.8} />
+              <span>View Site</span>
+            </a>
+            <button onClick={handleLogout} className="admin-logout-btn">
+              <LogOut size={16} strokeWidth={1.8} />
+              <span>Log Out</span>
+            </button>
+          </div>
         </header>
 
         <div className="admin-content">

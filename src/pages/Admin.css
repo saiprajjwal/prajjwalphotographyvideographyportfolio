@@ -233,7 +233,14 @@
   color: var(--muted);
 }
 
-.admin-logout-btn {
+.admin-topbar-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.admin-logout-btn,
+.admin-viewsite-btn {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
@@ -245,12 +252,27 @@
   cursor: pointer;
   font-size: 0.85rem;
   font-weight: 500;
-  transition: color 0.2s ease, border-color 0.2s ease;
+  text-decoration: none;
+  transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
 }
 
 .admin-logout-btn:hover {
   color: #fff;
   border-color: rgba(255, 255, 255, 0.4);
+}
+
+/* The primary way out to the public site — nudged toward the brand accent
+   so it reads as the "go look at the result" action, distinct from Log Out. */
+.admin-viewsite-btn {
+  color: var(--acc);
+  border-color: var(--acc-line);
+  background: var(--acc-soft);
+}
+
+.admin-viewsite-btn:hover {
+  color: var(--acc-ink);
+  background: var(--acc);
+  border-color: var(--acc);
 }
 
 .admin-content {
@@ -1190,7 +1212,8 @@
     padding: 1rem 1.25rem;
   }
 
-  .admin-logout-btn span {
+  .admin-logout-btn span,
+  .admin-viewsite-btn span {
     display: none;
   }
 
