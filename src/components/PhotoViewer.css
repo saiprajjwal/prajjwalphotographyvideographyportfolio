@@ -35,6 +35,8 @@
 
 .pv-frame {
   width: 100%;
+  overflow: hidden;
+  box-shadow: 0 40px 90px rgba(0, 0, 0, 0.6);
 }
 
 .pv-frame img {
@@ -42,8 +44,7 @@
   width: 100%;
   height: auto;
   border-radius: 0;
-  box-shadow: 0 40px 90px rgba(0, 0, 0, 0.6);
-  will-change: border-radius;
+  will-change: transform;
 }
 
 /* ── Grid (contact-sheet) ── */

@@ -3,12 +3,9 @@ import { createPortal } from 'react-dom';
 import {
   motion,
   useScroll,
-  useVelocity,
-  useSpring,
   useTransform,
-  useMotionTemplate,
 } from 'framer-motion';
-import { ArrowLeft, LayoutGrid, GalleryVertical } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { EASE, DUR } from '../utils/motion';
 import './PhotoViewer.css';
 
@@ -16,29 +13,44 @@ const prefersReduced =
   typeof window !== 'undefined' &&
   window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-// One frame in the flow view. The whole effect is the CLOTH CURL from
-// aikawakenichi.com/journey: while you SCROLL, each photo's top and bottom
-// edges bow into a wide draped curve — like fabric dragging as it's pulled —
-// and the faster you scroll the deeper the drape. The moment you stop, the
-// edges settle back to straight. The image itself never squashes or scales
-// (that earlier "wiggle" was wrong); only the edges curl.
-// `arch` is a shared motion value (px depth of the drape) fed from the whole
-// viewer's scroll velocity.
-function FlowFrame({ photo, arch }) {
-  // Elliptical radius: horizontal held at 50% so the two corners of an edge
-  // merge into one smooth drape; vertical = the live arch depth.
-  const radius = useMotionTemplate`50% ${arch}px`;
+// Arc ⇄ flat glyph matching the reference site's layout button
+function ModeGlyph({ flat }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" width="20" height="20">
+      <motion.path
+        d={flat ? 'M4 12 H20' : 'M4 15 Q12 6 20 15'}
+        animate={{ d: flat ? 'M4 12 H20' : 'M4 15 Q12 6 20 15' }}
+        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+      <circle cx="12" cy={flat ? 8 : 9.6} r="1.5" fill="currentColor" />
+    </svg>
+  );
+}
+
+// One frame in the flow view. The effect is the "slithes" or drape effect
+// from aikawakenichi.com/journey: while you SCROLL, the image inside moves
+// slower than its container, creating a parallax slit reveal.
+function FlowFrame({ photo }) {
+  const ref = useRef(null);
+  
+  // Track this specific frame's position in the viewport
+  const { scrollYProgress } = useScroll({
+    target: ref,
+    offset: ['start end', 'end start'],
+  });
+
+  // Image shifts vertically by 15% as it scrolls past, creating the slit effect
+  const y = useTransform(scrollYProgress, [0, 1], ['-15%', '15%']);
+
   const style = prefersReduced
     ? undefined
-    : {
-        borderTopLeftRadius: radius,
-        borderTopRightRadius: radius,
-        borderBottomLeftRadius: radius,
-        borderBottomRightRadius: radius,
-      };
+    : { y, scale: 1.15 };
 
   return (
-    <div className="pv-frame" data-pv-id={photo.id}>
+    <div className="pv-frame" ref={ref} data-pv-id={photo.id}>
       <motion.img
         src={photo.src}
         srcSet={`
@@ -66,16 +78,6 @@ export default function PhotoViewer({ album, onClose }) {
   const [view, setView] = useState('flow');
 
   const thumb = album.photos[0]?.src;
-
-  // Scroll velocity → drape depth. Springed so the curl eases in and settles
-  // smoothly. Symmetric: fast scrolling in either direction deepens the arch;
-  // at rest it returns to 0 (straight edges). Clamped so it can't over-round.
-  const { scrollY } = useScroll({ container: scrollRef });
-  const rawVelocity = useVelocity(scrollY);
-  const velocity = useSpring(rawVelocity, { stiffness: 200, damping: 38, mass: 0.6 });
-  // Shallow + wide: the arch depth tops out low (a gentle drape, not a dome),
-  // and reaches it at a modest scroll speed so ordinary scrolling shows it.
-  const arch = useTransform(velocity, [-1400, 0, 1400], [58, 0, 58], { clamp: true });
 
   // Rendered through a portal to <body> so it escapes the Portfolio page's
   // animated stacking context — otherwise the site nav would paint over it.
@@ -108,7 +110,7 @@ export default function PhotoViewer({ album, onClose }) {
         <div className="pv-inner">
           {view === 'flow'
             ? album.photos.map((p) => (
-                <FlowFrame key={p.id} photo={p} arch={arch} />
+                <FlowFrame key={p.id} photo={p} />
               ))
             : album.photos.map((p) => (
                 <div className="pv-grid-item" key={p.id}>
@@ -150,10 +152,11 @@ export default function PhotoViewer({ album, onClose }) {
           aria-label={view === 'flow' ? 'Switch to grid view' : 'Switch to flow view'}
           title={view === 'flow' ? 'Grid view' : 'Flow view'}
         >
-          {view === 'flow' ? <LayoutGrid size={19} strokeWidth={1.9} /> : <GalleryVertical size={19} strokeWidth={1.9} />}
+          <ModeGlyph flat={view === 'grid'} />
         </button>
       </div>
     </motion.div>,
     document.body
   );
 }
+
