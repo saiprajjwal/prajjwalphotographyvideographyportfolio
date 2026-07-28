@@ -4,9 +4,7 @@ import {
   motion,
   useScroll,
   useTransform,
-  useMotionTemplate,
-  useVelocity,
-  useSpring,
+  useTransform,
 } from 'framer-motion';
 import { ArrowLeft } from 'lucide-react';
 import { EASE, DUR } from '../utils/motion';
@@ -33,38 +31,12 @@ function ModeGlyph({ flat }) {
   );
 }
 
-// One frame in the flow view. Combines the cloth curl (border-radius) 
-// and the parallax slit reveal.
-function FlowFrame({ photo, arch }) {
+// One frame in the flow view. Sticky stack "sliding page" effect.
+function FlowFrame({ photo }) {
   const ref = useRef(null);
-  
-  // Track this specific frame's position in the viewport for the parallax effect
-  const { scrollYProgress } = useScroll({
-    target: ref,
-    offset: ['start end', 'end start'],
-  });
-
-  // Image shifts vertically by 15% as it scrolls past
-  const y = useTransform(scrollYProgress, [0, 1], ['-15%', '15%']);
-
-  // Dynamic border-radius for the cloth effect
-  const radius = useMotionTemplate`50% ${arch}px`;
-
-  const frameStyle = prefersReduced
-    ? undefined
-    : {
-        borderTopLeftRadius: radius,
-        borderTopRightRadius: radius,
-        borderBottomLeftRadius: radius,
-        borderBottomRightRadius: radius,
-      };
-
-  const imgStyle = prefersReduced
-    ? undefined
-    : { y, scale: 1.15 };
 
   return (
-    <motion.div className="pv-frame" ref={ref} data-pv-id={photo.id} style={frameStyle}>
+    <motion.div className="pv-frame" ref={ref} data-pv-id={photo.id}>
       <motion.img
         src={photo.src}
         srcSet={`
@@ -77,7 +49,6 @@ function FlowFrame({ photo, arch }) {
         alt={photo.alt}
         loading="lazy"
         draggable="false"
-        style={imgStyle}
       />
     </motion.div>
   );
@@ -87,18 +58,10 @@ function FlowFrame({ photo, arch }) {
 //   album = { name, categoryLabel, photos: [{ id, src, alt }], startId }
 export default function PhotoViewer({ album, onClose }) {
   const scrollRef = useRef(null);
-  // 'flow' = single-column cloth-curl scroll (default, like the reference),
   // 'grid' = denser two-column contact sheet.
   const [view, setView] = useState('flow');
 
   const thumb = album.photos[0]?.src;
-
-  // Scroll velocity -> drape depth. 
-  // Increased the max clamp from 58 to 120 for a much stronger cloth curve.
-  const { scrollY } = useScroll({ container: scrollRef });
-  const rawVelocity = useVelocity(scrollY);
-  const velocity = useSpring(rawVelocity, { stiffness: 200, damping: 38, mass: 0.6 });
-  const arch = useTransform(velocity, [-2000, 0, 2000], [120, 0, 120], { clamp: true });
 
   // Rendered through a portal to <body> so it escapes the Portfolio page's
   // animated stacking context — otherwise the site nav would paint over it.
@@ -131,7 +94,7 @@ export default function PhotoViewer({ album, onClose }) {
         <div className="pv-inner">
           {view === 'flow'
             ? album.photos.map((p) => (
-                <FlowFrame key={p.id} photo={p} arch={arch} />
+                <FlowFrame key={p.id} photo={p} />
               ))
             : album.photos.map((p) => (
                 <div className="pv-grid-item" key={p.id}>
