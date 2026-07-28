@@ -1,9 +1,10 @@
 import { useRef, useState, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { motion, useScroll } from 'framer-motion';
+import {
+  motion,
+} from 'framer-motion';
 import { ArrowLeft } from 'lucide-react';
 import { EASE, DUR } from '../utils/motion';
-import PhotoViewerScene from './PhotoViewerScene';
 import './PhotoViewer.css';
 
 const prefersReduced =
@@ -27,14 +28,35 @@ function ModeGlyph({ flat }) {
   );
 }
 
-// Replaced DOM FlowFrame with WebGL scene in flow mode.
+// One frame in the flow view. Sticky stack "sliding page" effect.
+function FlowFrame({ photo }) {
+  const ref = useRef(null);
+
+  return (
+    <motion.div className="pv-frame" ref={ref} data-pv-id={photo.id}>
+      <motion.img
+        src={photo.src}
+        srcSet={`
+          ${photo.src.replace('w_1200', 'w_800')} 800w,
+          ${photo.src.replace('w_1200', 'w_1200')} 1200w,
+          ${photo.src.replace('w_1200', 'w_1600')} 1600w,
+          ${photo.src.replace('w_1200', 'w_2000')} 2000w
+        `}
+        sizes="(max-width: 1100px) 100vw, 1100px"
+        alt={photo.alt}
+        loading="lazy"
+        draggable="false"
+      />
+    </motion.div>
+  );
+}
 
 // Full-screen scroll viewer for a single album's photos.
 //   album = { name, categoryLabel, photos: [{ id, src, alt }], startId }
 export default function PhotoViewer({ album, onClose }) {
   const scrollRef = useRef(null);
+  // 'grid' = denser two-column contact sheet.
   const [view, setView] = useState('flow');
-  const { scrollYProgress } = useScroll({ container: scrollRef });
 
   const thumb = album.photos[0]?.src;
 
@@ -67,34 +89,29 @@ export default function PhotoViewer({ album, onClose }) {
         data-lenis-prevent
       >
         <div className="pv-inner">
-          {view === 'flow' ? (
-            <div style={{ height: `calc(${album.photos.length} * 130vh)` }} />
-          ) : (
-            album.photos.map((p) => (
-              <div className="pv-grid-item" key={p.id}>
-                <img
-                  src={p.src}
-                  srcSet={`
-                    ${p.src.replace('w_1200', 'w_400')} 400w,
-                    ${p.src.replace('w_1200', 'w_800')} 800w,
-                    ${p.src.replace('w_1200', 'w_1200')} 1200w
-                  `}
-                  sizes="(max-width: 700px) 50vw, 33vw"
-                  alt={p.alt}
-                  loading="lazy"
-                  draggable="false"
-                />
-              </div>
-            ))
-          )}
+          {view === 'flow'
+            ? album.photos.map((p) => (
+                <FlowFrame key={p.id} photo={p} />
+              ))
+            : album.photos.map((p) => (
+                <div className="pv-grid-item" key={p.id}>
+                  <img
+                    src={p.src}
+                    srcSet={`
+                      ${p.src.replace('w_1200', 'w_400')} 400w,
+                      ${p.src.replace('w_1200', 'w_800')} 800w,
+                      ${p.src.replace('w_1200', 'w_1200')} 1200w
+                    `}
+                    sizes="(max-width: 700px) 50vw, 33vw"
+                    alt={p.alt}
+                    loading="lazy"
+                    draggable="false"
+                  />
+                </div>
+              ))}
           <div className="pv-end" aria-hidden="true" />
         </div>
       </div>
-
-      {/* Render WebGL canvas behind UI when in flow mode */}
-      {view === 'flow' && (
-        <PhotoViewerScene photos={album.photos} scrollYProgress={scrollYProgress} />
-      )}
 
       {/* Fixed control bar — back, album-name pill, view toggle (reference layout) */}
       <div className="pv-bar">
