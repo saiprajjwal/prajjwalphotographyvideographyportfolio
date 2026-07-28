@@ -2,6 +2,11 @@ import { useRef, useState, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import {
   motion,
+  useScroll,
+  useVelocity,
+  useSpring,
+  useMotionTemplate,
+  useTransform,
 } from 'framer-motion';
 import { ArrowLeft } from 'lucide-react';
 import { EASE, DUR } from '../utils/motion';
@@ -28,12 +33,25 @@ function ModeGlyph({ flat }) {
   );
 }
 
-// One frame in the flow view. Sticky stack "sliding page" effect.
-function FlowFrame({ photo }) {
+// One frame in the flow view. Sticky stack with dynamic top-edge cloth pull.
+function FlowFrame({ photo, arch }) {
   const ref = useRef(null);
 
+  // Apply the velocity-driven curve ONLY to the top edge.
+  // Horizontal radius is 50% so they meet perfectly in the middle, creating a continuous arch.
+  const radius = useMotionTemplate`50% ${arch}px`;
+
+  const frameStyle = prefersReduced
+    ? undefined
+    : {
+        borderTopLeftRadius: radius,
+        borderTopRightRadius: radius,
+        borderBottomLeftRadius: 0,
+        borderBottomRightRadius: 0,
+      };
+
   return (
-    <motion.div className="pv-frame" ref={ref} data-pv-id={photo.id}>
+    <motion.div className="pv-frame" ref={ref} data-pv-id={photo.id} style={frameStyle}>
       <motion.img
         src={photo.src}
         srcSet={`
@@ -57,6 +75,13 @@ export default function PhotoViewer({ album, onClose }) {
   const scrollRef = useRef(null);
   // 'grid' = denser two-column contact sheet.
   const [view, setView] = useState('flow');
+  const { scrollY } = useScroll({ container: scrollRef });
+
+  // Map scroll velocity to an arch depth for the top edge.
+  const rawVelocity = useVelocity(scrollY);
+  const smoothVelocity = useSpring(rawVelocity, { stiffness: 200, damping: 40 });
+  // The faster you scroll, the deeper the corners drop (up to 120px) creating the top-pull effect.
+  const arch = useTransform(smoothVelocity, [-2000, 0, 2000], [120, 0, 120], { clamp: true });
 
   const thumb = album.photos[0]?.src;
 
@@ -91,7 +116,7 @@ export default function PhotoViewer({ album, onClose }) {
         <div className="pv-inner">
           {view === 'flow'
             ? album.photos.map((p) => (
-                <FlowFrame key={p.id} photo={p} />
+                <FlowFrame key={p.id} photo={p} arch={arch} />
               ))
             : album.photos.map((p) => (
                 <div className="pv-grid-item" key={p.id}>
