@@ -2,9 +2,6 @@ import { useRef, useState, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import {
   motion,
-  useScroll,
-  useTransform,
-  useTransform,
 } from 'framer-motion';
 import { ArrowLeft } from 'lucide-react';
 import { EASE, DUR } from '../utils/motion';
