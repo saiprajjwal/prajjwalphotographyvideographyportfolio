@@ -72,13 +72,53 @@ const CLOTH_VERT = `
 const CLOTH_FRAG = `
   uniform sampler2D uTexture;
   uniform float uOpacity;
+  uniform float uVelocity;
   varying vec2 vUv;
   varying float vTopFade;
 
   void main() {
     vec4 tex = texture2D(uTexture, vUv);
+    vec3 image = tex.rgb;
+
+    // Match the reference's soft optical treatment on the rolling portion:
+    // five directional samples, plus a slight red/blue split at the thinnest
+    // edge. Multiplying velocity blur by vTopFade keeps the middle and bottom
+    // of the photograph perfectly sharp.
+    float fadeBlur = clamp(vTopFade * 0.03, 0.0, 0.08);
+    float velocityBlur =
+      clamp(abs(uVelocity) * 0.0008, 0.0, 0.08)
+      * smoothstep(0.0, 0.30, vTopFade);
+    float blurAmount = fadeBlur + velocityBlur;
+
+    if (blurAmount > 0.00001) {
+      float velocityDir = sign(uVelocity);
+      vec2 dir = vec2(
+        0.0,
+        blurAmount * (velocityDir == 0.0 ? 1.0 : velocityDir)
+      );
+
+      vec3 sampleNearA = texture2D(uTexture, vUv - dir * 0.5).rgb;
+      vec3 sampleNearB = texture2D(uTexture, vUv + dir * 0.5).rgb;
+      vec3 sampleFarA = texture2D(uTexture, vUv - dir).rgb;
+      vec3 sampleFarB = texture2D(uTexture, vUv + dir).rgb;
+      vec3 blurred =
+        (tex.rgb * 0.32)
+        + (sampleNearA * 0.24)
+        + (sampleNearB * 0.24)
+        + (sampleFarA * 0.10)
+        + (sampleFarB * 0.10);
+
+      vec2 aberrationOffset = vec2(0.018 * vTopFade, 0.0);
+      vec3 chroma = vec3(
+        texture2D(uTexture, vUv + aberrationOffset).r,
+        blurred.g,
+        texture2D(uTexture, vUv - aberrationOffset).b
+      );
+      image = mix(blurred, chroma, clamp(vTopFade, 0.0, 1.0));
+    }
+
     float alpha = tex.a * uOpacity * (1.0 - vTopFade);
-    gl_FragColor = vec4(tex.rgb, alpha);
+    gl_FragColor = vec4(image, alpha);
   }
 `;
 
@@ -155,9 +195,17 @@ function DOMSyncedImage({ photo, scrollY, rollVelocity, reduceMotion }) {
     // sensor noise from leaving a crease at rest; a brisk wheel/finger gesture
     // reaches the reference's full 500px roll radius.
     const speed = Math.abs(rollVelocity.get());
+    const referenceVelocity = THREE.MathUtils.clamp(
+      rollVelocity.get() / 60,
+      -120,
+      120,
+    );
     materialRef.current.uniforms.uRollStrength.value = reduceMotion
       ? 0
       : THREE.MathUtils.smoothstep(speed, 24, 900);
+    materialRef.current.uniforms.uVelocity.value = reduceMotion
+      ? 0
+      : referenceVelocity;
   });
 
   return (
@@ -174,6 +222,7 @@ function DOMSyncedImage({ photo, scrollY, rollVelocity, reduceMotion }) {
           uHeight: { value: 1 },
           uScrollPos: { value: 0 },
           uRollStrength: { value: 1 },
+          uVelocity: { value: 0 },
           uOpacity: { value: 1 }
         }}
         transparent={true}
