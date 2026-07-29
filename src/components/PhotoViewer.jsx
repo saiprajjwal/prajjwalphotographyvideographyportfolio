@@ -1,15 +1,9 @@
 import { useRef, useState, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
-import {
-  motion,
-  useScroll,
-  useVelocity,
-  useSpring,
-  useMotionTemplate,
-  useTransform,
-} from 'framer-motion';
+import { motion, useScroll } from 'framer-motion';
 import { ArrowLeft } from 'lucide-react';
 import { EASE, DUR } from '../utils/motion';
+import PhotoViewerScene from './PhotoViewerScene';
 import './PhotoViewer.css';
 
 const prefersReduced =
@@ -33,26 +27,12 @@ function ModeGlyph({ flat }) {
   );
 }
 
-// One frame in the flow view. Sticky stack with dynamic top-edge cloth pull.
-function FlowFrame({ photo, arch }) {
-  const ref = useRef(null);
-
-  // Apply the velocity-driven curve ONLY to the top edge.
-  // Horizontal radius is 50% so they meet perfectly in the middle, creating a continuous arch.
-  const radius = useMotionTemplate`50% ${arch}px`;
-
-  const frameStyle = prefersReduced
-    ? undefined
-    : {
-        borderTopLeftRadius: radius,
-        borderTopRightRadius: radius,
-        borderBottomLeftRadius: 0,
-        borderBottomRightRadius: 0,
-      };
-
+// One frame in the flow view. The DOM element is invisible but drives layout for WebGL.
+function FlowFrame({ photo }) {
   return (
-    <motion.div className="pv-frame" ref={ref} data-pv-id={photo.id} style={frameStyle}>
-      <motion.img
+    <div className="pv-frame" id={`pv-frame-${photo.id}`} data-pv-id={photo.id}>
+      <img
+        id={`pv-img-${photo.id}`}
         src={photo.src}
         srcSet={`
           ${photo.src.replace('w_1200', 'w_800')} 800w,
@@ -65,7 +45,7 @@ function FlowFrame({ photo, arch }) {
         loading="lazy"
         draggable="false"
       />
-    </motion.div>
+    </div>
   );
 }
 
@@ -73,15 +53,8 @@ function FlowFrame({ photo, arch }) {
 //   album = { name, categoryLabel, photos: [{ id, src, alt }], startId }
 export default function PhotoViewer({ album, onClose }) {
   const scrollRef = useRef(null);
-  // 'grid' = denser two-column contact sheet.
   const [view, setView] = useState('flow');
   const { scrollY } = useScroll({ container: scrollRef });
-
-  // Map scroll velocity to an arch depth for the top edge.
-  const rawVelocity = useVelocity(scrollY);
-  const smoothVelocity = useSpring(rawVelocity, { stiffness: 200, damping: 40 });
-  // The faster you scroll, the deeper the corners drop (up to 120px) creating the top-pull effect.
-  const arch = useTransform(smoothVelocity, [-2000, 0, 2000], [120, 0, 120], { clamp: true });
 
   const thumb = album.photos[0]?.src;
 
@@ -116,7 +89,7 @@ export default function PhotoViewer({ album, onClose }) {
         <div className="pv-inner">
           {view === 'flow'
             ? album.photos.map((p) => (
-                <FlowFrame key={p.id} photo={p} arch={arch} />
+                <FlowFrame key={p.id} photo={p} />
               ))
             : album.photos.map((p) => (
                 <div className="pv-grid-item" key={p.id}>
@@ -137,6 +110,10 @@ export default function PhotoViewer({ album, onClose }) {
           <div className="pv-end" aria-hidden="true" />
         </div>
       </div>
+
+      {view === 'flow' && (
+        <PhotoViewerScene photos={album.photos} scrollY={scrollY} scrollRef={scrollRef} />
+      )}
 
       {/* Fixed control bar — back, album-name pill, view toggle (reference layout) */}
       <div className="pv-bar">
