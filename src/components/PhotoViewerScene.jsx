@@ -15,13 +15,18 @@ const CLOTH_VERT = `
 
     // Parabola across the width: 1 at the center, 0 at the left/right edges.
     float dist = abs(uv.x - 0.5) * 2.0;
-    float arch = 1.0 - pow(dist, 2.0);
+    float archX = 1.0 - pow(dist, 2.0);
 
-    // The mesh is 1 unit tall and gets scaled to uHeight px, so to displace the
-    // center column by uArch PIXELS we divide by uHeight first. This makes the
-    // drape depth identical for tall and short photos. uArch is fed from scroll
-    // velocity, so the edges bow while scrolling and settle flat at rest.
-    pos.y += arch * (uArch / uHeight);
+    // Localize the bend to the TOP of the photo. 0 across the whole lower/middle
+    // (uv.y < 0.55) so the middle stays perfectly flat ("simple"), ramping to 1
+    // only at the very top edge (uv.y = 1). This makes ONLY the top edge curl,
+    // instead of the whole plane wiggling.
+    float topWeight = smoothstep(0.55, 1.0, uv.y);
+
+    // Displace in pixels (mesh is scaled to uHeight, so divide first). uArch is
+    // fed from scroll velocity, so the top edge domes while scrolling and
+    // settles flat at rest.
+    pos.y += archX * topWeight * (uArch / uHeight);
 
     gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
   }
