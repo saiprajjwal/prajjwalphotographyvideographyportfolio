@@ -1,72 +1,35 @@
-import { useRef, useState, useLayoutEffect } from 'react';
+import { useRef, useState, useLayoutEffect, lazy, Suspense } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, useScroll } from 'framer-motion';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, LayoutGrid, GalleryVertical } from 'lucide-react';
 import { EASE, DUR } from '../utils/motion';
-import PhotoViewerScene from './PhotoViewerScene';
 import './PhotoViewer.css';
 
-const prefersReduced =
-  typeof window !== 'undefined' &&
-  window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-// Arc ⇄ flat glyph matching the reference site's layout button
-function ModeGlyph({ flat }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" width="20" height="20">
-      <motion.path
-        d={flat ? 'M4 12 H20' : 'M4 15 Q12 6 20 15'}
-        animate={{ d: flat ? 'M4 12 H20' : 'M4 15 Q12 6 20 15' }}
-        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
-      <circle cx="12" cy={flat ? 8 : 9.6} r="1.5" fill="currentColor" />
-    </svg>
-  );
-}
-
-// One frame in the flow view. The DOM element is invisible but drives layout for WebGL.
-function FlowFrame({ photo }) {
-  return (
-    <div className="pv-frame" id={`pv-frame-${photo.id}`} data-pv-id={photo.id}>
-      <img
-        id={`pv-img-${photo.id}`}
-        src={photo.src}
-        srcSet={`
-          ${photo.src.replace('w_1200', 'w_800')} 800w,
-          ${photo.src.replace('w_1200', 'w_1200')} 1200w,
-          ${photo.src.replace('w_1200', 'w_1600')} 1600w,
-          ${photo.src.replace('w_1200', 'w_2000')} 2000w
-        `}
-        sizes="(max-width: 1100px) 100vw, 1100px"
-        alt={photo.alt}
-        loading="lazy"
-        draggable="false"
-      />
-    </div>
-  );
-}
+// The WebGL layer that renders the actual photos on bendable planes. Lazy so
+// three.js only loads when a viewer is opened, not on the Portfolio route.
+const PhotoViewerScene = lazy(() => import('./PhotoViewerScene'));
 
 // Full-screen scroll viewer for a single album's photos.
 //   album = { name, categoryLabel, photos: [{ id, src, alt }], startId }
+//
+// Flow view is a DOM-synced WebGL gallery: the DOM lays out invisible image
+// placeholders (which drive scroll + position), and PhotoViewerScene draws the
+// real, texture-mapped planes on top — bending each plane's mesh with scroll
+// velocity for the true cloth-curl from aikawakenichi.com/journey. Grid view is
+// a plain DOM contact sheet.
 export default function PhotoViewer({ album, onClose }) {
   const scrollRef = useRef(null);
   const [view, setView] = useState('flow');
-  const { scrollY } = useScroll({ container: scrollRef });
-
   const thumb = album.photos[0]?.src;
 
-  // Rendered through a portal to <body> so it escapes the Portfolio page's
-  // animated stacking context — otherwise the site nav would paint over it.
+  // Live scroll position of the viewer, fed to the WebGL cloth shader.
+  const { scrollY } = useScroll({ container: scrollRef });
 
-  // Open scrolled to whichever photo was tapped, so it feels like that photo
-  // opened (not always the first). Jump instantly before paint.
+  // Open scrolled to whichever photo was tapped.
   useLayoutEffect(() => {
     if (!album.startId || view !== 'flow') return;
     const el = scrollRef.current?.querySelector(`[data-pv-id="${CSS.escape(album.startId)}"]`);
-    if (el) el.scrollIntoView({ block: 'center' });
+    if (el) el.scrollIntoView({ block: 'start' });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [album.startId]);
 
@@ -81,6 +44,14 @@ export default function PhotoViewer({ album, onClose }) {
       aria-modal="true"
       aria-label={`${album.name} photographs`}
     >
+      {/* WebGL cloth layer (flow view only). Fixed, pointer-events-none, so the
+          scroll below still receives wheel/touch. */}
+      {view === 'flow' && (
+        <Suspense fallback={null}>
+          <PhotoViewerScene photos={album.photos} scrollY={scrollY} />
+        </Suspense>
+      )}
+
       <div
         className={`pv-scroll pv-scroll--${view}`}
         ref={scrollRef}
@@ -89,7 +60,18 @@ export default function PhotoViewer({ album, onClose }) {
         <div className="pv-inner">
           {view === 'flow'
             ? album.photos.map((p) => (
-                <FlowFrame key={p.id} photo={p} />
+                // Invisible placeholder: gives the WebGL plane its size + scroll
+                // position. The real pixels are drawn by PhotoViewerScene.
+                <div className="pv-frame" key={p.id} data-pv-id={p.id}>
+                  <img
+                    id={`pv-img-${p.id}`}
+                    className="pv-frame-img"
+                    src={p.src}
+                    alt={p.alt}
+                    loading="lazy"
+                    draggable="false"
+                  />
+                </div>
               ))
             : album.photos.map((p) => (
                 <div className="pv-grid-item" key={p.id}>
@@ -111,10 +93,6 @@ export default function PhotoViewer({ album, onClose }) {
         </div>
       </div>
 
-      {view === 'flow' && (
-        <PhotoViewerScene photos={album.photos} scrollY={scrollY} scrollRef={scrollRef} />
-      )}
-
       {/* Fixed control bar — back, album-name pill, view toggle (reference layout) */}
       <div className="pv-bar">
         <button className="pv-btn" onClick={onClose} aria-label="Back to album">
@@ -135,11 +113,10 @@ export default function PhotoViewer({ album, onClose }) {
           aria-label={view === 'flow' ? 'Switch to grid view' : 'Switch to flow view'}
           title={view === 'flow' ? 'Grid view' : 'Flow view'}
         >
-          <ModeGlyph flat={view === 'grid'} />
+          {view === 'flow' ? <LayoutGrid size={19} strokeWidth={1.9} /> : <GalleryVertical size={19} strokeWidth={1.9} />}
         </button>
       </div>
     </motion.div>,
     document.body
   );
 }
-

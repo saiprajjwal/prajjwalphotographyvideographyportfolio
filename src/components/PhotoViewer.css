@@ -28,26 +28,22 @@
   max-width: 1100px;
   display: flex;
   flex-direction: column;
-  gap: 15vh;
-  padding: 15vh clamp(0px, 3vw, 40px) 26vh;
+  gap: 9vh;
+  padding: 10vh clamp(0px, 3vw, 40px) 24vh;
 }
 
 .pv-frame {
   width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
-.pv-frame img {
+/* Layout-only placeholder: sizes + positions the WebGL plane that draws the
+   real photo, so the element rect must equal the displayed image exactly
+   (no object-fit letterboxing). It is itself invisible. */
+.pv-frame-img {
   display: block;
   width: 100%;
-  max-width: 1200px;
   height: auto;
-  max-height: 90vh;
-  object-fit: contain;
-  opacity: 0; /* Let WebGL draw the visible pixels */
-  will-change: transform;
+  opacity: 0;
 }
 
 /* ── Grid (contact-sheet) ── */

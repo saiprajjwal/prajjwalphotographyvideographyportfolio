@@ -5,26 +5,23 @@ import * as THREE from 'three';
 import { useVelocity, useSpring } from 'framer-motion';
 
 const CLOTH_VERT = `
-  uniform float uVelocity;
+  uniform float uArch;    // desired vertical drape depth at center, in PIXELS
+  uniform float uHeight;  // plane height in pixels (mesh is scaled by this)
   varying vec2 vUv;
 
   void main() {
     vUv = uv;
     vec3 pos = position;
 
-    // Arch shape: 1 at the center, 0 at the edges
+    // Parabola across the width: 1 at the center, 0 at the left/right edges.
     float dist = abs(uv.x - 0.5) * 2.0;
     float arch = 1.0 - pow(dist, 2.0);
 
-    // Bend the top and bottom edges based on scroll velocity.
-    // uVelocity is measured in pixels per second. 
-    // We scale it down so a fast swipe bends the image by up to ~100-200 pixels.
-    // The negative sign ensures that if you scroll down (velocity positive), 
-    // the center lags behind (bends up), creating the pulling effect.
-    pos.y += arch * uVelocity * -0.05;
-    
-    // Add a slight Z pop based on velocity (optional, but looks nice for cloth)
-    pos.z += arch * abs(uVelocity) * 0.02;
+    // The mesh is 1 unit tall and gets scaled to uHeight px, so to displace the
+    // center column by uArch PIXELS we divide by uHeight first. This makes the
+    // drape depth identical for tall and short photos. uArch is fed from scroll
+    // velocity, so the edges bow while scrolling and settle flat at rest.
+    pos.y += arch * (uArch / uHeight);
 
     gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
   }
@@ -75,8 +72,9 @@ function DOMSyncedImage({ photo, scrollY }) {
 
     const rect = el.getBoundingClientRect();
     
-    // Check if it's visible on screen (with a little bleed area)
-    const isVisible = rect.top < window.innerHeight + 500 && rect.bottom > -500;
+    // Check if it's visible on screen (generous bleed so a mid-scroll drape
+    // never pops out at the edges)
+    const isVisible = rect.top < window.innerHeight + 900 && rect.bottom > -900;
     
     if (!isVisible) {
       meshRef.current.visible = false;
@@ -97,8 +95,12 @@ function DOMSyncedImage({ photo, scrollY }) {
 
     // Update shader uniforms
     materialRef.current.uniforms.uTexture.value = texture;
-    // We pass the scroll velocity (pixels/sec) to the shader
-    materialRef.current.uniforms.uVelocity.value = smoothVelocity.get();
+    materialRef.current.uniforms.uHeight.value = rect.height;
+    // Clamp velocity (px/s) so extreme flings can't over-bend, then convert to
+    // a pixel drape depth. ~0.06 → about ±95px of drape at a brisk scroll.
+    const raw = smoothVelocity.get();
+    const clamped = Math.max(-1600, Math.min(1600, raw));
+    materialRef.current.uniforms.uArch.value = clamped * 0.06;
   });
 
   return (
@@ -111,7 +113,8 @@ function DOMSyncedImage({ photo, scrollY }) {
         fragmentShader={CLOTH_FRAG}
         uniforms={{
           uTexture: { value: null },
-          uVelocity: { value: 0 },
+          uArch: { value: 0 },
+          uHeight: { value: 1 },
           uOpacity: { value: 1 }
         }}
         transparent={true}
