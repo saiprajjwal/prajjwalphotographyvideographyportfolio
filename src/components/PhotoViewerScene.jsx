@@ -2,10 +2,10 @@ import { useRef, useState, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrthographicCamera } from '@react-three/drei';
 import * as THREE from 'three';
-import { useVelocity, useSpring } from 'framer-motion';
+import { useReducedMotion, useSpring, useVelocity } from 'framer-motion';
 
 const CLOTH_VERT = `
-  uniform float uArch;    // desired vertical drape depth at center, in PIXELS
+  uniform float uCurl;    // signed curl depth at the top-center, in pixels
   uniform float uHeight;  // plane height in pixels (mesh is scaled by this)
   varying vec2 vUv;
 
@@ -13,20 +13,20 @@ const CLOTH_VERT = `
     vUv = uv;
     vec3 pos = position;
 
-    // Parabola across the width: 1 at the center, 0 at the left/right edges.
-    float dist = abs(uv.x - 0.5) * 2.0;
-    float archX = 1.0 - pow(dist, 2.0);
+    // The reference behaves like a sheet held at its two top corners: the
+    // centre of the leading edge has the most travel and the corners barely
+    // move. sin() gives a softer, more cloth-like shoulder than a parabola.
+    float across = pow(sin(uv.x * 3.14159265), 1.35);
 
-    // Localize the bend to the TOP of the photo. 0 across the whole lower/middle
-    // (uv.y < 0.55) so the middle stays perfectly flat ("simple"), ramping to 1
-    // only at the very top edge (uv.y = 1). This makes ONLY the top edge curl,
-    // instead of the whole plane wiggling.
-    float topWeight = smoothstep(0.55, 1.0, uv.y);
+    // Only the upper 18% participates. The fifth-order curve has zero slope at
+    // both ends, so the fold joins the completely rigid lower 82% invisibly.
+    float topBand = clamp((uv.y - 0.82) / 0.18, 0.0, 1.0);
+    float topFold = topBand * topBand * topBand
+      * (topBand * (topBand * 6.0 - 15.0) + 10.0);
 
-    // Displace in pixels (mesh is scaled to uHeight, so divide first). uArch is
-    // fed from scroll velocity, so the top edge domes while scrolling and
-    // settles flat at rest.
-    pos.y += archX * topWeight * (uArch / uHeight);
+    // uCurl is signed from scroll direction. Position is normalized before the
+    // DOM-sized mesh scale is applied, keeping the fold depth in screen pixels.
+    pos.y += across * topFold * (uCurl / max(uHeight, 1.0));
 
     gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
   }
@@ -44,20 +44,22 @@ const CLOTH_FRAG = `
   }
 `;
 
-function DOMSyncedImage({ photo, scrollY }) {
+function DOMSyncedImage({ photo, velocity, reduceMotion }) {
   const meshRef = useRef(null);
   const materialRef = useRef(null);
   const [texture, setTexture] = useState(null);
 
-  // Derive smoothed velocity from framer-motion scroll
-  const rawVelocity = useVelocity(scrollY);
-  const smoothVelocity = useSpring(rawVelocity, { damping: 50, stiffness: 400 });
-
   // Load texture
   useEffect(() => {
     let active = true;
+    let loadedTexture;
+
     new THREE.TextureLoader().load(photo.src, (tex) => {
-      if (!active) return;
+      loadedTexture = tex;
+      if (!active) {
+        tex.dispose();
+        return;
+      }
       // Use NoColorSpace to prevent washed-out colours on raw ShaderMaterials
       tex.colorSpace = THREE.NoColorSpace;
       tex.minFilter = THREE.LinearMipmapLinearFilter;
@@ -65,7 +67,11 @@ function DOMSyncedImage({ photo, scrollY }) {
       tex.generateMipmaps = true;
       setTexture(tex);
     });
-    return () => { active = false; };
+
+    return () => {
+      active = false;
+      loadedTexture?.dispose();
+    };
   }, [photo.src]);
 
   useFrame(() => {
@@ -101,11 +107,14 @@ function DOMSyncedImage({ photo, scrollY }) {
     // Update shader uniforms
     materialRef.current.uniforms.uTexture.value = texture;
     materialRef.current.uniforms.uHeight.value = rect.height;
-    // Clamp velocity (px/s) so extreme flings can't over-bend, then convert to
-    // a pixel drape depth. ~0.06 → about ±95px of drape at a brisk scroll.
-    const raw = smoothVelocity.get();
-    const clamped = Math.max(-1600, Math.min(1600, raw));
-    materialRef.current.uniforms.uArch.value = clamped * 0.06;
+
+    // DOM content travels opposite scroll direction, so the cloth's leading
+    // edge lags with the opposite sign. A brisk wheel gesture produces roughly
+    // 50–70px of travel; flings are capped before they become a whole-image
+    // "wiggle". The shared spring returns every image to a true rectangle.
+    const scrollVelocity = reduceMotion ? 0 : velocity.get();
+    const clamped = THREE.MathUtils.clamp(scrollVelocity, -1800, 1800);
+    materialRef.current.uniforms.uCurl.value = -clamped * 0.038;
   });
 
   return (
@@ -118,7 +127,7 @@ function DOMSyncedImage({ photo, scrollY }) {
         fragmentShader={CLOTH_FRAG}
         uniforms={{
           uTexture: { value: null },
-          uArch: { value: 0 },
+          uCurl: { value: 0 },
           uHeight: { value: 1 },
           uOpacity: { value: 1 }
         }}
@@ -129,6 +138,16 @@ function DOMSyncedImage({ photo, scrollY }) {
 }
 
 export default function PhotoViewerScene({ photos, scrollY }) {
+  const rawVelocity = useVelocity(scrollY);
+  // A quick attack preserves wheel/finger intent; the slightly softer release
+  // gives the reference's short cloth-settle without leaving residual motion.
+  const velocity = useSpring(rawVelocity, {
+    stiffness: 520,
+    damping: 46,
+    mass: 0.32,
+  });
+  const reduceMotion = useReducedMotion();
+
   return (
     <Canvas
       gl={{ alpha: true, antialias: true }}
@@ -147,7 +166,12 @@ export default function PhotoViewerScene({ photos, scrollY }) {
       />
       
       {photos.map((p) => (
-        <DOMSyncedImage key={p.id} photo={p} scrollY={scrollY} />
+        <DOMSyncedImage
+          key={p.id}
+          photo={p}
+          velocity={velocity}
+          reduceMotion={reduceMotion}
+        />
       ))}
     </Canvas>
   );
