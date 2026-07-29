@@ -9,6 +9,8 @@ const CLOTH_VERT = `
   uniform float uHeight;
   uniform float uScrollPos;
   uniform float uRollStrength;
+  uniform float uRollDepth;
+  uniform float uWaveAmp;
   varying vec2 vUv;
   varying float vTopFade;
 
@@ -29,8 +31,10 @@ const CLOTH_VERT = `
 
       // The two-stage S curve is the cloth-over-a-roller profile: it first
       // recedes from the camera, then softly returns instead of forming a dome.
-      float rollEnter = smoothstep(0.0, 0.42, band);
-      float rollReturn = smoothstep(0.44, 0.92, band);
+      // Both stages are widened and overlapped so the surface never creases at
+      // the hand-off point (the old 0.42/0.44 seam was a visible kink).
+      float rollEnter = smoothstep(0.0, 0.52, band);
+      float rollReturn = smoothstep(0.38, 0.96, band);
       float curlEnter = sin(rollEnter * 3.14159265 * 0.5);
       float curlReturn = sin(rollReturn * 3.14159265);
       float sCurve = (curlEnter * 0.92) - (curlReturn * 0.30 * 0.48);
@@ -38,26 +42,33 @@ const CLOTH_VERT = `
 
       // A broad, layered horizontal ripple keeps the rolled edge organic. The
       // phase follows scroll position, exactly like cloth being pulled upward.
+      // Lower frequencies + a slower phase drift read as heavy fabric instead
+      // of a fast shimmer, and stop the ripple from strobing frame to frame.
       float waveMask = sin(band * 3.14159265);
       float wavePhase = (
-        ((uv.x * 2.0 - 1.0) * 3.14159265 * 1.45 / 1.22)
-        - uScrollPos * 0.01
+        ((uv.x * 2.0 - 1.0) * 3.14159265 * 1.05)
+        - uScrollPos * 0.0045
       );
       float primaryWave = sin(wavePhase);
       float secondaryWave = sin(wavePhase * 0.52 - 0.95);
       float tertiaryWave = sin(wavePhase * 0.31 + 1.20);
       float smoothWave =
-        (primaryWave * 0.68)
-        + (secondaryWave * 0.22)
-        + (tertiaryWave * 0.10);
+        (primaryWave * 0.62)
+        + (secondaryWave * 0.26)
+        + (tertiaryWave * 0.12);
       float surfaceWave =
-        mix(primaryWave, smoothWave, 0.68) * 36.0 * waveMask;
+        mix(primaryWave, smoothWave, 0.85) * uWaveAmp * waveMask;
+
+      // Cloth gathers slightly as it goes over a roller — the sheet narrows a
+      // touch and its corners draw inward. Subtle, but it's what separates
+      // fabric from a bending sheet of glass.
+      pos.x *= 1.0 - (rollMask * uRollStrength * 0.022);
 
       // Y is normalized because the DOM-sized mesh scale is applied later.
       // Z remains in screen pixels so the perspective camera creates a real
       // 3D roll of the image pixels, rather than a 2D edge arch.
       pos.y += (lift / max(uHeight, 1.0)) * uRollStrength;
-      pos.z -= sCurve * 500.0 * rollMask * uRollStrength;
+      pos.z -= sCurve * uRollDepth * rollMask * uRollStrength;
       pos.z += surfaceWave * uRollStrength;
 
       // The material thins away at the very top of the roll.
@@ -126,6 +137,13 @@ function DOMSyncedImage({ photo, scrollY, rollVelocity, reduceMotion }) {
   const meshRef = useRef(null);
   const materialRef = useRef(null);
   const [texture, setTexture] = useState(null);
+  // Temporally damped copies of the two noisiest inputs. Wheel/trackpad
+  // velocity arrives in bursts, so feeding it straight into the shader made the
+  // roll flicker; easing toward the target instead lets the fabric build and
+  // release weight. Scroll position is smoothed for the same reason — it drives
+  // the ripple phase, which otherwise strobes at high scroll speeds.
+  const rollStrengthRef = useRef(0);
+  const wavePhaseRef = useRef(0);
 
   // Load texture
   useEffect(() => {
@@ -152,7 +170,7 @@ function DOMSyncedImage({ photo, scrollY, rollVelocity, reduceMotion }) {
     };
   }, [photo.src]);
 
-  useFrame(() => {
+  useFrame((_, delta) => {
     if (!meshRef.current || !materialRef.current || !texture) return;
 
     // Find the invisible DOM image element
@@ -182,6 +200,12 @@ function DOMSyncedImage({ photo, scrollY, rollVelocity, reduceMotion }) {
     
     meshRef.current.position.set(px, py, 0);
 
+    // Photos lower on screen paint over ones rolling away above them, matching
+    // cloth being pulled up. Explicit order keeps this stable — with depthTest
+    // off, a plane receding several hundred px in Z would otherwise pop in
+    // front of its neighbour depending on traversal order.
+    meshRef.current.renderOrder = Math.round(rect.top);
+
     // Update shader uniforms
     materialRef.current.uniforms.uTexture.value = texture;
     materialRef.current.uniforms.uHeight.value = rect.height;
@@ -189,20 +213,32 @@ function DOMSyncedImage({ photo, scrollY, rollVelocity, reduceMotion }) {
       window.innerWidth,
       window.innerHeight,
     );
-    materialRef.current.uniforms.uScrollPos.value = scrollY.get();
 
-    // Framer reports container velocity in px/s. The small dead zone prevents
-    // sensor noise from leaving a crease at rest; a brisk wheel/finger gesture
-    // reaches the reference's full 500px roll radius.
+    // Frame-rate-independent easing: at 60fps these settle in ~0.15s (roll) and
+    // ~0.25s (ripple), so both survive a dropped frame without a visible jump.
+    const rollEase = 1 - Math.exp(-14 * delta);
+    const phaseEase = 1 - Math.exp(-9 * delta);
+
+    // Framer reports container velocity in px/s. The dead zone keeps sensor
+    // noise from leaving a crease at rest, and the wider engage range means the
+    // roll builds progressively with scroll speed rather than snapping to full.
     const speed = Math.abs(rollVelocity.get());
+    const targetStrength = reduceMotion
+      ? 0
+      : THREE.MathUtils.smoothstep(speed, 40, 1500);
+    rollStrengthRef.current +=
+      (targetStrength - rollStrengthRef.current) * rollEase;
+
+    wavePhaseRef.current += (scrollY.get() - wavePhaseRef.current) * phaseEase;
+
     const referenceVelocity = THREE.MathUtils.clamp(
       rollVelocity.get() / 60,
       -120,
       120,
     );
-    materialRef.current.uniforms.uRollStrength.value = reduceMotion
-      ? 0
-      : THREE.MathUtils.smoothstep(speed, 24, 900);
+
+    materialRef.current.uniforms.uScrollPos.value = wavePhaseRef.current;
+    materialRef.current.uniforms.uRollStrength.value = rollStrengthRef.current;
     materialRef.current.uniforms.uVelocity.value = reduceMotion
       ? 0
       : referenceVelocity;
@@ -210,8 +246,9 @@ function DOMSyncedImage({ photo, scrollY, rollVelocity, reduceMotion }) {
 
   return (
     <mesh ref={meshRef} visible={false}>
-      {/* Matches the reference's vertical mesh density for a smooth top roll. */}
-      <planeGeometry args={[1, 1, 24, 48]} />
+      {/* Vertical density carries the roll: the curve is compressed into the
+          top band, so too few rows there facet the fabric into flat strips. */}
+      <planeGeometry args={[1, 1, 32, 96]} />
       <shaderMaterial
         ref={materialRef}
         vertexShader={CLOTH_VERT}
@@ -221,7 +258,11 @@ function DOMSyncedImage({ photo, scrollY, rollVelocity, reduceMotion }) {
           uResolution: { value: new THREE.Vector2(1, 1) },
           uHeight: { value: 1 },
           uScrollPos: { value: 0 },
-          uRollStrength: { value: 1 },
+          // Starts at rest — a non-zero default made every plane mount fully
+          // rolled and snap flat on its first frame.
+          uRollStrength: { value: 0 },
+          uRollDepth: { value: 430 },
+          uWaveAmp: { value: 26 },
           uVelocity: { value: 0 },
           uOpacity: { value: 1 }
         }}
@@ -264,10 +305,12 @@ function PixelPerspectiveCamera() {
 export default function PhotoViewerScene({ photos, scrollY }) {
   const reduceMotion = useReducedMotion();
   const rawVelocity = useVelocity(scrollY);
+  // Softer and heavier than a UI spring: fabric has mass, so the roll should
+  // lag the scroll slightly and unwind rather than snap back.
   const rollVelocity = useSpring(rawVelocity, {
-    stiffness: 430,
-    damping: 32,
-    mass: 0.32,
+    stiffness: 260,
+    damping: 34,
+    mass: 0.5,
   });
 
   return (
