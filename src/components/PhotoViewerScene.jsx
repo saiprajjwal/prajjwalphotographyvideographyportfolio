@@ -11,9 +11,11 @@ const CLOTH_VERT = `
   uniform float uRollStrength;
   uniform float uRollDepth;
   uniform float uWaveAmp;
+  uniform float uDirection;
   varying vec2 vUv;
   varying float vTopFade;
   varying float vBandRaw;
+  varying float vFoldLight;
 
   // Ken Perlin's smootherstep for G2 continuity (eliminates the Mach band crease line)
   float smootherstep_custom(float edge0, float edge1, float x) {
@@ -26,36 +28,57 @@ const CLOTH_VERT = `
     vec3 pos = position;
     vTopFade = 0.0;
     vBandRaw = 0.0;
+    vFoldLight = 0.0;
 
     if (uRollStrength > 0.0001) {
       vec4 worldPosition = modelMatrix * vec4(position, 1.0);
-      float topThreshold = (uResolution.y * 0.5) - (uResolution.y * 0.13);
-      float topRange = max(uResolution.y * 0.30, 1.0);
-      float band = clamp((worldPosition.y - topThreshold) / topRange, 0.0, 1.0);
+      float topThreshold = (uResolution.y * 0.5) - (uResolution.y * 0.10);
+      float topRange = max(uResolution.y * 0.24, 1.0);
+      float viewportBand = clamp(
+        (worldPosition.y - topThreshold) / topRange,
+        0.0,
+        1.0
+      );
+
+      // Only the upper portion of the photograph is allowed to become cloth.
+      // Even at maximum velocity, everything below it stays optically rigid.
+      float photoTopMask = smootherstep_custom(0.58, 0.98, uv.y);
+      float band = viewportBand * photoTopMask;
       
       vBandRaw = band; // Pass raw linear band for per-pixel shading
 
       float smoothBand = smootherstep_custom(0.0, 1.0, band);
       
-      // Clean, rigid cylinder roll
-      float angle = smoothBand * 3.14159265 * 0.55; 
+      // The broad under-roll gives the fabric its depth and recognizable
+      // "pulled over a bar" silhouette at the browser edge.
+      float angle = smoothBand * 3.14159265 * 0.68;
       float cylinderZ = 1.0 - cos(angle);
       float liftY = sin(angle);
 
-      pos.y += (liftY * 45.0 / max(uHeight, 1.0)) * uRollStrength;
+      pos.y += (liftY * 54.0 / max(uHeight, 1.0)) * uRollStrength;
       pos.z -= cylinderZ * uRollDepth * uRollStrength;
 
-      // A cylinder supplies the broad curl, while two quiet, wide waves keep
-      // its edge from reading as rigid card. The sin(band * PI) envelope makes
-      // the wave vanish at both joins, leaving the middle/bottom perfectly flat.
+      // Three differently sized folds break the cylinder into organic cloth.
+      // The phase follows scroll position, so no two pulls look mechanically
+      // identical, while the envelope hides every join into the flat image.
       float waveEnvelope = sin(band * 3.14159265);
-      float phase = (uv.x - 0.5) * 7.2 - uScrollPos * 0.006;
+      float phase = (uv.x - 0.5) * 6.8 - uScrollPos * 0.0055;
       float fabricWave =
-        sin(phase) * 0.72 +
-        sin(phase * 0.52 - 1.25) * 0.28;
+        sin(phase) * 0.56 +
+        sin(phase * 1.87 + 0.85) * 0.27 +
+        sin(phase * 0.43 - 1.65) * 0.17;
       pos.z += fabricWave * waveEnvelope * uWaveAmp * uRollStrength;
 
-      vTopFade = smootherstep_custom(0.30, 1.0, band) * uRollStrength;
+      // A slight centre sag and directional tug keep the edge loose rather than
+      // perfectly horizontal. Both disappear with the velocity envelope.
+      float centreSag = 1.0 - pow(abs(uv.x - 0.5) * 2.0, 2.0);
+      pos.y -= (
+        centreSag * waveEnvelope * 16.0 / max(uHeight, 1.0)
+      ) * uRollStrength;
+      pos.x += uDirection * smoothBand * 0.018 * uRollStrength;
+
+      vFoldLight = fabricWave * waveEnvelope * uRollStrength;
+      vTopFade = smootherstep_custom(0.34, 1.0, band) * uRollStrength;
     }
 
     gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
@@ -69,6 +92,7 @@ const CLOTH_FRAG = `
   varying vec2 vUv;
   varying float vTopFade;
   varying float vBandRaw;
+  varying float vFoldLight;
 
   float smootherstep_custom(float edge0, float edge1, float x) {
     float t = clamp((x - edge0) / (edge1 - edge0), 0.0, 1.0);
@@ -93,7 +117,7 @@ const CLOTH_FRAG = `
       vec3 sampleFarB = texture2D(uTexture, vUv + dir).rgb;
       vec3 blurred = (tex.rgb * 0.32) + (sampleNearA * 0.24) + (sampleNearB * 0.24) + (sampleFarA * 0.10) + (sampleFarB * 0.10);
 
-      vec2 aberrationOffset = vec2(0.018 * vTopFade, 0.0);
+      vec2 aberrationOffset = vec2(0.008 * vTopFade, 0.0);
       vec3 chroma = vec3(
         texture2D(uTexture, vUv + aberrationOffset).r,
         blurred.g,
@@ -104,10 +128,13 @@ const CLOTH_FRAG = `
 
     // Evaluate G2 continuous shadow per-pixel to completely avoid linear interpolation creases
     float smoothBand = smootherstep_custom(0.0, 1.0, vBandRaw);
-    float shadow = mix(1.0, 0.25, smoothBand);
-    image *= shadow;
+    float shadow = mix(1.0, 0.42, smoothBand);
+    float foldShade = clamp(1.0 + vFoldLight * 0.22, 0.72, 1.22);
+    image *= shadow * foldShade;
+    image += max(vFoldLight, 0.0) * 0.045;
 
-    float alpha = tex.a * uOpacity * (1.0 - vTopFade);
+    // Keep a faint translucent lip instead of erasing the rolled edge.
+    float alpha = tex.a * uOpacity * (1.0 - vTopFade * 0.86);
     gl_FragColor = vec4(image, alpha);
   }
 `;
@@ -123,6 +150,7 @@ function DOMSyncedImage({ photo, scrollY, rollVelocity, reduceMotion }) {
   // the ripple phase, which otherwise strobes at high scroll speeds.
   const rollStrengthRef = useRef(0);
   const wavePhaseRef = useRef(0);
+  const directionRef = useRef(1);
 
   // Load texture
   useEffect(() => {
@@ -217,9 +245,16 @@ function DOMSyncedImage({ photo, scrollY, rollVelocity, reduceMotion }) {
       (targetStrength - rollStrengthRef.current) * strengthEase;
 
     wavePhaseRef.current += (scrollY.get() - wavePhaseRef.current) * phaseEase;
+    if (Math.abs(referenceVelocity) > 0.2) {
+      const directionTarget = Math.sign(referenceVelocity);
+      const directionEase = 1 - Math.exp(-10 * delta);
+      directionRef.current +=
+        (directionTarget - directionRef.current) * directionEase;
+    }
 
     materialRef.current.uniforms.uScrollPos.value = wavePhaseRef.current;
     materialRef.current.uniforms.uRollStrength.value = rollStrengthRef.current;
+    materialRef.current.uniforms.uDirection.value = directionRef.current;
     materialRef.current.uniforms.uVelocity.value = reduceMotion
       ? 0
       : referenceVelocity;
@@ -230,7 +265,7 @@ function DOMSyncedImage({ photo, scrollY, rollVelocity, reduceMotion }) {
       {/* Vertical density carries the roll: the curve is compressed into the
           top band, so too few rows there facet the fabric into flat strips.
           Increased to 256 to completely eliminate vertex hinge lines. */}
-      <planeGeometry args={[1, 1, 32, 256]} />
+      <planeGeometry args={[1, 1, 64, 192]} />
       <shaderMaterial
         ref={materialRef}
         vertexShader={CLOTH_VERT}
@@ -244,7 +279,8 @@ function DOMSyncedImage({ photo, scrollY, rollVelocity, reduceMotion }) {
           // rolled and snap flat on its first frame.
           uRollStrength: { value: 0 },
           uRollDepth: { value: 430 },
-          uWaveAmp: { value: 15 },
+          uWaveAmp: { value: 34 },
+          uDirection: { value: 1 },
           uVelocity: { value: 0 },
           uOpacity: { value: 1 }
         }}
