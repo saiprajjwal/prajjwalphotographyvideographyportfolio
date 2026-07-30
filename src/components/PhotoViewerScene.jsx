@@ -32,18 +32,18 @@ const CLOTH_VERT = `
 
     if (uRollStrength > 0.0001) {
       vec4 worldPosition = modelMatrix * vec4(position, 1.0);
-      float topThreshold = (uResolution.y * 0.5) - (uResolution.y * 0.10);
-      float topRange = max(uResolution.y * 0.24, 1.0);
-      float viewportBand = clamp(
+      float topThreshold = (uResolution.y * 0.5) - (uResolution.y * 0.14);
+      float topRange = max(uResolution.y * 0.22, 1.0);
+      float band = clamp(
         (worldPosition.y - topThreshold) / topRange,
         0.0,
         1.0
       );
 
-      // Only the upper portion of the photograph is allowed to become cloth.
-      // Even at maximum velocity, everything below it stays optically rigid.
-      float photoTopMask = smootherstep_custom(0.58, 0.98, uv.y);
-      float band = viewportBand * photoTopMask;
+      // This is a browser-edge roller, not a whole-image wobble: only pixels
+      // inside the top 14% of the viewport can deform. As the photo moves, that
+      // narrow strip keeps pulling continuously instead of flashing for a few
+      // frames only when the photograph's original top edge passes through.
       
       vBandRaw = band; // Pass raw linear band for per-pixel shading
 
@@ -51,11 +51,11 @@ const CLOTH_VERT = `
       
       // The broad under-roll gives the fabric its depth and recognizable
       // "pulled over a bar" silhouette at the browser edge.
-      float angle = smoothBand * 3.14159265 * 0.68;
+      float angle = smoothBand * 3.14159265 * 0.78;
       float cylinderZ = 1.0 - cos(angle);
       float liftY = sin(angle);
 
-      pos.y += (liftY * 54.0 / max(uHeight, 1.0)) * uRollStrength;
+      pos.y += (liftY * 72.0 / max(uHeight, 1.0)) * uRollStrength;
       pos.z -= cylinderZ * uRollDepth * uRollStrength;
 
       // Three differently sized folds break the cylinder into organic cloth.
@@ -73,9 +73,9 @@ const CLOTH_VERT = `
       // perfectly horizontal. Both disappear with the velocity envelope.
       float centreSag = 1.0 - pow(abs(uv.x - 0.5) * 2.0, 2.0);
       pos.y -= (
-        centreSag * waveEnvelope * 16.0 / max(uHeight, 1.0)
+        centreSag * waveEnvelope * 24.0 / max(uHeight, 1.0)
       ) * uRollStrength;
-      pos.x += uDirection * smoothBand * 0.018 * uRollStrength;
+      pos.x += uDirection * smoothBand * 0.028 * uRollStrength;
 
       vFoldLight = fabricWave * waveEnvelope * uRollStrength;
       vTopFade = smootherstep_custom(0.34, 1.0, band) * uRollStrength;
@@ -103,8 +103,8 @@ const CLOTH_FRAG = `
     vec4 tex = texture2D(uTexture, vUv);
     vec3 image = tex.rgb;
 
-    float fadeBlur = clamp(vTopFade * 0.03, 0.0, 0.08);
-    float velocityBlur = clamp(abs(uVelocity) * 0.0008, 0.0, 0.08) * smoothstep(0.0, 0.30, vTopFade);
+    float fadeBlur = clamp(vTopFade * 0.04, 0.0, 0.09);
+    float velocityBlur = clamp(abs(uVelocity) * 0.0012, 0.0, 0.09) * smoothstep(0.0, 0.28, vTopFade);
     float blurAmount = fadeBlur + velocityBlur;
 
     if (blurAmount > 0.00001) {
@@ -128,13 +128,13 @@ const CLOTH_FRAG = `
 
     // Evaluate G2 continuous shadow per-pixel to completely avoid linear interpolation creases
     float smoothBand = smootherstep_custom(0.0, 1.0, vBandRaw);
-    float shadow = mix(1.0, 0.42, smoothBand);
-    float foldShade = clamp(1.0 + vFoldLight * 0.22, 0.72, 1.22);
+    float shadow = mix(1.0, 0.34, smoothBand);
+    float foldShade = clamp(1.0 + vFoldLight * 0.30, 0.66, 1.30);
     image *= shadow * foldShade;
-    image += max(vFoldLight, 0.0) * 0.045;
+    image += max(vFoldLight, 0.0) * 0.07;
 
     // Keep a faint translucent lip instead of erasing the rolled edge.
-    float alpha = tex.a * uOpacity * (1.0 - vTopFade * 0.86);
+    float alpha = tex.a * uOpacity * (1.0 - vTopFade * 0.72);
     gl_FragColor = vec4(image, alpha);
   }
 `;
@@ -237,10 +237,10 @@ function DOMSyncedImage({ photo, scrollY, rollVelocity, reduceMotion }) {
     const speed = Math.abs(referenceVelocity);
     const targetStrength = reduceMotion
       ? 0
-      : Math.pow(THREE.MathUtils.clamp(speed / 18, 0, 1), 0.62);
+      : Math.pow(THREE.MathUtils.clamp(speed / 8, 0, 1), 0.52);
     const strengthEase = targetStrength > rollStrengthRef.current
       ? 1 - Math.exp(-12 * delta)
-      : 1 - Math.exp(-5.5 * delta);
+      : 1 - Math.exp(-4.2 * delta);
     rollStrengthRef.current +=
       (targetStrength - rollStrengthRef.current) * strengthEase;
 
@@ -278,8 +278,8 @@ function DOMSyncedImage({ photo, scrollY, rollVelocity, reduceMotion }) {
           // Starts at rest — a non-zero default made every plane mount fully
           // rolled and snap flat on its first frame.
           uRollStrength: { value: 0 },
-          uRollDepth: { value: 430 },
-          uWaveAmp: { value: 34 },
+          uRollDepth: { value: 520 },
+          uWaveAmp: { value: 52 },
           uDirection: { value: 1 },
           uVelocity: { value: 0 },
           uOpacity: { value: 1 }
