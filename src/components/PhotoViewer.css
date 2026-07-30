@@ -51,8 +51,14 @@
 }
 
 /* ── Grid (Filmstrip Accordion) ── */
+/* Scrolls sideways rather than clipping: with flex:1 alone, a 40-photo album
+   would squeeze every strip to a ~25px sliver with no way to reach them. The
+   min-width floor lets the strips overflow instead, and the strip stays
+   scrollable to the end. */
 .pv-scroll--grid {
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
 }
 
 .pv-scroll--grid .pv-inner {
@@ -62,23 +68,37 @@
   justify-content: center;
   height: 100%;
   width: 100%;
+  min-width: min-content;
   padding: 0 4vw;
   gap: 4px; /* More distinct gap */
 }
 
 .pv-grid-item {
-  flex: 1; /* All items share space equally */
+  flex: 1 1 0; /* Share space equally, but never below the floor below */
+  min-width: 46px;
   height: 60vh;
   background: rgba(255, 255, 255, 0.03);
   overflow: hidden;
   border-radius: 0;
   transition: flex 0.5s cubic-bezier(0.16, 1, 0.3, 1), max-width 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-  cursor: crosshair;
+  /* Strips open a photo when chosen, so advertise that rather than crosshair. */
+  cursor: pointer;
 }
 
-.pv-grid-item:hover {
+.pv-grid-item:hover,
+.pv-grid-item:focus-visible {
   flex: 6; /* Slide open */
   max-width: calc(60vh * 0.75); /* Prevent strip from growing wider than photo, stopping zoom */
+}
+
+.pv-grid-item:focus-visible {
+  outline: 1px solid rgba(255, 255, 255, 0.6);
+  outline-offset: -1px;
+}
+
+/* Flex row: the flow-view spacer would otherwise sit in the strip as a child. */
+.pv-scroll--grid .pv-end {
+  display: none;
 }
 
 .pv-grid-item img, .pv-grid-img {
@@ -89,8 +109,9 @@
   opacity: 0; /* Invisible so WebGL can draw over it */
 }
 
+/* Tail spacer for flow view, so the last frame clears the control bar. */
 .pv-end {
-  grid-column: 1 / -1;
+  flex: none;
 }
 
 /* ── Fixed control bar (back · album pill · view toggle) ── */

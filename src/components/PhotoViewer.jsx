@@ -21,22 +21,33 @@ const PhotoViewerScene = lazy(() => import('./PhotoViewerScene'));
 export default function PhotoViewer({ album, onClose }) {
   const scrollRef = useRef(null);
   const [view, setView] = useState('flow');
+  // Which photo flow view should sit on. Starts at whatever was tapped in the
+  // album, and is re-pointed when a filmstrip strip is chosen.
+  const [focusId, setFocusId] = useState(album.startId);
   const thumb = album.photos[0]?.src;
+
+  // Picking a strip in the filmstrip drops you into flow view on that photo.
+  // This is also what makes the filmstrip usable on touch, where the hover
+  // expand can never fire.
+  const openFromStrip = (id) => {
+    setFocusId(id);
+    setView('flow');
+  };
 
   // Live scroll position of the viewer, fed to the WebGL cloth shader.
   const { scrollY } = useScroll({ container: scrollRef });
 
   // Open scrolled to whichever photo was tapped.
   useLayoutEffect(() => {
-    if (!album.startId || view !== 'flow') return;
+    if (!focusId || view !== 'flow') return;
     const scroller = scrollRef.current;
-    const el = scrollRef.current?.querySelector(`[data-pv-id="${CSS.escape(album.startId)}"]`);
+    const el = scrollRef.current?.querySelector(`[data-pv-id="${CSS.escape(focusId)}"]`);
     if (el && scroller) {
       // Keep a little air above the selected frame, like the reference, rather
       // than pinning its first row directly under the browser edge.
       scroller.scrollTop = Math.max(0, el.offsetTop - window.innerHeight * 0.08);
     }
-  }, [album.startId, view]);
+  }, [focusId, view]);
 
   // The site-wide Lenis instance is paused while an album is open. Give this
   // nested scroll surface its own slower, weightier interpolation so wheel
@@ -105,6 +116,20 @@ export default function PhotoViewer({ album, onClose }) {
               className={view === 'flow' ? 'pv-frame' : 'pv-grid-item'}
               key={p.id}
               data-pv-id={p.id}
+              onClick={view === 'grid' ? () => openFromStrip(p.id) : undefined}
+              role={view === 'grid' ? 'button' : undefined}
+              tabIndex={view === 'grid' ? 0 : undefined}
+              aria-label={view === 'grid' ? `Open ${p.alt || 'photograph'}` : undefined}
+              onKeyDown={
+                view === 'grid'
+                  ? (e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        openFromStrip(p.id);
+                      }
+                    }
+                  : undefined
+              }
             >
               <img
                 id={`pv-img-${p.id}`}
