@@ -7,8 +7,8 @@
   background: #050506;
 }
 
-/* The scroll surface. Native scroll (Lenis is paused while an album overlay is
-   open), contained so it never rubber-bands the page behind it. */
+/* The scroll surface. Its local Lenis instance supplies the slow, continuous
+   pull while the site-wide scroller is paused behind the overlay. */
 .pv-scroll {
   position: absolute;
   inset: 0;
@@ -25,15 +25,17 @@
 
 /* ── Flow: Sliding page vertical stack (Now handled by WebGL Canvas) ── */
 .pv-scroll--flow .pv-inner {
-  max-width: 1100px;
+  max-width: none;
   display: flex;
   flex-direction: column;
-  gap: 9vh;
-  padding: 10vh clamp(0px, 3vw, 40px) 24vh;
+  gap: clamp(42px, 7vh, 72px);
+  padding: 8vh clamp(20px, 4vw, 64px) 24vh;
 }
 
 .pv-frame {
   width: 100%;
+  display: flex;
+  justify-content: center;
 }
 
 /* Layout-only placeholder: sizes + positions the WebGL plane that draws the
@@ -41,8 +43,10 @@
    (no object-fit letterboxing). It is itself invisible. */
 .pv-frame-img {
   display: block;
-  width: 100%;
+  width: auto;
   height: auto;
+  max-width: min(78vw, 900px);
+  max-height: 64vh;
   opacity: 0;
 }
 
@@ -163,8 +167,14 @@
   .pv-btn { width: 50px; height: 50px; }
   .pv-pill-thumb { width: 34px; height: 34px; }
   .pv-pill-name { max-width: 40vw; }
-  .pv-scroll--flow .pv-inner { padding: 0 0 24vh 0; }
-  .pv-frame img { padding: 0 16px; }
+  .pv-scroll--flow .pv-inner {
+    gap: 6vh;
+    padding: 6vh 16px 24vh;
+  }
+  .pv-frame-img {
+    max-width: calc(100vw - 32px);
+    max-height: 62svh;
+  }
 }
 
 /* Respect reduced-motion: keep the snap layout, drop the elastic deformation. */

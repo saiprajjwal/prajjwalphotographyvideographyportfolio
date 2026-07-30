@@ -10,6 +10,7 @@ const CLOTH_VERT = `
   uniform float uScrollPos;
   uniform float uRollStrength;
   uniform float uRollDepth;
+  uniform float uWaveAmp;
   varying vec2 vUv;
   varying float vTopFade;
   varying float vBandRaw;
@@ -43,6 +44,16 @@ const CLOTH_VERT = `
 
       pos.y += (liftY * 45.0 / max(uHeight, 1.0)) * uRollStrength;
       pos.z -= cylinderZ * uRollDepth * uRollStrength;
+
+      // A cylinder supplies the broad curl, while two quiet, wide waves keep
+      // its edge from reading as rigid card. The sin(band * PI) envelope makes
+      // the wave vanish at both joins, leaving the middle/bottom perfectly flat.
+      float waveEnvelope = sin(band * 3.14159265);
+      float phase = (uv.x - 0.5) * 7.2 - uScrollPos * 0.006;
+      float fabricWave =
+        sin(phase) * 0.72 +
+        sin(phase * 0.52 - 1.25) * 0.28;
+      pos.z += fabricWave * waveEnvelope * uWaveAmp * uRollStrength;
 
       vTopFade = smootherstep_custom(0.30, 1.0, band) * uRollStrength;
     }
@@ -184,26 +195,28 @@ function DOMSyncedImage({ photo, scrollY, rollVelocity, reduceMotion }) {
     );
 
     // Frame-rate-independent easing, so nothing jumps on a dropped frame.
-    const rollEase = 1 - Math.exp(-14 * delta);
     const phaseEase = 1 - Math.exp(-9 * delta);
-
-    // The roll is POSITIONAL, not velocity-gated. The shader already derives
-    // its shape from where the vertex sits in the viewport, so a photo stays
-    // rolled for as long as it is passing under the roller at the top —
-    // exactly like the reference. Gating this on scroll speed was what made the
-    // effect flash on and vanish the instant you stopped scrolling.
-    // The ease here only covers mount and the reduced-motion toggle.
-    const targetStrength = reduceMotion ? 0 : 1;
-    rollStrengthRef.current +=
-      (targetStrength - rollStrengthRef.current) * rollEase;
-
-    wavePhaseRef.current += (scrollY.get() - wavePhaseRef.current) * phaseEase;
 
     const referenceVelocity = THREE.MathUtils.clamp(
       rollVelocity.get() / 60,
       -120,
       120,
     );
+
+    // Velocity supplies the pull. A soft power curve lets slow trackpad motion
+    // register, while the separate release rate gives the fabric enough weight
+    // to unwind instead of disappearing between wheel events.
+    const speed = Math.abs(referenceVelocity);
+    const targetStrength = reduceMotion
+      ? 0
+      : Math.pow(THREE.MathUtils.clamp(speed / 18, 0, 1), 0.62);
+    const strengthEase = targetStrength > rollStrengthRef.current
+      ? 1 - Math.exp(-12 * delta)
+      : 1 - Math.exp(-5.5 * delta);
+    rollStrengthRef.current +=
+      (targetStrength - rollStrengthRef.current) * strengthEase;
+
+    wavePhaseRef.current += (scrollY.get() - wavePhaseRef.current) * phaseEase;
 
     materialRef.current.uniforms.uScrollPos.value = wavePhaseRef.current;
     materialRef.current.uniforms.uRollStrength.value = rollStrengthRef.current;
@@ -231,7 +244,7 @@ function DOMSyncedImage({ photo, scrollY, rollVelocity, reduceMotion }) {
           // rolled and snap flat on its first frame.
           uRollStrength: { value: 0 },
           uRollDepth: { value: 430 },
-          uWaveAmp: { value: 26 },
+          uWaveAmp: { value: 15 },
           uVelocity: { value: 0 },
           uOpacity: { value: 1 }
         }}

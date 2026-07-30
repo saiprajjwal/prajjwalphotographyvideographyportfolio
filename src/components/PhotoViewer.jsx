@@ -1,7 +1,8 @@
-import { useRef, useState, useLayoutEffect, lazy, Suspense } from 'react';
+import { useRef, useState, useEffect, useLayoutEffect, lazy, Suspense } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, useScroll } from 'framer-motion';
 import { ArrowLeft, LayoutGrid, GalleryVertical } from 'lucide-react';
+import Lenis from 'lenis';
 import { EASE, DUR } from '../utils/motion';
 import './PhotoViewer.css';
 
@@ -28,10 +29,50 @@ export default function PhotoViewer({ album, onClose }) {
   // Open scrolled to whichever photo was tapped.
   useLayoutEffect(() => {
     if (!album.startId || view !== 'flow') return;
+    const scroller = scrollRef.current;
     const el = scrollRef.current?.querySelector(`[data-pv-id="${CSS.escape(album.startId)}"]`);
-    if (el) el.scrollIntoView({ block: 'start' });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [album.startId]);
+    if (el && scroller) {
+      // Keep a little air above the selected frame, like the reference, rather
+      // than pinning its first row directly under the browser edge.
+      scroller.scrollTop = Math.max(0, el.offsetTop - window.innerHeight * 0.08);
+    }
+  }, [album.startId, view]);
+
+  // The site-wide Lenis instance is paused while an album is open. Give this
+  // nested scroll surface its own slower, weightier interpolation so wheel
+  // impulses become one continuous cloth pull instead of a series of jolts.
+  useEffect(() => {
+    if (view !== 'flow' || !scrollRef.current) return undefined;
+
+    const wrapper = scrollRef.current;
+    const content = wrapper.querySelector('.pv-inner');
+    if (!content) return undefined;
+
+    const lenis = new Lenis({
+      wrapper,
+      content,
+      eventsTarget: wrapper,
+      duration: 1.05,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -9 * t)),
+      smoothWheel: true,
+      syncTouch: true,
+      touchMultiplier: 1.25,
+      wheelMultiplier: 0.88,
+      overscroll: false,
+    });
+
+    let frame;
+    const tick = (time) => {
+      lenis.raf(time);
+      frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+
+    return () => {
+      cancelAnimationFrame(frame);
+      lenis.destroy();
+    };
+  }, [view]);
 
   return createPortal(
     <motion.div
@@ -55,7 +96,6 @@ export default function PhotoViewer({ album, onClose }) {
       <div
         className={`pv-scroll pv-scroll--${view}`}
         ref={scrollRef}
-        data-lenis-prevent
       >
         <div className="pv-inner">
           {view === 'flow'
