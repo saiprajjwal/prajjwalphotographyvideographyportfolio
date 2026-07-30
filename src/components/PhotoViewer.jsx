@@ -87,51 +87,38 @@ export default function PhotoViewer({ album, onClose }) {
     >
       {/* WebGL cloth layer (flow view only). Fixed, pointer-events-none, so the
           scroll below still receives wheel/touch. */}
-      {view === 'flow' && (
-        <Suspense fallback={null}>
-          <PhotoViewerScene photos={album.photos} scrollY={scrollY} />
-        </Suspense>
-      )}
+      {/* Always render WebGL layer so it can animate between views */}
+      <Suspense fallback={null}>
+        <PhotoViewerScene photos={album.photos} scrollY={scrollY} view={view} />
+      </Suspense>
 
-      <div
+      <motion.div
+        layoutScroll
         className={`pv-scroll pv-scroll--${view}`}
         ref={scrollRef}
       >
-        <div className="pv-inner">
-          {view === 'flow'
-            ? album.photos.map((p) => (
-                // Invisible placeholder: gives the WebGL plane its size + scroll
-                // position. The real pixels are drawn by PhotoViewerScene.
-                <div className="pv-frame" key={p.id} data-pv-id={p.id}>
-                  <img
-                    id={`pv-img-${p.id}`}
-                    className="pv-frame-img"
-                    src={p.src}
-                    alt={p.alt}
-                    loading="lazy"
-                    draggable="false"
-                  />
-                </div>
-              ))
-            : album.photos.map((p) => (
-                <div className="pv-grid-item" key={p.id}>
-                  <img
-                    src={p.src}
-                    srcSet={`
-                      ${p.src.replace('w_1200', 'w_400')} 400w,
-                      ${p.src.replace('w_1200', 'w_800')} 800w,
-                      ${p.src.replace('w_1200', 'w_1200')} 1200w
-                    `}
-                    sizes="(max-width: 700px) 50vw, 33vw"
-                    alt={p.alt}
-                    loading="lazy"
-                    draggable="false"
-                  />
-                </div>
-              ))}
+        <motion.div layout className="pv-inner">
+          {album.photos.map((p) => (
+            <motion.div
+              layout
+              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }} // smooth FLIP animation
+              className={view === 'flow' ? 'pv-frame' : 'pv-grid-item'}
+              key={p.id}
+              data-pv-id={p.id}
+            >
+              <img
+                id={`pv-img-${p.id}`}
+                className={view === 'flow' ? 'pv-frame-img' : 'pv-grid-img'}
+                src={p.src}
+                alt={p.alt}
+                loading="lazy"
+                draggable="false"
+              />
+            </motion.div>
+          ))}
           <div className="pv-end" aria-hidden="true" />
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
 
       {/* Fixed control bar — back, album-name pill, view toggle (reference layout) */}
       <div className="pv-bar">
