@@ -12,7 +12,7 @@ const CLOTH_VERT = `
   uniform float uRollDepth;
   varying vec2 vUv;
   varying float vTopFade;
-  varying float vBand;
+  varying float vBandRaw;
 
   // Ken Perlin's smootherstep for G2 continuity (eliminates the Mach band crease line)
   float smootherstep_custom(float edge0, float edge1, float x) {
@@ -24,33 +24,26 @@ const CLOTH_VERT = `
     vUv = uv;
     vec3 pos = position;
     vTopFade = 0.0;
-    vBand = 0.0;
+    vBandRaw = 0.0;
 
     if (uRollStrength > 0.0001) {
-      // Viewport-anchored roll.
       vec4 worldPosition = modelMatrix * vec4(position, 1.0);
       float topThreshold = (uResolution.y * 0.5) - (uResolution.y * 0.13);
       float topRange = max(uResolution.y * 0.30, 1.0);
       float band = clamp((worldPosition.y - topThreshold) / topRange, 0.0, 1.0);
       
-      // Use smootherstep so the second derivative is 0 at the start of the roll.
-      // This completely removes the optical illusion of a sharp horizontal line.
+      vBandRaw = band; // Pass raw linear band for per-pixel shading
+
       float smoothBand = smootherstep_custom(0.0, 1.0, band);
       
-      vBand = smoothBand; // Pass to fragment shader for shading
-
-      // Clean, rigid cylinder roll instead of a wavy cloth
-      float angle = smoothBand * 3.14159265 * 0.55; // Roll back by ~100 degrees
+      // Clean, rigid cylinder roll
+      float angle = smoothBand * 3.14159265 * 0.55; 
       float cylinderZ = 1.0 - cos(angle);
       float liftY = sin(angle);
 
-      // Y is normalized because the DOM-sized mesh scale is applied later.
-      // Z remains in screen pixels so the perspective camera creates a real
-      // 3D roll of the image pixels.
       pos.y += (liftY * 45.0 / max(uHeight, 1.0)) * uRollStrength;
       pos.z -= cylinderZ * uRollDepth * uRollStrength;
 
-      // The material thins away at the very top of the roll.
       vTopFade = smootherstep_custom(0.30, 1.0, band) * uRollStrength;
     }
 
@@ -64,14 +57,17 @@ const CLOTH_FRAG = `
   uniform float uVelocity;
   varying vec2 vUv;
   varying float vTopFade;
-  varying float vBand;
+  varying float vBandRaw;
+
+  float smootherstep_custom(float edge0, float edge1, float x) {
+    float t = clamp((x - edge0) / (edge1 - edge0), 0.0, 1.0);
+    return t * t * t * (t * (t * 6.0 - 15.0) + 10.0);
+  }
 
   void main() {
     vec4 tex = texture2D(uTexture, vUv);
     vec3 image = tex.rgb;
 
-    // Match the reference's soft optical treatment on the rolling portion:
-    // five directional samples, plus a slight red/blue split at the thinnest edge.
     float fadeBlur = clamp(vTopFade * 0.03, 0.0, 0.08);
     float velocityBlur = clamp(abs(uVelocity) * 0.0008, 0.0, 0.08) * smoothstep(0.0, 0.30, vTopFade);
     float blurAmount = fadeBlur + velocityBlur;
@@ -95,9 +91,9 @@ const CLOTH_FRAG = `
       image = mix(blurred, chroma, clamp(vTopFade, 0.0, 1.0));
     }
 
-    // Add shadow darkening as it rolls backward
-    // vBand is already G2 continuous, so no sharp creases in shading
-    float shadow = mix(1.0, 0.25, vBand);
+    // Evaluate G2 continuous shadow per-pixel to completely avoid linear interpolation creases
+    float smoothBand = smootherstep_custom(0.0, 1.0, vBandRaw);
+    float shadow = mix(1.0, 0.25, smoothBand);
     image *= shadow;
 
     float alpha = tex.a * uOpacity * (1.0 - vTopFade);
@@ -218,8 +214,9 @@ function DOMSyncedImage({ photo, scrollY, rollVelocity, reduceMotion }) {
   return (
     <mesh ref={meshRef} visible={false}>
       {/* Vertical density carries the roll: the curve is compressed into the
-          top band, so too few rows there facet the fabric into flat strips. */}
-      <planeGeometry args={[1, 1, 32, 96]} />
+          top band, so too few rows there facet the fabric into flat strips.
+          Increased to 256 to completely eliminate vertex hinge lines. */}
+      <planeGeometry args={[1, 1, 32, 256]} />
       <shaderMaterial
         ref={materialRef}
         vertexShader={CLOTH_VERT}
