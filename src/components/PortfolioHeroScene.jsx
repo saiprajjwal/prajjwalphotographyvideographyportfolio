@@ -31,6 +31,13 @@ const FLAT_CORNER = 0.1;
 // Height of the band's centre.
 const BAND_Y = 0.1;
 
+// The category word floats just in front of the cylinder's front face rather
+// than being wrapped onto it, so it stays flat and legible while the band
+// curves and turns behind it. Plane matches the 4:1 label texture.
+const LABEL_Z = RADIUS + 0.36;
+const LABEL_PLANE_W = 3.4;
+const LABEL_PLANE_H = LABEL_PLANE_W / 4;
+
 // Camera sits far enough back that RADIUS / CAMERA_Z matches the reference's
 // curvature. It stays fixed and the FOV does the framing, so the band curves
 // identically at every viewport size.
@@ -83,7 +90,50 @@ function panelFont() {
   return `400 ${Math.round(TEX_H * 0.30)}px "Bodoni Moda", "Playfair Display", Didot, serif`;
 }
 
-function paintPanel(img, label) {
+// Transparent texture holding just the category word. Drawn on its own so the
+// label can float in front of the band instead of being wrapped around it.
+// Generous padding keeps the soft glow from clipping at the texture edge.
+const LABEL_W = 1024;
+const LABEL_H = 256;
+
+function paintLabel(label) {
+  const canvas = document.createElement('canvas');
+  canvas.width = LABEL_W;
+  canvas.height = LABEL_H;
+  const ctx = canvas.getContext('2d');
+
+  const cx = LABEL_W / 2;
+  const cy = LABEL_H / 2;
+  const font = `400 ${Math.round(LABEL_H * 0.52)}px "Bodoni Moda", "Playfair Display", Didot, serif`;
+
+  ctx.font = font;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  // Soft outer glow so the word separates from a busy photograph behind it.
+  ctx.save();
+  ctx.shadowColor = 'rgba(20, 12, 32, 0.55)';
+  ctx.shadowBlur = 22;
+  ctx.fillStyle = 'rgba(255, 253, 250, 0.30)';
+  ctx.fillText(label, cx, cy);
+  ctx.restore();
+
+  // Milky fill plus a bright hairline edge — the frosted-glass look the label
+  // had when it was painted into the panel, minus the curvature.
+  ctx.fillStyle = 'rgba(255, 253, 250, 0.34)';
+  ctx.fillText(label, cx, cy);
+
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.72)';
+  ctx.lineWidth = 1.6;
+  ctx.strokeText(label, cx, cy);
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.NoColorSpace;
+  tex.anisotropy = 4;
+  return tex;
+}
+
+function paintPanel(img) {
   const canvas = document.createElement('canvas');
   canvas.width = TEX_W;
   canvas.height = TEX_H;
@@ -110,59 +160,10 @@ function paintPanel(img, label) {
   ctx.fillStyle = vig;
   ctx.fillRect(0, 0, TEX_W, TEX_H);
 
-  // 5. Glass lettering.
-  //    Rather than painting flat white text on top, we cut the word out of a
-  //    blurred, brightened copy of the panel itself. The result refracts the
-  //    photo behind it, so the label reads as frosted glass sitting *in* the
-  //    image instead of a caption laid over it.
-  const font = panelFont();
-  const cx = TEX_W / 2;
-  const cy = TEX_H / 2;
-
-  const glass = document.createElement('canvas');
-  glass.width = TEX_W;
-  glass.height = TEX_H;
-  const gctx = glass.getContext('2d');
-
-  // Blow the panel up slightly before blurring — that offset is what sells
-  // the refraction, since the glass bends what's behind it outward.
-  gctx.filter = 'blur(7px) brightness(1.0) saturate(0.85)';
-  gctx.drawImage(canvas, -TEX_W * 0.035, -TEX_H * 0.045, TEX_W * 1.07, TEX_H * 1.09);
-  gctx.filter = 'none';
-
-  // Keep only what falls inside the glyphs
-  gctx.globalCompositeOperation = 'destination-in';
-  gctx.font = font;
-  gctx.textAlign = 'center';
-  gctx.textBaseline = 'middle';
-  gctx.fillStyle = '#ffffff';
-  gctx.fillText(label, cx, cy);
-
-  // Drop shadow under the glass so it lifts off the photo
-  ctx.save();
-  ctx.shadowColor = 'rgba(30, 14, 48, 0.42)';
-  ctx.shadowBlur = 26;
-  ctx.shadowOffsetY = 4;
-  ctx.drawImage(glass, 0, 0);
-  ctx.restore();
-
-  // A touch of milky fill keeps the word legible over busy photos
-  ctx.save();
-  ctx.font = font;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillStyle = 'rgba(255, 252, 248, 0.22)';
-  ctx.fillText(label, cx, cy);
-
-  // Bevelled highlight along the top edge of each glyph
-  ctx.globalCompositeOperation = 'lighter';
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.42)';
-  ctx.lineWidth = 1.6;
-  ctx.shadowColor = 'rgba(255, 255, 255, 0.55)';
-  ctx.shadowBlur = 14;
-  ctx.shadowOffsetY = -1.5;
-  ctx.strokeText(label, cx, cy);
-  ctx.restore();
+  // The category label is deliberately NOT baked in here any more. It floats
+  // in front of the cylinder on its own plane (see FloatingLabels), so it stays
+  // flat and readable while the band curves and rotates behind it — and it
+  // slides across as you spin the carousel, like the reference.
 
   const tex = new THREE.CanvasTexture(canvas);
   // NoColorSpace, deliberately. A raw ShaderMaterial doesn't get three.js's
@@ -292,6 +293,37 @@ function makePanelMaterial(isReflection) {
 // ──────────────────────────────────────────────────────────────
 // Load + paint a texture per category (once)
 // ──────────────────────────────────────────────────────────────
+// Label textures are cheap (text on a small transparent canvas) and depend only
+// on the category names, so they rebuild independently of the photographs.
+function useLabelTextures(categories) {
+  const [labels, setLabels] = useState([]);
+
+  useEffect(() => {
+    let alive = true;
+    let made = [];
+
+    const build = async () => {
+      try {
+        await document.fonts.load(panelFont());
+      } catch {
+        /* font API unavailable — fall through to the serif stack */
+      }
+      if (!alive) return;
+      made = categories.map((c) => paintLabel(c));
+      setLabels(made);
+    };
+
+    build();
+
+    return () => {
+      alive = false;
+      made.forEach((t) => t?.dispose());
+    };
+  }, [categories]);
+
+  return labels;
+}
+
 function useCategoryTextures(items) {
   const [textures, setTextures] = useState([]);
 
@@ -324,7 +356,7 @@ function useCategoryTextures(items) {
           const cropped = bandCrop(item.src);
           for (const src of cropped === item.src ? [item.src] : [cropped, item.src]) {
             try {
-              return paintPanel(await loadImage(src), item.key);
+              return paintPanel(await loadImage(src));
             } catch {
               /* try the next candidate */
             }
@@ -396,7 +428,7 @@ function ResponsiveCamera({ rectRef }) {
 // ──────────────────────────────────────────────────────────────
 // The rotating band: 3 fixed slots, textures recycled behind the camera
 // ──────────────────────────────────────────────────────────────
-function PhotoBand({ textures, activeIndex, flatMode, onSnap, onHoverChange, onTap, rectRef, hoverRef }) {
+function PhotoBand({ textures, labelTextures, activeIndex, flatMode, onSnap, onHoverChange, onTap, rectRef, hoverRef }) {
   const total = textures.length;
   const { gl } = useThree();
 
@@ -404,6 +436,7 @@ function PhotoBand({ textures, activeIndex, flatMode, onSnap, onHoverChange, onT
   const slots = useRef([]);
   const assigned = useRef([-1, -1, -1]);
   const bandGroup = useRef(null);
+  const labelMeshes = useRef([]);
 
   // Continuous carousel position, measured in panels
   const pos = useRef(0);
@@ -554,6 +587,31 @@ function PhotoBand({ textures, activeIndex, flatMode, onSnap, onHoverChange, onT
       }
       band.uniforms.uOpacity.value = 1;
       reflection.uniforms.uOpacity.value = 1;
+
+      // Floating label for this slot. It tracks the slot's angular position but
+      // only horizontally — no rotation — so the word slides across the front
+      // of the band and stays flat, rather than wrapping onto the cylinder.
+      const label = labelMeshes.current[j];
+      if (label) {
+        const theta = offset * ANGLE_PER_SLOT;
+        label.position.x = THREE.MathUtils.lerp(
+          Math.sin(theta) * RADIUS,
+          offset * (PANEL_WIDTH + FLAT_GAP),
+          f
+        );
+        // Fades as it swings toward the sides, and is hidden outright once the
+        // slot is round the back — otherwise the rear label would read through
+        // the front photo, since these draw with depth testing off.
+        const facing = Math.cos(theta);
+        const fade = Math.max(0, facing) ** 1.6;
+        const tex = labelTextures?.[catIdx] || null;
+        if (label.material.map !== tex) {
+          label.material.map = tex;
+          label.material.needsUpdate = true;
+        }
+        label.material.opacity = tex ? fade : 0;
+        label.visible = fade > 0.01 && !!tex;
+      }
     }
   });
 
@@ -707,6 +765,28 @@ function PhotoBand({ textures, activeIndex, flatMode, onSnap, onHoverChange, onT
           />
         </group>
       ))}
+
+      {/* Floating category labels. These live in the band group (so they share
+          its tilt and hover lift) but outside the slot groups, so they are
+          never rotated onto the cylinder. Each one slides horizontally across
+          the front as the carousel turns and fades out toward the sides. */}
+      {[0, 1, 2].map((j) => (
+        <mesh
+          key={`label-${j}`}
+          ref={(el) => { labelMeshes.current[j] = el; }}
+          position={[0, 0, LABEL_Z]}
+          renderOrder={2}
+          frustumCulled={false}
+        >
+          <planeGeometry args={[LABEL_PLANE_W, LABEL_PLANE_H]} />
+          <meshBasicMaterial
+            transparent
+            depthTest={false}
+            depthWrite={false}
+            opacity={0}
+          />
+        </mesh>
+      ))}
     </group>
   );
 }
@@ -742,6 +822,7 @@ export default function PortfolioHeroScene({
   );
 
   const textures = useCategoryTextures(items);
+  const labelTextures = useLabelTextures(categories);
   const rectRef = useRef(null);
   // Written by PhotoBand each frame, read by GlassShards — a ref rather than
   // state so hovering never re-renders the Canvas.
@@ -760,6 +841,7 @@ export default function PortfolioHeroScene({
       <GlassShards hoverRef={hoverRef} texture={textures?.[activeIndex]} />
       <PhotoBand
         textures={textures}
+        labelTextures={labelTextures}
         activeIndex={activeIndex}
         flatMode={flatMode}
         onSnap={onCategoryChange}
