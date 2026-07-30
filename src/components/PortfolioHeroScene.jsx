@@ -1,9 +1,46 @@
 import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
+
 import * as THREE from 'three';
 import { pickCategoryCover } from '../utils/categoryCover';
 import { playCarouselTick } from '../utils/audio';
 import GlassShards from './GlassShards';
+
+const LABEL_W = 1024;
+const LABEL_H = 256;
+const LABEL_PLANE_W = 3.4;
+const LABEL_PLANE_H = LABEL_PLANE_W / 4;
+
+function paintLabel(label) {
+  const canvas = document.createElement('canvas');
+  canvas.width = LABEL_W;
+  canvas.height = LABEL_H;
+  const ctx = canvas.getContext('2d');
+
+  const cx = LABEL_W / 2;
+  const cy = LABEL_H / 2;
+  const font = `600 ${Math.round(LABEL_H * 0.65)}px "Bodoni Moda", "Playfair Display", Didot, serif`;
+
+  ctx.font = font;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  // We just need a solid white mask for the shader to use as the alpha map
+  ctx.fillStyle = 'white';
+  ctx.fillText(label, cx, cy);
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.anisotropy = 4;
+  tex.minFilter = THREE.LinearFilter;
+  tex.magFilter = THREE.LinearFilter;
+  return tex;
+}
+
+function useLabelTextures(categories) {
+  return useMemo(() => {
+    return categories.map(cat => paintLabel(cat));
+  }, [categories]);
+}
 
 // ──────────────────────────────────────────────────────────────
 // Geometry constants
@@ -35,8 +72,7 @@ const BAND_Y = 0.1;
 // than being wrapped onto it, so it stays flat and legible while the band
 // curves and turns behind it. Plane matches the 4:1 label texture.
 const LABEL_Z = RADIUS + 0.36;
-const LABEL_PLANE_W = 3.4;
-const LABEL_PLANE_H = LABEL_PLANE_W / 4;
+
 
 // Camera sits far enough back that RADIUS / CAMERA_Z matches the reference's
 // curvature. It stays fixed and the FOV does the framing, so the band curves
@@ -93,45 +129,9 @@ function panelFont() {
 // Transparent texture holding just the category word. Drawn on its own so the
 // label can float in front of the band instead of being wrapped around it.
 // Generous padding keeps the soft glow from clipping at the texture edge.
-const LABEL_W = 1024;
-const LABEL_H = 256;
 
-function paintLabel(label) {
-  const canvas = document.createElement('canvas');
-  canvas.width = LABEL_W;
-  canvas.height = LABEL_H;
-  const ctx = canvas.getContext('2d');
 
-  const cx = LABEL_W / 2;
-  const cy = LABEL_H / 2;
-  const font = `400 ${Math.round(LABEL_H * 0.52)}px "Bodoni Moda", "Playfair Display", Didot, serif`;
 
-  ctx.font = font;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-
-  // Soft outer glow so the word separates from a busy photograph behind it.
-  ctx.save();
-  ctx.shadowColor = 'rgba(20, 12, 32, 0.55)';
-  ctx.shadowBlur = 22;
-  ctx.fillStyle = 'rgba(255, 253, 250, 0.30)';
-  ctx.fillText(label, cx, cy);
-  ctx.restore();
-
-  // Milky fill plus a bright hairline edge — the frosted-glass look the label
-  // had when it was painted into the panel, minus the curvature.
-  ctx.fillStyle = 'rgba(255, 253, 250, 0.34)';
-  ctx.fillText(label, cx, cy);
-
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.72)';
-  ctx.lineWidth = 1.6;
-  ctx.strokeText(label, cx, cy);
-
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.colorSpace = THREE.NoColorSpace;
-  tex.anisotropy = 4;
-  return tex;
-}
 
 function paintPanel(img) {
   const canvas = document.createElement('canvas');
@@ -193,8 +193,10 @@ const PANEL_VERT = /* glsl */ `
   uniform float uSide;
   uniform float uHover;
   uniform float uPointerX;
+  uniform float uPointerY;
   uniform float uTime;
   varying vec2 vUv;
+  varying vec2 vScreen;
 
   const float RADIUS = ${RADIUS.toFixed(4)};
   const float ARC = ${ANGLE_PER_SLOT.toFixed(6)};
@@ -215,34 +217,11 @@ const PANEL_VERT = /* glsl */ `
     float recede = mix(1.0, 1.0 - 0.07 * clamp(uSide, 0.0, 1.0), uFlat);
     p.xy *= recede;
 
-    // ── Hover warp ──────────────────────────────────────────────
-    // The band physically deforms under the cursor rather than just lifting:
-    // the surface swells toward the viewer where the pointer is, with a soft
-    // falloff either side, and a slow travelling ripple runs across it so the
-    // sheet reads as pliable. Only the focused panel responds — neighbours are
-    // damped by uSide, so the effect stays local to what you're pointing at.
-    float focus = uHover * (1.0 - clamp(uSide, 0.0, 1.0));
-    if (focus > 0.0) {
-      // Distance from the cursor along the panel, in UV space
-      float d = uv.x - (uPointerX * 0.5 + 0.5);
-      float bulge = exp(-d * d * 9.0);
-
-      // Fade the deformation out at the top and bottom edges, so the panel's
-      // silhouette stays clean instead of tearing away from the reflection.
-      float edge = sin(clamp(uv.y, 0.0, 1.0) * 3.14159265);
-
-      // Travelling ripple, deliberately low frequency — a swell, not a wobble.
-      float ripple = sin(uv.x * 7.0 - uTime * 1.6) * 0.16
-                   + sin(uv.y * 4.0 + uTime * 1.1) * 0.09;
-
-      float swell = (bulge + ripple * bulge) * edge * focus;
-
-      // Push along the surface normal. In arc mode that is the radial
-      // direction, which is what makes the cylinder itself bow outward.
-      vec3 normalDir = normalize(mix(vec3(sin(angle), 0.0, cos(angle)), vec3(0.0, 0.0, 1.0), uFlat));
-      p += normalDir * swell * 0.42;
-    }
-
+    // Pass screen position for precise hover distance in the fragment shader
+    vec4 mvPosition = modelViewMatrix * vec4(p, 1.0);
+    vec4 projPosition = projectionMatrix * mvPosition;
+    vScreen = projPosition.xy / projPosition.w;
+    
     // Mirror about the panel's lower edge for the reflection copy
     p.y = mix(p.y, -p.y - H, uReflect);
 
@@ -258,7 +237,11 @@ const PANEL_FRAG = /* glsl */ `
   uniform float uFlat;
   uniform float uHover;
   uniform float uSide;
+  uniform float uPointerX;
+  uniform float uPointerY;
+  uniform float uTime;
   varying vec2 vUv;
+  varying vec2 vScreen;
 
   const float PW = ${PANEL_WIDTH.toFixed(5)};
   const float H = ${PANEL_HEIGHT.toFixed(4)};
@@ -268,26 +251,72 @@ const PANEL_FRAG = /* glsl */ `
     vec2 q = abs(p) - b + r;
     return min(max(q.x, q.y), 0.0) + length(max(q, 0.0)) - r;
   }
+  
+  // 2D Hash
+  vec2 hash22(vec2 p) {
+    p = vec2(dot(p,vec2(127.1,311.7)), dot(p,vec2(269.5,183.3)));
+    return -1.0 + 2.0 * fract(sin(p)*43758.5453123);
+  }
+  
+  // Smooth gradient noise (calm liquid glass)
+  float noise(vec2 p) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    vec2 u = f * f * (3.0 - 2.0 * f);
+    return mix(mix(dot(hash22(i + vec2(0.0,0.0)), f - vec2(0.0,0.0)), 
+                   dot(hash22(i + vec2(1.0,0.0)), f - vec2(1.0,0.0)), u.x),
+               mix(dot(hash22(i + vec2(0.0,1.0)), f - vec2(0.0,1.0)), 
+                   dot(hash22(i + vec2(1.0,1.0)), f - vec2(1.0,1.0)), u.x), u.y);
+  }
 
   void main() {
     if (uHasMap < 0.5) discard;
-    vec4 c = texture2D(uMap, vUv);
+    
+    // Focus restricts the glass effect to the center panel only
+    float focus = uHover * (1.0 - clamp(uSide, 0.0, 1.0));
+    
+    vec2 sampleUv = vUv;
+    float frost = 0.0;
+    
+    if (focus > 0.001) {
+      // Distance from the cursor in screen space
+      vec2 cursor = vec2(uPointerX, uPointerY);
+      vec2 dScreen = vScreen - cursor;
+      float dist = length(dScreen);
+      
+      // Soft circular mask around cursor
+      float mask = smoothstep(0.50, 0.05, dist) * focus;
+      
+      if (mask > 0.001) {
+        // Liquid effect removed per user request
+        // vec2 noiseUv = vUv * vec2(5.0, 5.0 * (PW/H));
+        // float n1 = noise(noiseUv + uTime * 0.12);
+        // float n2 = noise(noiseUv * 1.3 - uTime * 0.09 + vec2(5.7, 3.2));
+        // vec2 offset = vec2(n1, n2) * 0.018 * mask;
+        // sampleUv += offset;
+        
+        // Frosted glass overlay strength — milky white layer that follows cursor
+        frost = mask * 0.22;
+      }
+    }
 
-    // Hovering adds a subtle contrast lift only (no brightness boost — photo
-    // should always look true-to-life, exactly as the photographer shot it).
-    c.rgb = mix(c.rgb, (c.rgb - 0.5) * 1.04 + 0.5, uHover);
+    vec4 c = texture2D(uMap, sampleUv);
 
-    // Reflections fade with distance from the band, which keeps the falloff
-    // tied to the geometry instead of a viewport percentage.
+    // Frosted glass overlay: soft milky-white layer at cursor position
+    // This is the main visible hover effect — like looking through frosted glass
+    c.rgb = mix(c.rgb, vec3(1.0), frost);
+    
+    // Slight brightness/contrast lift on the whole hovered panel
+    c.rgb = mix(c.rgb, (c.rgb - 0.5) * 1.06 + 0.52, uHover * 0.5);
+
+    // Reflections fade with distance from the band
     float fade = pow(1.0 - vUv.y, 1.7) * 0.30;
     float a = c.a * uOpacity * mix(1.0, fade, uReflect);
 
-    // Hold the peeking neighbours back so they read as "more to slide to"
-    // rather than competing with the focused slide.
+    // Hold the peeking neighbours back
     a *= mix(1.0, 1.0 - 0.42 * clamp(uSide, 0.0, 1.0), uFlat);
 
-    // Round the corners once flattened. Measured in world units so the
-    // radius stays even across the panel's 2.3:1 aspect.
+    // Round the corners once flattened
     vec2 half_ = vec2(PW, H) * 0.5;
     float sd = sdRoundBox((vUv - 0.5) * vec2(PW, H), half_, CR);
     float corner = 1.0 - smoothstep(-0.012, 0.012, sd);
@@ -296,6 +325,79 @@ const PANEL_FRAG = /* glsl */ `
     gl_FragColor = vec4(c.rgb, a);
   }
 `;
+
+
+const LABEL_VERT = `
+  varying vec2 vUv;
+  void main() {
+    vUv = uv;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`;
+
+const LABEL_FRAG = `
+  uniform sampler2D uMap; // The photo texture
+  uniform sampler2D uMask; // The text canvas mask
+  uniform float uOpacity;
+  uniform float uReflect;
+  varying vec2 vUv;
+
+  const float LABEL_W = ${LABEL_PLANE_W.toFixed(5)};
+  const float LABEL_H = ${LABEL_PLANE_H.toFixed(5)};
+  const float PW = ${PANEL_WIDTH.toFixed(5)};
+  const float PH = ${PANEL_HEIGHT.toFixed(5)};
+
+  void main() {
+    vec4 maskColor = texture2D(uMask, vUv);
+    float alpha = maskColor.a * uOpacity;
+    
+    if (alpha < 0.01) discard;
+
+    // Map the label UV to the photo UV space
+    vec2 photoUv;
+    photoUv.x = (vUv.x - 0.5) * (LABEL_W / PW) + 0.5;
+    
+    photoUv.y = (vUv.y - 0.5) * (LABEL_H / PH) + 0.5;
+    // For reflection, we sample the same part of the photo, because the label mesh is already scaled by -1.
+    // However, if we want it to look EXACTLY like it's resting on the reflected photo, no inversion is needed.
+    
+    vec4 photoColor = texture2D(uMap, photoUv);
+    
+    // Frosted glass effect: tint the photo color white and brighten it
+    vec3 glassColor = mix(photoColor.rgb, vec3(1.0), 0.55); // 55% white tint
+    glassColor *= 1.3; // Slight glow
+    
+    // Add a tiny bit of blue/cyan tint for a premium glass feel
+    glassColor = mix(glassColor, vec3(0.9, 0.95, 1.0), 0.1);
+    
+    float finalAlpha = alpha;
+    if (uReflect > 0.5) {
+      // The reflection is visually upside down. vUv.y=0 is the top (closest to cylinder),
+      // vUv.y=1 is the bottom (farthest). We want it to fade out as it goes down.
+      float reflectFade = pow(1.0 - vUv.y, 2.0);
+      finalAlpha *= reflectFade;
+    }
+    
+    gl_FragColor = vec4(glassColor, finalAlpha);
+  }
+`;
+
+function makeLabelMaterial(isReflection) {
+  return new THREE.ShaderMaterial({
+    vertexShader: LABEL_VERT,
+    fragmentShader: LABEL_FRAG,
+    uniforms: {
+      uMap: { value: null },
+      uMask: { value: null },
+      uOpacity: { value: 0 },
+      uReflect: { value: isReflection ? 1 : 0 }
+    },
+    transparent: true,
+    depthTest: false,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  });
+}
 
 function makePanelMaterial(isReflection) {
   return new THREE.ShaderMaterial({
@@ -310,6 +412,7 @@ function makePanelMaterial(isReflection) {
       uHover: { value: 0 },
       uSide: { value: 0 },
       uPointerX: { value: 0 },
+      uPointerY: { value: 0 },
       uTime: { value: 0 },
     },
     transparent: true,
@@ -328,34 +431,7 @@ function makePanelMaterial(isReflection) {
 // ──────────────────────────────────────────────────────────────
 // Label textures are cheap (text on a small transparent canvas) and depend only
 // on the category names, so they rebuild independently of the photographs.
-function useLabelTextures(categories) {
-  const [labels, setLabels] = useState([]);
 
-  useEffect(() => {
-    let alive = true;
-    let made = [];
-
-    const build = async () => {
-      try {
-        await document.fonts.load(panelFont());
-      } catch {
-        /* font API unavailable — fall through to the serif stack */
-      }
-      if (!alive) return;
-      made = categories.map((c) => paintLabel(c));
-      setLabels(made);
-    };
-
-    build();
-
-    return () => {
-      alive = false;
-      made.forEach((t) => t?.dispose());
-    };
-  }, [categories]);
-
-  return labels;
-}
 
 function useCategoryTextures(items) {
   const [textures, setTextures] = useState([]);
@@ -461,7 +537,7 @@ function ResponsiveCamera({ rectRef }) {
 // ──────────────────────────────────────────────────────────────
 // The rotating band: 3 fixed slots, textures recycled behind the camera
 // ──────────────────────────────────────────────────────────────
-function PhotoBand({ textures, labelTextures, activeIndex, flatMode, onSnap, onHoverChange, onTap, rectRef, hoverRef }) {
+function PhotoBand({ textures, categories, activeIndex, flatMode, onSnap, onHoverChange, onTap, rectRef, hoverRef }) {
   const total = textures.length;
   const { gl } = useThree();
 
@@ -470,6 +546,7 @@ function PhotoBand({ textures, labelTextures, activeIndex, flatMode, onSnap, onH
   const assigned = useRef([-1, -1, -1]);
   const bandGroup = useRef(null);
   const labelMeshes = useRef([]);
+  const labelReflectionMeshes = useRef([]);
 
   // Continuous carousel position, measured in panels
   const pos = useRef(0);
@@ -507,18 +584,24 @@ function PhotoBand({ textures, labelTextures, activeIndex, flatMode, onSnap, onH
   const geometry = useMemo(() => new THREE.PlaneGeometry(1, 1, 96, 1), []);
   useEffect(() => () => geometry.dispose(), [geometry]);
 
+
+
   const materials = useMemo(
     () =>
       Array.from({ length: SLOTS }, () => ({
         band: makePanelMaterial(false),
         reflection: makePanelMaterial(true),
+        label: makeLabelMaterial(false),
+        labelReflect: makeLabelMaterial(true),
       })),
     []
   );
   useEffect(
-    () => () => materials.forEach((m) => { m.band.dispose(); m.reflection.dispose(); }),
+    () => () => materials.forEach((m) => { m.band.dispose(); m.reflection.dispose(); m.label.dispose(); m.labelReflect.dispose(); }),
     [materials]
   );
+  
+  const labelTextures = useLabelTextures(categories);
 
   // Follow the category chosen elsewhere (filter pills, nav arrows) by the
   // shortest way round the ring
@@ -616,6 +699,7 @@ function PhotoBand({ textures, labelTextures, activeIndex, flatMode, onSnap, onH
         mat.uniforms.uFlat.value = f;
         mat.uniforms.uHover.value = hoverLift.current;
         mat.uniforms.uPointerX.value = pointer.current.x;
+        mat.uniforms.uPointerY.value = pointer.current.y;
         mat.uniforms.uTime.value = state.clock.elapsedTime;
         // Continuous, so the neighbours fade up as they slide into focus
         mat.uniforms.uSide.value = Math.min(Math.abs(offset), 1);
@@ -623,29 +707,27 @@ function PhotoBand({ textures, labelTextures, activeIndex, flatMode, onSnap, onH
       band.uniforms.uOpacity.value = 1;
       reflection.uniforms.uOpacity.value = 1;
 
-      // Floating label for this slot. It tracks the slot's angular position but
-      // only horizontally — no rotation — so the word slides across the front
-      // of the band and stays flat, rather than wrapping onto the cylinder.
+      // Frosted Glass Label Shader Updates
       const label = labelMeshes.current[j];
-      if (label) {
+      const labelReflect = labelReflectionMeshes.current[j];
+      if (label && labelReflect) {
         const theta = offset * ANGLE_PER_SLOT;
-        label.position.x = THREE.MathUtils.lerp(
-          Math.sin(theta) * RADIUS,
-          offset * (PANEL_WIDTH + FLAT_GAP),
-          f
-        );
-        // Fades as it swings toward the sides, and is hidden outright once the
-        // slot is round the back — otherwise the rear label would read through
-        // the front photo, since these draw with depth testing off.
         const facing = Math.cos(theta);
         const fade = Math.max(0, facing) ** 1.6;
-        const tex = labelTextures?.[catIdx] || null;
-        if (label.material.map !== tex) {
-          label.material.map = tex;
-          label.material.needsUpdate = true;
+        const maskTex = labelTextures?.[catIdx] || null;
+        
+        const { label: labelMat, labelReflect: labelReflectMat } = materials[j];
+        
+        for (const mat of [labelMat, labelReflectMat]) {
+          if (mat.uniforms.uMap.value !== tex) mat.uniforms.uMap.value = tex;
+          if (mat.uniforms.uMask.value !== maskTex) mat.uniforms.uMask.value = maskTex;
         }
-        label.material.opacity = tex ? fade : 0;
-        label.visible = fade > 0.01 && !!tex;
+        
+        labelMat.uniforms.uOpacity.value = maskTex ? fade : 0;
+        labelReflectMat.uniforms.uOpacity.value = maskTex ? fade * 0.70 : 0; // Reflection slightly dimmer
+        
+        label.visible = fade > 0.01 && !!maskTex;
+        labelReflect.visible = fade > 0.01 && !!maskTex;
       }
     }
   });
@@ -798,29 +880,28 @@ function PhotoBand({ textures, labelTextures, activeIndex, flatMode, onSnap, onH
             renderOrder={-1}
             frustumCulled={false}
           />
+          {/* Frosted Glass Category Label Plane */}
+          <mesh
+            ref={(el) => { labelMeshes.current[j] = el; }}
+            position={[0, 0, LABEL_Z]}
+            renderOrder={2}
+            frustumCulled={false}
+            material={materials[j].label}
+          >
+            <planeGeometry args={[LABEL_PLANE_W, LABEL_PLANE_H]} />
+          </mesh>
+          {/* Reflection of the Frosted Glass Label */}
+          <mesh
+            ref={(el) => { labelReflectionMeshes.current[j] = el; }}
+            position={[0, -PANEL_HEIGHT + 0.35, LABEL_Z]}
+            scale={[1, -1, 1]}
+            renderOrder={2}
+            frustumCulled={false}
+            material={materials[j].labelReflect}
+          >
+            <planeGeometry args={[LABEL_PLANE_W, LABEL_PLANE_H]} />
+          </mesh>
         </group>
-      ))}
-
-      {/* Floating category labels. These live in the band group (so they share
-          its tilt and hover lift) but outside the slot groups, so they are
-          never rotated onto the cylinder. Each one slides horizontally across
-          the front as the carousel turns and fades out toward the sides. */}
-      {[0, 1, 2].map((j) => (
-        <mesh
-          key={`label-${j}`}
-          ref={(el) => { labelMeshes.current[j] = el; }}
-          position={[0, 0, LABEL_Z]}
-          renderOrder={2}
-          frustumCulled={false}
-        >
-          <planeGeometry args={[LABEL_PLANE_W, LABEL_PLANE_H]} />
-          <meshBasicMaterial
-            transparent
-            depthTest={false}
-            depthWrite={false}
-            opacity={0}
-          />
-        </mesh>
       ))}
     </group>
   );
@@ -857,7 +938,7 @@ export default function PortfolioHeroScene({
   );
 
   const textures = useCategoryTextures(items);
-  const labelTextures = useLabelTextures(categories);
+
   const rectRef = useRef(null);
   // Written by PhotoBand each frame, read by GlassShards — a ref rather than
   // state so hovering never re-renders the Canvas.
@@ -876,7 +957,7 @@ export default function PortfolioHeroScene({
       <GlassShards hoverRef={hoverRef} texture={textures?.[activeIndex]} />
       <PhotoBand
         textures={textures}
-        labelTextures={labelTextures}
+        categories={categories}
         activeIndex={activeIndex}
         flatMode={flatMode}
         onSnap={onCategoryChange}
