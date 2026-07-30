@@ -126,9 +126,10 @@ function DOMSyncedImage({ photo, scrollY, rollVelocity, reduceMotion }) {
       }
       // Use NoColorSpace to prevent washed-out colours on raw ShaderMaterials
       tex.colorSpace = THREE.NoColorSpace;
-      tex.minFilter = THREE.LinearMipmapLinearFilter;
+      // Disable mipmaps to prevent sharp LOD boundary lines during the 3D roll
+      tex.minFilter = THREE.LinearFilter;
       tex.magFilter = THREE.LinearFilter;
-      tex.generateMipmaps = true;
+      tex.generateMipmaps = false;
       setTexture(tex);
     });
 
