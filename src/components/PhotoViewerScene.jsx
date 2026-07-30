@@ -10,29 +10,27 @@ const CLOTH_VERT = `
   uniform float uScrollPos;
   uniform float uRollStrength;
   uniform float uRollDepth;
-  uniform float uWaveAmp;
   varying vec2 vUv;
   varying float vTopFade;
+  varying float vBand;
 
   void main() {
     vUv = uv;
     vec3 pos = position;
     vTopFade = 0.0;
+    vBand = 0.0;
 
     if (uRollStrength > 0.0001) {
-      // This is a viewport-anchored roll, matching the reference. A vertex
-      // starts bending when it enters the upper 13% of the browser; the roll
-      // develops through a band 30% of the viewport high.
+      // Viewport-anchored roll.
       vec4 worldPosition = modelMatrix * vec4(position, 1.0);
       float topThreshold = (uResolution.y * 0.5) - (uResolution.y * 0.13);
       float topRange = max(uResolution.y * 0.30, 1.0);
       float band = clamp((worldPosition.y - topThreshold) / topRange, 0.0, 1.0);
       float rollMask = smoothstep(0.0, 1.0, band);
+      
+      vBand = rollMask; // Pass to fragment shader for shading
 
-      // The two-stage S curve is the cloth-over-a-roller profile: it first
-      // recedes from the camera, then softly returns instead of forming a dome.
-      // Both stages are widened and overlapped so the surface never creases at
-      // the hand-off point (the old 0.42/0.44 seam was a visible kink).
+      // Clean, rigid cylinder roll instead of a wavy cloth
       float rollEnter = smoothstep(0.0, 0.52, band);
       float rollReturn = smoothstep(0.38, 0.96, band);
       float curlEnter = sin(rollEnter * 3.14159265 * 0.5);
@@ -40,40 +38,14 @@ const CLOTH_VERT = `
       float sCurve = (curlEnter * 0.92) - (curlReturn * 0.30 * 0.48);
       float lift = smoothstep(0.62, 0.98, band) * 48.0 * 0.18;
 
-      // A broad, layered horizontal ripple keeps the rolled edge organic. The
-      // phase follows scroll position, exactly like cloth being pulled upward.
-      // Lower frequencies + a slower phase drift read as heavy fabric instead
-      // of a fast shimmer, and stop the ripple from strobing frame to frame.
-      float waveMask = sin(band * 3.14159265);
-      float wavePhase = (
-        ((uv.x * 2.0 - 1.0) * 3.14159265 * 1.05)
-        - uScrollPos * 0.0045
-      );
-      float primaryWave = sin(wavePhase);
-      float secondaryWave = sin(wavePhase * 0.52 - 0.95);
-      float tertiaryWave = sin(wavePhase * 0.31 + 1.20);
-      float smoothWave =
-        (primaryWave * 0.62)
-        + (secondaryWave * 0.26)
-        + (tertiaryWave * 0.12);
-      float surfaceWave =
-        mix(primaryWave, smoothWave, 0.85) * uWaveAmp * waveMask;
-
-      // Cloth gathers slightly as it goes over a roller — the sheet narrows a
-      // touch and its corners draw inward. Subtle, but it's what separates
-      // fabric from a bending sheet of glass.
-      pos.x *= 1.0 - (rollMask * uRollStrength * 0.022);
-
       // Y is normalized because the DOM-sized mesh scale is applied later.
       // Z remains in screen pixels so the perspective camera creates a real
-      // 3D roll of the image pixels, rather than a 2D edge arch.
+      // 3D roll of the image pixels.
       pos.y += (lift / max(uHeight, 1.0)) * uRollStrength;
       pos.z -= sCurve * uRollDepth * rollMask * uRollStrength;
-      pos.z += surfaceWave * uRollStrength;
 
       // The material thins away at the very top of the roll.
-      vTopFade =
-        pow(smoothstep(0.30, 1.0, band), 0.70) * uRollStrength;
+      vTopFade = pow(smoothstep(0.30, 1.0, band), 0.70) * uRollStrength;
     }
 
     gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
@@ -86,38 +58,27 @@ const CLOTH_FRAG = `
   uniform float uVelocity;
   varying vec2 vUv;
   varying float vTopFade;
+  varying float vBand;
 
   void main() {
     vec4 tex = texture2D(uTexture, vUv);
     vec3 image = tex.rgb;
 
     // Match the reference's soft optical treatment on the rolling portion:
-    // five directional samples, plus a slight red/blue split at the thinnest
-    // edge. Multiplying velocity blur by vTopFade keeps the middle and bottom
-    // of the photograph perfectly sharp.
+    // five directional samples, plus a slight red/blue split at the thinnest edge.
     float fadeBlur = clamp(vTopFade * 0.03, 0.0, 0.08);
-    float velocityBlur =
-      clamp(abs(uVelocity) * 0.0008, 0.0, 0.08)
-      * smoothstep(0.0, 0.30, vTopFade);
+    float velocityBlur = clamp(abs(uVelocity) * 0.0008, 0.0, 0.08) * smoothstep(0.0, 0.30, vTopFade);
     float blurAmount = fadeBlur + velocityBlur;
 
     if (blurAmount > 0.00001) {
       float velocityDir = sign(uVelocity);
-      vec2 dir = vec2(
-        0.0,
-        blurAmount * (velocityDir == 0.0 ? 1.0 : velocityDir)
-      );
+      vec2 dir = vec2(0.0, blurAmount * (velocityDir == 0.0 ? 1.0 : velocityDir));
 
       vec3 sampleNearA = texture2D(uTexture, vUv - dir * 0.5).rgb;
       vec3 sampleNearB = texture2D(uTexture, vUv + dir * 0.5).rgb;
       vec3 sampleFarA = texture2D(uTexture, vUv - dir).rgb;
       vec3 sampleFarB = texture2D(uTexture, vUv + dir).rgb;
-      vec3 blurred =
-        (tex.rgb * 0.32)
-        + (sampleNearA * 0.24)
-        + (sampleNearB * 0.24)
-        + (sampleFarA * 0.10)
-        + (sampleFarB * 0.10);
+      vec3 blurred = (tex.rgb * 0.32) + (sampleNearA * 0.24) + (sampleNearB * 0.24) + (sampleFarA * 0.10) + (sampleFarB * 0.10);
 
       vec2 aberrationOffset = vec2(0.018 * vTopFade, 0.0);
       vec3 chroma = vec3(
@@ -127,6 +88,10 @@ const CLOTH_FRAG = `
       );
       image = mix(blurred, chroma, clamp(vTopFade, 0.0, 1.0));
     }
+
+    // Add shadow darkening as it rolls backward
+    float shadow = mix(1.0, 0.35, clamp(vBand * 1.2, 0.0, 1.0));
+    image *= shadow;
 
     float alpha = tex.a * uOpacity * (1.0 - vTopFade);
     gl_FragColor = vec4(image, alpha);
@@ -214,18 +179,17 @@ function DOMSyncedImage({ photo, scrollY, rollVelocity, reduceMotion }) {
       window.innerHeight,
     );
 
-    // Frame-rate-independent easing: at 60fps these settle in ~0.15s (roll) and
-    // ~0.25s (ripple), so both survive a dropped frame without a visible jump.
+    // Frame-rate-independent easing, so nothing jumps on a dropped frame.
     const rollEase = 1 - Math.exp(-14 * delta);
     const phaseEase = 1 - Math.exp(-9 * delta);
 
-    // Framer reports container velocity in px/s. The dead zone keeps sensor
-    // noise from leaving a crease at rest, and the wider engage range means the
-    // roll builds progressively with scroll speed rather than snapping to full.
-    const speed = Math.abs(rollVelocity.get());
-    const targetStrength = reduceMotion
-      ? 0
-      : THREE.MathUtils.smoothstep(speed, 40, 1500);
+    // The roll is POSITIONAL, not velocity-gated. The shader already derives
+    // its shape from where the vertex sits in the viewport, so a photo stays
+    // rolled for as long as it is passing under the roller at the top —
+    // exactly like the reference. Gating this on scroll speed was what made the
+    // effect flash on and vanish the instant you stopped scrolling.
+    // The ease here only covers mount and the reduced-motion toggle.
+    const targetStrength = reduceMotion ? 0 : 1;
     rollStrengthRef.current +=
       (targetStrength - rollStrengthRef.current) * rollEase;
 
