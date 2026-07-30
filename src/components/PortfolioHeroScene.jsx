@@ -3,6 +3,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { pickCategoryCover } from '../utils/categoryCover';
 import { playCarouselTick } from '../utils/audio';
+import GlassShards from './GlassShards';
 
 // ──────────────────────────────────────────────────────────────
 // Geometry constants
@@ -395,7 +396,7 @@ function ResponsiveCamera({ rectRef }) {
 // ──────────────────────────────────────────────────────────────
 // The rotating band: 3 fixed slots, textures recycled behind the camera
 // ──────────────────────────────────────────────────────────────
-function PhotoBand({ textures, activeIndex, flatMode, onSnap, onHoverChange, onTap, rectRef }) {
+function PhotoBand({ textures, activeIndex, flatMode, onSnap, onHoverChange, onTap, rectRef, hoverRef }) {
   const total = textures.length;
   const { gl } = useThree();
 
@@ -414,7 +415,10 @@ function PhotoBand({ textures, activeIndex, flatMode, onSnap, onHoverChange, onT
 
   // Eased 0 → 1 arc-to-flat morph, and the hover lift
   const flat = useRef(0);
-  const hoverLift = useRef(0);
+  // Shared with the scene so the glass shards can read the same eased hover
+  // value the band uses, without a state change re-rendering the Canvas.
+  const localHover = useRef(0);
+  const hoverLift = hoverRef ?? localHover;
   const hovering = useRef(false);
 
   const lastTickIndex = useRef(0);
@@ -739,6 +743,9 @@ export default function PortfolioHeroScene({
 
   const textures = useCategoryTextures(items);
   const rectRef = useRef(null);
+  // Written by PhotoBand each frame, read by GlassShards — a ref rather than
+  // state so hovering never re-renders the Canvas.
+  const hoverRef = useRef(0);
 
   return (
     <Canvas
@@ -748,6 +755,9 @@ export default function PortfolioHeroScene({
       dpr={[1, 1.5]}
     >
       <ResponsiveCamera rectRef={rectRef} />
+      {/* Behind the band in the scene graph and depth-tested against it, so the
+          panel and its baked-in category label always read in front. */}
+      <GlassShards hoverRef={hoverRef} texture={textures?.[activeIndex]} />
       <PhotoBand
         textures={textures}
         activeIndex={activeIndex}
@@ -756,6 +766,7 @@ export default function PortfolioHeroScene({
         onHoverChange={onHoverChange}
         onTap={onTap}
         rectRef={rectRef}
+        hoverRef={hoverRef}
       />
     </Canvas>
   );
