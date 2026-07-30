@@ -14,6 +14,12 @@ const CLOTH_VERT = `
   varying float vTopFade;
   varying float vBand;
 
+  // Ken Perlin's smootherstep for G2 continuity (eliminates the Mach band crease line)
+  float smootherstep_custom(float edge0, float edge1, float x) {
+    float t = clamp((x - edge0) / (edge1 - edge0), 0.0, 1.0);
+    return t * t * t * (t * (t * 6.0 - 15.0) + 10.0);
+  }
+
   void main() {
     vUv = uv;
     vec3 pos = position;
@@ -26,26 +32,26 @@ const CLOTH_VERT = `
       float topThreshold = (uResolution.y * 0.5) - (uResolution.y * 0.13);
       float topRange = max(uResolution.y * 0.30, 1.0);
       float band = clamp((worldPosition.y - topThreshold) / topRange, 0.0, 1.0);
-      float rollMask = smoothstep(0.0, 1.0, band);
       
-      vBand = rollMask; // Pass to fragment shader for shading
+      // Use smootherstep so the second derivative is 0 at the start of the roll.
+      // This completely removes the optical illusion of a sharp horizontal line.
+      float smoothBand = smootherstep_custom(0.0, 1.0, band);
+      
+      vBand = smoothBand; // Pass to fragment shader for shading
 
       // Clean, rigid cylinder roll instead of a wavy cloth
-      float rollEnter = smoothstep(0.0, 0.52, band);
-      float rollReturn = smoothstep(0.38, 0.96, band);
-      float curlEnter = sin(rollEnter * 3.14159265 * 0.5);
-      float curlReturn = sin(rollReturn * 3.14159265);
-      float sCurve = (curlEnter * 0.92) - (curlReturn * 0.30 * 0.48);
-      float lift = smoothstep(0.62, 0.98, band) * 48.0 * 0.18;
+      float angle = smoothBand * 3.14159265 * 0.55; // Roll back by ~100 degrees
+      float cylinderZ = 1.0 - cos(angle);
+      float liftY = sin(angle);
 
       // Y is normalized because the DOM-sized mesh scale is applied later.
       // Z remains in screen pixels so the perspective camera creates a real
       // 3D roll of the image pixels.
-      pos.y += (lift / max(uHeight, 1.0)) * uRollStrength;
-      pos.z -= sCurve * uRollDepth * rollMask * uRollStrength;
+      pos.y += (liftY * 45.0 / max(uHeight, 1.0)) * uRollStrength;
+      pos.z -= cylinderZ * uRollDepth * uRollStrength;
 
       // The material thins away at the very top of the roll.
-      vTopFade = pow(smoothstep(0.30, 1.0, band), 0.70) * uRollStrength;
+      vTopFade = smootherstep_custom(0.30, 1.0, band) * uRollStrength;
     }
 
     gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
@@ -90,7 +96,8 @@ const CLOTH_FRAG = `
     }
 
     // Add shadow darkening as it rolls backward
-    float shadow = mix(1.0, 0.35, clamp(vBand * 1.2, 0.0, 1.0));
+    // vBand is already G2 continuous, so no sharp creases in shading
+    float shadow = mix(1.0, 0.25, vBand);
     image *= shadow;
 
     float alpha = tex.a * uOpacity * (1.0 - vTopFade);
