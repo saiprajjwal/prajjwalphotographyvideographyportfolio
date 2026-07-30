@@ -169,6 +169,14 @@ function DOMSyncedImage({ photo, scrollY, rollVelocity, reduceMotion, view }) {
   const rollStrengthRef = useRef(0);
   const wavePhaseRef = useRef(0);
   const directionRef = useRef(1);
+  // The placeholder this plane tracks. Resolved once instead of a document-wide
+  // getElementById on every frame — with a full album that was ~1,000 lookups a
+  // second before the useFrame body even started.
+  const elRef = useRef(null);
+
+  useLayoutEffect(() => {
+    elRef.current = document.getElementById(`pv-img-${photo.id}`);
+  }, [photo.id, view]);
 
   // Load texture
   useEffect(() => {
@@ -200,8 +208,8 @@ function DOMSyncedImage({ photo, scrollY, rollVelocity, reduceMotion, view }) {
   useFrame((_, delta) => {
     if (!meshRef.current || !materialRef.current || !texture) return;
 
-    // Find the invisible DOM image element
-    const el = document.getElementById(`pv-img-${photo.id}`);
+    // The invisible DOM placeholder this plane tracks (resolved once, above)
+    const el = elRef.current;
     if (!el) return;
 
     const rect = el.getBoundingClientRect();
@@ -286,7 +294,13 @@ function DOMSyncedImage({ photo, scrollY, rollVelocity, reduceMotion, view }) {
       {/* Vertical density carries the roll: the curve is compressed into the
           top band, so too few rows there facet the fabric into flat strips.
           Increased to 256 to completely eliminate vertex hinge lines. */}
-      <planeGeometry args={[1, 1, 64, 192]} />
+      {/* Vertical density carries the roll and stays high — that is what keeps
+          the curve free of the hinge crease. Horizontal density does almost
+          nothing: the only X-varying terms are the fabric wave (~2 cycles
+          across the width) and a smooth quadratic sag, so 16 columns still
+          oversamples both. 64 -> 16 is a 4x cut in vertices per photo with no
+          visible difference. */}
+      <planeGeometry args={[1, 1, 16, 192]} />
       <shaderMaterial
         ref={materialRef}
         vertexShader={CLOTH_VERT}
@@ -357,6 +371,11 @@ export default function PhotoViewerScene({ photos, scrollY, view }) {
   return (
     <Canvas
       gl={{ alpha: true, antialias: true }}
+      // Without a cap this renders at the device's full pixel ratio — 3x on a
+      // modern phone, i.e. ~9x the fragments of a 1x buffer, full-screen, every
+      // frame. Matches the cap the other scenes already use; visually identical
+      // on anything short of a very large retina display.
+      dpr={[1, 1.5]}
       style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 4005 }}
     >
       <PixelPerspectiveCamera />
