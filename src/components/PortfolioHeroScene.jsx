@@ -191,6 +191,9 @@ const PANEL_VERT = /* glsl */ `
   uniform float uFlat;
   uniform float uReflect;
   uniform float uSide;
+  uniform float uHover;
+  uniform float uPointerX;
+  uniform float uTime;
   varying vec2 vUv;
 
   const float RADIUS = ${RADIUS.toFixed(4)};
@@ -211,6 +214,34 @@ const PANEL_VERT = /* glsl */ `
     // one stays dominant. In arc mode the curve already does this.
     float recede = mix(1.0, 1.0 - 0.07 * clamp(uSide, 0.0, 1.0), uFlat);
     p.xy *= recede;
+
+    // ── Hover warp ──────────────────────────────────────────────
+    // The band physically deforms under the cursor rather than just lifting:
+    // the surface swells toward the viewer where the pointer is, with a soft
+    // falloff either side, and a slow travelling ripple runs across it so the
+    // sheet reads as pliable. Only the focused panel responds — neighbours are
+    // damped by uSide, so the effect stays local to what you're pointing at.
+    float focus = uHover * (1.0 - clamp(uSide, 0.0, 1.0));
+    if (focus > 0.0) {
+      // Distance from the cursor along the panel, in UV space
+      float d = uv.x - (uPointerX * 0.5 + 0.5);
+      float bulge = exp(-d * d * 9.0);
+
+      // Fade the deformation out at the top and bottom edges, so the panel's
+      // silhouette stays clean instead of tearing away from the reflection.
+      float edge = sin(clamp(uv.y, 0.0, 1.0) * 3.14159265);
+
+      // Travelling ripple, deliberately low frequency — a swell, not a wobble.
+      float ripple = sin(uv.x * 7.0 - uTime * 1.6) * 0.16
+                   + sin(uv.y * 4.0 + uTime * 1.1) * 0.09;
+
+      float swell = (bulge + ripple * bulge) * edge * focus;
+
+      // Push along the surface normal. In arc mode that is the radial
+      // direction, which is what makes the cylinder itself bow outward.
+      vec3 normalDir = normalize(mix(vec3(sin(angle), 0.0, cos(angle)), vec3(0.0, 0.0, 1.0), uFlat));
+      p += normalDir * swell * 0.42;
+    }
 
     // Mirror about the panel's lower edge for the reflection copy
     p.y = mix(p.y, -p.y - H, uReflect);
@@ -278,6 +309,8 @@ function makePanelMaterial(isReflection) {
       uHasMap: { value: 0 },
       uHover: { value: 0 },
       uSide: { value: 0 },
+      uPointerX: { value: 0 },
+      uTime: { value: 0 },
     },
     transparent: true,
     depthWrite: !isReflection,
@@ -582,6 +615,8 @@ function PhotoBand({ textures, labelTextures, activeIndex, flatMode, onSnap, onH
         }
         mat.uniforms.uFlat.value = f;
         mat.uniforms.uHover.value = hoverLift.current;
+        mat.uniforms.uPointerX.value = pointer.current.x;
+        mat.uniforms.uTime.value = state.clock.elapsedTime;
         // Continuous, so the neighbours fade up as they slide into focus
         mat.uniforms.uSide.value = Math.min(Math.abs(offset), 1);
       }
