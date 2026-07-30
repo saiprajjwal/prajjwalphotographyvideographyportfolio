@@ -35,17 +35,26 @@ export default function BeforeAfterSlider({ beforeImage, afterImage }) {
   };
 
   useEffect(() => {
-    if (isDragging) {
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', () => setIsDragging(false));
-      window.addEventListener('touchmove', handleTouchMove);
-      window.addEventListener('touchend', () => setIsDragging(false));
-    }
+    if (!isDragging) return undefined;
+
+    // One stable reference per listener. The previous version passed a fresh
+    // arrow function to removeEventListener, which removes nothing — so every
+    // drag left another mouseup and touchend handler attached to window for
+    // the life of the page.
+    const stopDragging = () => setIsDragging(false);
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', stopDragging);
+    // The handler never calls preventDefault, so it can be passive: the browser
+    // no longer has to wait on it before scrolling.
+    window.addEventListener('touchmove', handleTouchMove, { passive: true });
+    window.addEventListener('touchend', stopDragging);
+
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', () => setIsDragging(false));
+      window.removeEventListener('mouseup', stopDragging);
       window.removeEventListener('touchmove', handleTouchMove);
-      window.removeEventListener('touchend', () => setIsDragging(false));
+      window.removeEventListener('touchend', stopDragging);
     };
   }, [isDragging]);
 
